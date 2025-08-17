@@ -48,7 +48,9 @@ def build_prompt(inbox_tasks: List[str], projects: List[Dict],
         tasks_list = '\n'.join([f"  - {task}" for task in inbox_tasks])
 
         return f"""
-Act as my personal project assisntant and help me organize my task lists.
+Act as my personal advisor and assistant. I need you to help me
+organize my tasks. Please be focused to detials and understan my tagging system and projects scope.
+Please first explain me how do you understnad my task and my tagging system.
 
 Available projects:
 {projects_list}
@@ -59,7 +61,8 @@ Classify these tasks:
 Available tags: 
   physical, digial
   out, out  - (if physical) 
-  need-tools, need-material (if not bare handed: specific for repair, decoration, gardent, etc.)
+  need-material (if I migh have to buy material, ingredients, etc.) 
+  need-tools (if not bare handed then require tools)
 
 Response format:
 
@@ -71,6 +74,8 @@ TAGS: [comma-separated tags]
 DURATION: [time estimate]
 REASONING: [brief explanation]
 ---
+TASK: ...
+PROJECT: ...
 """
 
 def classify_tasks(inbox_tasks: List[str], projects: List[Dict],
@@ -143,7 +148,6 @@ def parse_multiline_response(text: str) -> List[Dict]:
 
 # Main UI
 st.title("🔬 AI Task Classification Research Tool")
-st.markdown("Experiment with different AI prompts for task categorization")
 
 col1, col2 = st.columns([1, 1])
 
@@ -164,11 +168,9 @@ with col1:
     )
     
     reference_tasks = parse_reference_tasks(reference_text)
-    if reference_tasks:
+    if not reference_tasks:
         st.success(f"✅ Parsed {len(reference_tasks)} reference tasks")
-    else:
-        st.warning("⚠️ No reference tasks parsed")
-    
+
     # Projects
     st.markdown("**Current Projects** (pid;subject)")
     projects_text = st.text_area(
@@ -181,9 +183,7 @@ with col1:
     )
     
     projects = parse_projects(projects_text)
-    if projects:
-        st.success(f"✅ Parsed {len(projects)} projects") 
-    else:
+    if not projects:
         st.warning("⚠️ No projects parsed")
     
     # Inbox Tasks
