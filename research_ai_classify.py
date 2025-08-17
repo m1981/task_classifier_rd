@@ -41,7 +41,7 @@ def parse_projects(text: str) -> List[Dict]:
     return projects
 
 def classify_tasks(inbox_tasks: List[str], projects: List[Dict], 
-                  reference_tasks: List[Dict], prompt_variant: str) -> List[Dict]:
+                  reference_tasks: List[Dict], prompt_variant: str) -> Tuple[List[Dict], str, str]:
     """Classify tasks using Anthropic Claude"""
     client = get_anthropic_client()
     
@@ -49,44 +49,26 @@ def classify_tasks(inbox_tasks: List[str], projects: List[Dict],
     if prompt_variant == "basic":
         prompt = f"""
         Available projects: {[p['subject'] for p in projects]}
+        Available tags: 
+          physical, digial
+          out, out  - (if physical) 
+          need-tools, need-material (specific for repair, decoration, gardent, etc.)
         
         Classify these tasks: {inbox_tasks}
         
-        Return JSON array with: task, suggestedProject, confidence, extractedTags, estimatedDuration, reasoning
+        For each task, provide on separate lines:
+        TASK: [original task]
+        PROJECT: [best matching project]
+        CONFIDENCE: [0.0-1.0]
+        TAGS: [comma-separated tags]
+        DURATION: [time estimate]
+        REASONING: [brief explanation]
+        ---
         """
-    elif prompt_variant == "detailed":
-        prompt = f"""
-        Reference examples:
-        {json.dumps(reference_tasks, indent=2)}
-        
-        Available projects:
-        {json.dumps(projects, indent=2)}
-        
-        Tasks to classify: {inbox_tasks}
-        
-        For each task, return JSON with:
-        - task: original task text
-        - suggestedProject: best matching project
-        - confidence: 0-1 score
-        - extractedTags: relevant tags based on examples
-        - estimatedDuration: time estimate
-        - reasoning: explanation
-        """
-    elif prompt_variant == "few-shot":
-        prompt = f"""
-        Here are examples of how to classify tasks:
-        
-        Example 1: "Mount electrical socket" → Project: "Dining room redecorated", Tags: ["physical", "electrical"], Duration: "1h"
-        Example 2: "Send email to Hotel" → Project: "Birthday party", Tags: ["digital"], Duration: "15min"
-        
-        Available projects: {[p['subject'] for p in projects]}
-        Reference patterns: {[(r['subject'], r['tags']) for r in reference_tasks[:3]]}
-        
-        Classify these tasks: {inbox_tasks}
-        
-        Return JSON array with: task, suggestedProject, confidence, extractedTags, estimatedDuration, reasoning
-        """
-    
+
+    with st.expander("👁️ View Current Prompt", expanded=False):
+        st.code(prompt.strip(), language="text")
+        st.caption(f"Strategy: {prompt_variant} | Characters: {len(prompt)}")
     try:
         response = client.messages.create(
             model="claude-3-5-haiku-latest",
@@ -94,11 +76,56 @@ def classify_tasks(inbox_tasks: List[str], projects: List[Dict],
             messages=[{"role": "user", "content": prompt}]
         )
         
-        # Parse JSON response
-        return json.loads(response.content[0].text)
+        raw_response = response.content[0].text
+        # Parse multiline text response
+        parsed_results = parse_multiline_response(raw_response)
+        return parsed_results, prompt, raw_response
     except Exception as e:
         st.error(f"Classification failed: {e}")
-        return []
+        return [], prompt, str(e)
+
+def parse_multiline_response(text: str) -> List[Dict]:
+    """Parse multiline text response into structured data"""
+    results = []
+    current_task = {}
+    
+    for line in text.strip().split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+            
+        if line == "---":
+            if current_task:
+                results.append(current_task)
+                current_task = {}
+            continue
+            
+        if ':' in line:
+            key, value = line.split(':', 1)
+            key = key.strip().lower()
+            value = value.strip()
+            
+            if key == "task":
+                current_task['task'] = value
+            elif key == "project":
+                current_task['suggestedProject'] = value
+            elif key == "confidence":
+                try:
+                    current_task['confidence'] = float(value)
+                except ValueError:
+                    current_task['confidence'] = 0.5
+            elif key == "tags":
+                current_task['extractedTags'] = [tag.strip() for tag in value.split(',') if tag.strip()]
+            elif key == "duration":
+                current_task['estimatedDuration'] = value
+            elif key == "reasoning":
+                current_task['reasoning'] = value
+    
+    # Add last task if exists
+    if current_task:
+        results.append(current_task)
+    
+    return results
 
 # Main UI
 st.title("🔬 AI Task Classification Research Tool")
@@ -159,14 +186,14 @@ Paint accent wall""",
     inbox_tasks = [line.strip() for line in inbox_text.split('\n') if line.strip()]
     st.caption(f"✅ {len(inbox_tasks)} tasks to classify")
 
-with col2:
+@rewith col2:
     st.subheader("⚙️ Classification")
     
     # Prompt variant selector
     prompt_variant = st.selectbox(
         "Prompt Strategy",
-        ["basic", "detailed", "few-shot"],
-        index=1
+        ["basic"],
+        index=0
     )
     
     # Classify button
@@ -175,8 +202,10 @@ with col2:
             st.error("Please add tasks to classify")
         else:
             with st.spinner("🤖 AI is thinking..."):
-                results = classify_tasks(inbox_tasks, projects, reference_tasks, prompt_variant)
+                results, prompt, raw_response = classify_tasks(inbox_tasks, projects, reference_tasks, prompt_variant)
                 st.session_state.results = results
+                st.session_state.request_prompt = prompt
+                st.session_state.raw_response = raw_response
     
     # Results
     st.subheader("📊 Results")
@@ -190,7 +219,7 @@ with col2:
                     st.write(f"**Project:** {result.get('suggestedProject', 'Unknown')}")
                     
                     if result.get('extractedTags'):
-                        tags_html = " ".join([f'<span style="background-color: #e1f5fe; padding: 2px 6px; border-radius: 12px; font-size: 12px;">{tag}</span>' 
+                        tags_html = " ".join([f'<span style="background-color: rgb(3 155 223); padding: 2px 6px; border-radius: 12px; font-size: 12px;">{tag}</span>'
                                             for tag in result['extractedTags']])
                         st.markdown(f"**Tags:** {tags_html}", unsafe_allow_html=True)
                     
@@ -205,8 +234,38 @@ with col2:
                 
                 if result.get('reasoning'):
                     st.write(f"**Reasoning:** {result['reasoning']}")
-    else:
-        st.info("👆 Click 'Classify Tasks' to see results")
+
+# Request/Response Viewer
+st.subheader("🔍 Request & Response Analysis")
+
+if 'request_prompt' in st.session_state and 'raw_response' in st.session_state:
+    tab1, tab2, tab3 = st.tabs(["📤 Request", "📥 Raw Response", "✨ Pretty Response"])
+    
+    with tab1:
+        st.markdown("**Sent to AI:**")
+        st.code(st.session_state.request_prompt, language="text")
+        st.caption(f"Characters: {len(st.session_state.request_prompt)}")
+    
+    with tab2:
+        st.markdown("**Raw AI Response:**")
+        st.code(st.session_state.raw_response, language="text")
+        st.caption(f"Characters: {len(st.session_state.raw_response)}")
+    
+    with tab3:
+        st.markdown("**Parsed Response:**")
+        if 'results' in st.session_state and st.session_state.results:
+            for i, result in enumerate(st.session_state.results, 1):
+                st.markdown(f"**Task {i}:** {result.get('task', 'Unknown')}")
+                st.markdown(f"- **Project:** {result.get('suggestedProject', 'Unknown')}")
+                st.markdown(f"- **Confidence:** {result.get('confidence', 0):.1%}")
+                st.markdown(f"- **Tags:** {', '.join(result.get('extractedTags', []))}")
+                st.markdown(f"- **Duration:** {result.get('estimatedDuration', 'Unknown')}")
+                st.markdown(f"- **Reasoning:** {result.get('reasoning', 'None')}")
+                st.markdown("---")
+        else:
+            st.warning("No valid response to display")
+else:
+    st.info("👆 Run classification to see request/response details")
 
 # Sidebar with metrics
 with st.sidebar:
