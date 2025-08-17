@@ -149,6 +149,31 @@ def parse_multiline_response(text: str) -> List[Dict]:
 # Main UI
 st.title("🔬 AI Task Classification Research Tool")
 
+print(f"🐛 TOP OF APP - session_state keys: {list(st.session_state.keys())}")
+if 'results' in st.session_state:
+    print(f"🐛 TOP - results exists, length: {len(st.session_state.results)}")
+    print(f"🐛 TOP - results content: {st.session_state.results}")
+else:
+    print("🐛 TOP - no results in session_state")
+
+if 'results' in st.session_state:
+    if st.session_state.results:
+        print("🐛 TOP - Creating table (results exist and not empty)")
+        # Create markdown table
+        table_rows = ["| Task | Project | Tags | Duration |", "|------|---------|------|----------|"]
+        for result in st.session_state.results:
+            task_name = result.get('task', '')
+            project = result.get('suggestedProject', 'Unknown')
+            tags = ', '.join(result.get('extractedTags', []))
+            duration = result.get('estimatedDuration', 'N/A')
+            table_rows.append(f"| {task_name} | {project} | {tags} | {duration} |")
+        st.markdown('\n'.join(table_rows))
+    else:
+        print("🐛 TOP - Results exist but empty")
+        st.warning("Classification returned no results")
+else:
+    print("🐛 TOP - Showing info message")
+    st.info("Run classification to see results table here")
 col1, col2 = st.columns([1, 1])
 
 with col1:
@@ -168,7 +193,7 @@ with col1:
     )
     
     reference_tasks = parse_reference_tasks(reference_text)
-    if not reference_tasks:
+    if reference_tasks:  # ✅ Fixed logic
         st.success(f"✅ Parsed {len(reference_tasks)} reference tasks")
 
     # Projects
@@ -200,31 +225,6 @@ Paint accent wall""",
     inbox_tasks = [line.strip() for line in inbox_text.split('\n') if line.strip()]
     st.caption(f"✅ {len(inbox_tasks)} tasks to classify")
     
-    # Show classified tasks table in col1 after classification
-    if 'results' in st.session_state and st.session_state.results:
-        st.markdown("**📋 Classified Tasks Table:**")
-        
-        # Debug info
-        st.write(f"Debug: Found {len(st.session_state.results)} results")
-        
-        # Create markdown table
-        table_rows = ["| Task | Project | Tags | Duration |", "|------|---------|------|----------|"]
-        
-        for result in st.session_state.results:
-            task_name = result.get('task', '')
-            project = result.get('suggestedProject', 'Unknown')
-            tags = ', '.join(result.get('extractedTags', []))
-            duration = result.get('estimatedDuration', 'N/A')
-            
-            table_rows.append(f"| {task_name} | {project} | {tags} | {duration} |")
-        
-        final_table = '\n'.join(table_rows)
-        st.write("🐛 Table markdown:")
-        st.code(final_table)
-        st.markdown(final_table)
-    else:
-        st.info("Run classification to see results table here")
-
 with col2:
     st.subheader("⚙️ Classification")
     
@@ -234,7 +234,23 @@ with col2:
         ["basic"],
         index=0
     )
-    
+
+    # Classify button
+    if st.button("🚀 Classify Tasks", type="primary", use_container_width=True):
+        if not inbox_tasks:
+            st.error("Please add tasks to classify")
+        else:
+            print("🐛 BUTTON CLICKED - Starting classification")
+            with st.spinner("🤖 AI is thinking..."):
+                results, prompt, raw_response = classify_tasks(inbox_tasks, projects, reference_tasks, prompt_variant)
+                print(f"🐛 BUTTON - Got results: {results}")
+                print(f"🐛 BUTTON - Results length: {len(results)}")
+                st.session_state.results = results
+                st.session_state.request_prompt = prompt
+                st.session_state.raw_response = raw_response
+                print("🐛 BUTTON - Session state updated")
+                st.rerun()  # Force app to rerun and show the table
+
     # Show current prompt preview
     if inbox_tasks and projects:
         current_prompt = build_prompt(inbox_tasks, projects, reference_tasks, prompt_variant)
@@ -244,62 +260,7 @@ with col2:
     else:
         st.info("Add tasks and projects to see prompt preview")
     
-    # Classify button
-    if st.button("🚀 Classify Tasks", type="primary", use_container_width=True):
-        if not inbox_tasks:
-            st.error("Please add tasks to classify")
-        else:
-            with st.spinner("🤖 AI is thinking..."):
-                results, prompt, raw_response = classify_tasks(inbox_tasks, projects, reference_tasks, prompt_variant)
-                st.session_state.results = results
-                st.session_state.request_prompt = prompt
-                st.session_state.raw_response = raw_response
-    
-    # Results
-    st.subheader("📊 Results")
-    
-    if 'results' in st.session_state and st.session_state.results:
-        for i, result in enumerate(st.session_state.results):
-            with st.expander(f"📋 {result.get('task', f'Task {i+1}')}"):
-                col_a, col_b = st.columns([2, 1])
-                
-                with col_a:
-                    st.write(f"**Project:** {result.get('suggestedProject', 'Unknown')}")
-                    
-                    if result.get('extractedTags'):
-                        tags_html = " ".join([f'<span style="background-color: rgb(3 155 223); padding: 2px 6px; border-radius: 12px; font-size: 12px;">{tag}</span>'
-                                            for tag in result['extractedTags']])
-                        st.markdown(f"**Tags:** {tags_html}", unsafe_allow_html=True)
-                    
-                    if result.get('estimatedDuration'):
-                        st.write(f"**Duration:** {result['estimatedDuration']}")
-                
-                with col_b:
-                    confidence = result.get('confidence', 0)
-                    color = "🟢" if confidence > 0.8 else "🟡" if confidence > 0.6 else "🔴"
-                    st.metric("Confidence", f"{confidence:.0%}", delta=None)
-                    st.write(color)
-                
-                if result.get('reasoning'):
-                    st.write(f"**Reasoning:** {result['reasoning']}")
 
-# Global Results Table
-st.subheader("📋 Classified Tasks Summary")
-if 'results' in st.session_state and st.session_state.results:
-    # Create markdown table
-    table_rows = ["| Task | Project | Tags | Duration |", "|------|---------|------|----------|"]
-    
-    for result in st.session_state.results:
-        task_name = result.get('task', '')
-        project = result.get('suggestedProject', 'Unknown')
-        tags = ', '.join(result.get('extractedTags', []))
-        duration = result.get('estimatedDuration', 'N/A')
-        
-        table_rows.append(f"| {task_name} | {project} | {tags} | {duration} |")
-    
-    st.markdown('\n'.join(table_rows))
-else:
-    st.info("Run classification to see results table here")
 
 # Request/Response Viewer
 st.subheader("🔍 Request & Response Analysis")
