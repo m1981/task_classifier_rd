@@ -186,7 +186,7 @@ Paint accent wall""",
     inbox_tasks = [line.strip() for line in inbox_text.split('\n') if line.strip()]
     st.caption(f"✅ {len(inbox_tasks)} tasks to classify")
 
-@rewith col2:
+with col2:
     st.subheader("⚙️ Classification")
     
     # Prompt variant selector
