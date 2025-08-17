@@ -40,32 +40,46 @@ def parse_projects(text: str) -> List[Dict]:
             })
     return projects
 
-def classify_tasks(inbox_tasks: List[str], projects: List[Dict], 
+def build_prompt(inbox_tasks: List[str], projects: List[Dict], 
+                reference_tasks: List[Dict], prompt_variant: str) -> str:
+    """Build prompt based on variant - extracted for reuse"""
+    if prompt_variant == "basic":
+        projects_list = '\n'.join([f"  - {p['subject']}" for p in projects])
+        tasks_list = '\n'.join([f"  - {task}" for task in inbox_tasks])
+
+        return f"""
+Act as my personal project assisntant and help me organize my task lists.
+
+Available projects:
+{projects_list}
+
+Classify these tasks:
+{tasks_list}
+
+Available tags: 
+  physical, digial
+  out, out  - (if physical) 
+  need-tools, need-material (if not bare handed: specific for repair, decoration, gardent, etc.)
+
+Response format:
+
+For each task, provide on separate lines:
+TASK: [original task]
+PROJECT: [best matching project]
+CONFIDENCE: [0.0-1.0]
+TAGS: [comma-separated tags]
+DURATION: [time estimate]
+REASONING: [brief explanation]
+---
+"""
+
+def classify_tasks(inbox_tasks: List[str], projects: List[Dict],
                   reference_tasks: List[Dict], prompt_variant: str) -> Tuple[List[Dict], str, str]:
     """Classify tasks using Anthropic Claude"""
     client = get_anthropic_client()
     
-    # Build prompt based on variant
-    if prompt_variant == "basic":
-        prompt = f"""
-        Available projects: {[p['subject'] for p in projects]}
-        Available tags: 
-          physical, digial
-          out, out  - (if physical) 
-          need-tools, need-material (specific for repair, decoration, gardent, etc.)
-        
-        Classify these tasks: {inbox_tasks}
-        
-        For each task, provide on separate lines:
-        TASK: [original task]
-        PROJECT: [best matching project]
-        CONFIDENCE: [0.0-1.0]
-        TAGS: [comma-separated tags]
-        DURATION: [time estimate]
-        REASONING: [brief explanation]
-        ---
-        """
-
+    prompt = build_prompt(inbox_tasks, projects, reference_tasks, prompt_variant)
+    
     with st.expander("👁️ View Current Prompt", expanded=False):
         st.code(prompt.strip(), language="text")
         st.caption(f"Strategy: {prompt_variant} | Characters: {len(prompt)}")
@@ -88,23 +102,23 @@ def parse_multiline_response(text: str) -> List[Dict]:
     """Parse multiline text response into structured data"""
     results = []
     current_task = {}
-    
+
     for line in text.strip().split('\n'):
         line = line.strip()
         if not line:
             continue
-            
+
         if line == "---":
             if current_task:
                 results.append(current_task)
                 current_task = {}
             continue
-            
+
         if ':' in line:
             key, value = line.split(':', 1)
             key = key.strip().lower()
             value = value.strip()
-            
+
             if key == "task":
                 current_task['task'] = value
             elif key == "project":
@@ -120,11 +134,11 @@ def parse_multiline_response(text: str) -> List[Dict]:
                 current_task['estimatedDuration'] = value
             elif key == "reasoning":
                 current_task['reasoning'] = value
-    
+
     # Add last task if exists
     if current_task:
         results.append(current_task)
-    
+
     return results
 
 # Main UI
@@ -195,6 +209,15 @@ with col2:
         ["basic"],
         index=0
     )
+    
+    # Show current prompt preview
+    if inbox_tasks and projects:
+        current_prompt = build_prompt(inbox_tasks, projects, reference_tasks, prompt_variant)
+        with st.expander("👁️ Current Prompt Preview", expanded=True):
+            st.code(current_prompt.strip(), language="text")
+            st.caption(f"Strategy: {prompt_variant} | Characters: {len(current_prompt)}")
+    else:
+        st.info("Add tasks and projects to see prompt preview")
     
     # Classify button
     if st.button("🚀 Classify Tasks", type="primary", use_container_width=True):
