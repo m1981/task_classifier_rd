@@ -199,6 +199,31 @@ Paint accent wall""",
     
     inbox_tasks = [line.strip() for line in inbox_text.split('\n') if line.strip()]
     st.caption(f"✅ {len(inbox_tasks)} tasks to classify")
+    
+    # Show classified tasks table in col1 after classification
+    if 'results' in st.session_state and st.session_state.results:
+        st.markdown("**📋 Classified Tasks Table:**")
+        
+        # Debug info
+        st.write(f"Debug: Found {len(st.session_state.results)} results")
+        
+        # Create markdown table
+        table_rows = ["| Task | Project | Tags | Duration |", "|------|---------|------|----------|"]
+        
+        for result in st.session_state.results:
+            task_name = result.get('task', '')
+            project = result.get('suggestedProject', 'Unknown')
+            tags = ', '.join(result.get('extractedTags', []))
+            duration = result.get('estimatedDuration', 'N/A')
+            
+            table_rows.append(f"| {task_name} | {project} | {tags} | {duration} |")
+        
+        final_table = '\n'.join(table_rows)
+        st.write("🐛 Table markdown:")
+        st.code(final_table)
+        st.markdown(final_table)
+    else:
+        st.info("Run classification to see results table here")
 
 with col2:
     st.subheader("⚙️ Classification")
@@ -257,6 +282,24 @@ with col2:
                 
                 if result.get('reasoning'):
                     st.write(f"**Reasoning:** {result['reasoning']}")
+
+# Global Results Table
+st.subheader("📋 Classified Tasks Summary")
+if 'results' in st.session_state and st.session_state.results:
+    # Create markdown table
+    table_rows = ["| Task | Project | Tags | Duration |", "|------|---------|------|----------|"]
+    
+    for result in st.session_state.results:
+        task_name = result.get('task', '')
+        project = result.get('suggestedProject', 'Unknown')
+        tags = ', '.join(result.get('extractedTags', []))
+        duration = result.get('estimatedDuration', 'N/A')
+        
+        table_rows.append(f"| {task_name} | {project} | {tags} | {duration} |")
+    
+    st.markdown('\n'.join(table_rows))
+else:
+    st.info("Run classification to see results table here")
 
 # Request/Response Viewer
 st.subheader("🔍 Request & Response Analysis")
