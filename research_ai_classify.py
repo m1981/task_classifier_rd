@@ -43,14 +43,28 @@ def parse_projects(text: str) -> List[Dict]:
 def build_prompt(inbox_tasks: List[str], projects: List[Dict], 
                 reference_tasks: List[Dict], prompt_variant: str) -> str:
     """Build prompt based on variant - extracted for reuse"""
+    
+    # Shared components
+    projects_list = '\n'.join([f"  - {p['subject']}" for p in projects])
+    tasks_list = '\n'.join([f"  - {task}" for task in inbox_tasks])
+    
+    # Variant-specific guidance
     if prompt_variant == "basic":
-        projects_list = '\n'.join([f"  - {p['subject']}" for p in projects])
-        tasks_list = '\n'.join([f"  - {task}" for task in inbox_tasks])
-
-        return f"""
-Act as my personal advisor and assistant. I need you to help me
+        guidance = """Act as my personal advisor and assistant. I need you to help me
 organize my tasks. Please be focused to detials and understan my tagging system and projects scope.
-Please first explain me how do you understnad my task and my tagging system.
+Please first explain me how do you understnad my task and my tagging system."""
+    
+    elif prompt_variant == "diy_renovation":
+        guidance = """Act as an experienced DIY home renovation expert and project manager. 
+You specialize in breaking down home improvement tasks, understanding material requirements, 
+tool needs, and realistic time estimates for DIY projects. Focus on safety considerations, 
+skill level requirements, and logical project sequencing."""
+    
+    else:
+        guidance = "Act as a helpful task organizer."
+    
+    # Shared prompt structure
+    return f"""{guidance}
 
 Available projects:
 {projects_list}
@@ -63,20 +77,20 @@ Available tags:
   out, out  - (if physical) 
   need-material (if I migh have to buy material, ingredients, etc.) 
   need-tools (if not bare handed then require tools)
+  buy (item goes to buy list)
 
 Response format:
 
 For each task, provide on separate lines:
 TASK: [original task]
-PROJECT: [best matching project]
+PROJECT: [best matching project OR unmatched]
 CONFIDENCE: [0.0-1.0]
 TAGS: [comma-separated tags]
 DURATION: [time estimate]
 REASONING: [brief explanation]
 ---
 TASK: ...
-PROJECT: ...
-"""
+PROJECT: ..."""
 
 def classify_tasks(inbox_tasks: List[str], projects: List[Dict],
                   reference_tasks: List[Dict], prompt_variant: str) -> Tuple[List[Dict], str, str]:
@@ -113,7 +127,7 @@ def parse_multiline_response(text: str) -> List[Dict]:
         if not line:
             continue
 
-        if line == "---":
+        if line == "---" or line == "":
             if current_task:
                 results.append(current_task)
                 current_task = {}
@@ -200,9 +214,13 @@ with col1:
     st.markdown("**Current Projects** (pid;subject)")
     projects_text = st.text_area(
         "projects",
-        value="""3;Birthday party
-5;Repair my scooter
-6;Dining room redecorated""",
+        value=
+"""
+1;Shopipng list Castorama
+2;Shopping list Rossman
+3;Mam zdrowe ciało i kondycję
+4;Spędzamy razem fajnie czas
+""",
         height=80,
         label_visibility="collapsed"
     )
@@ -215,9 +233,14 @@ with col1:
     st.markdown("**Inbox Tasks** (one per line)")
     inbox_text = st.text_area(
         "inbox",
-        value="""Buy decorations
-Fix brake cable
-Paint accent wall""",
+        value=
+"""
+Plyn do zębów
+Kupię filtr do ekspresy Philips
+Zabawy na drukarce 3D zaplanuję
+[SlickGPT] https://slickgpt.vercel.app/
+Co znaczy being vulnerable i czy warto takim być
+""",
         height=80,
         label_visibility="collapsed"
     )
@@ -231,7 +254,7 @@ with col2:
     # Prompt variant selector
     prompt_variant = st.selectbox(
         "Prompt Strategy",
-        ["basic"],
+        ["basic", "diy_renovation"],
         index=0
     )
 
@@ -306,11 +329,3 @@ with st.sidebar:
         st.metric("Avg Confidence", f"{avg_confidence:.1%}")
         st.metric("High Confidence", sum(1 for r in results if r.get('confidence', 0) > 0.8))
         
-        # Export button
-        if st.button("📥 Export Results"):
-            st.download_button(
-                "Download JSON",
-                data=json.dumps(results, indent=2),
-                file_name="classification_results.json",
-                mime="application/json"
-            )
