@@ -65,8 +65,24 @@ if 'response' in st.session_state and st.session_state.response.results:
         
         # Show problematic tasks for review
         if low_conf or unmatched:
-            with st.expander(f"🔍 Review Needed ({len(low_conf + unmatched)} tasks)", expanded=False):
-                for result in low_conf + unmatched:
+            print(f"🔍 DEBUG: Showing review section with {len(low_conf)} low conf + {len(unmatched)} unmatched")
+            
+            # Combine and deduplicate by task name
+            review_tasks = low_conf + unmatched
+            seen_tasks = set()
+            unique_tasks = []
+            
+            for result in review_tasks:
+                if result.task not in seen_tasks:
+                    seen_tasks.add(result.task)
+                    unique_tasks.append(result)
+                else:
+                    print(f"🔍 DEBUG: Skipping duplicate task: {result.task}")
+            
+            print(f"🔍 DEBUG: After dedup: {len(unique_tasks)} unique tasks")
+            
+            with st.expander(f"🔍 Review Needed ({len(unique_tasks)} tasks)", expanded=False):
+                for result in unique_tasks:
                     st.write(f"**{result.task}**")
                     st.write(f"- Suggested: {result.suggested_project} ({result.confidence:.1%})")
                     if result.alternative_projects:
@@ -147,6 +163,30 @@ with col1:
             dataset.projects = new_projects
             dataset.inbox_tasks = new_inbox
             st.session_state.dataset = dataset
+        
+        # Save dataset option
+        st.markdown("---")
+        col_save1, col_save2 = st.columns([2, 1])
+        
+        with col_save1:
+            new_dataset_name = st.text_input(
+                "Dataset name", 
+                value=selected_dataset,
+                placeholder="my_custom_dataset"
+            )
+        
+        with col_save2:
+            if st.button("💾 Save as Dataset", use_container_width=True):
+                if new_dataset_name.strip():
+                    try:
+                        dataset_manager.save_dataset(new_dataset_name.strip(), dataset)
+                        st.success(f"✅ Saved as '{new_dataset_name}'")
+                        # Refresh available datasets
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Save failed: {e}")
+                else:
+                    st.error("Please enter a dataset name")
 
 with col2:
     if 'dataset' in st.session_state:

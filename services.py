@@ -184,6 +184,7 @@ PROJECT: ..."""
 class ResponseParser:
     def parse(self, raw_response: str) -> List[ClassificationResult]:
         """Parse multiline text response into structured data"""
+        print(f"🔍 DEBUG: Parsing response with {len(raw_response)} characters")
         results = []
         current_task = {}
 
@@ -194,6 +195,7 @@ class ResponseParser:
 
             if line == "---":
                 if current_task:
+                    print(f"🔍 DEBUG: Adding task: {current_task.get('task', 'UNKNOWN')}")
                     results.append(self._create_result(current_task))
                     current_task = {}
                 continue
@@ -223,8 +225,13 @@ class ResponseParser:
 
         # Add last task if exists
         if current_task:
+            print(f"🔍 DEBUG: Adding final task: {current_task.get('task', 'UNKNOWN')}")
             results.append(self._create_result(current_task))
 
+        print(f"🔍 DEBUG: Parsed {len(results)} total results")
+        for i, result in enumerate(results):
+            print(f"🔍 DEBUG: Result {i}: {result.task} -> {result.suggested_project}")
+        
         return results
     
     def _parse_confidence(self, value: str) -> float:
@@ -263,8 +270,14 @@ class TaskClassifier:
     def classify(self, request: ClassificationRequest) -> ClassificationResponse:
         """Classify tasks using AI and return structured response"""
         prompt = self.prompt_builder.build_prompt(request)
+        print(f"🔍 DEBUG: Sending prompt with {len(prompt)} characters")
+        print(f"🔍 DEBUG: Classifying {len(request.dataset.inbox_tasks)} inbox tasks")
+        
         raw_response = self._call_api(prompt)
+        print(f"🔍 DEBUG: Received response with {len(raw_response)} characters")
+        
         results = self.parser.parse(raw_response)
+        print(f"🔍 DEBUG: Classification complete: {len(results)} results")
         
         return ClassificationResponse(
             results=results,
