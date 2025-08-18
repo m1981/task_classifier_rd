@@ -1,0 +1,8 @@
+21;Send email to client;digital;15min
+22;Buy groceries for week;physical,buy;1h
+23;Schedule dentist appointment;digital;10min
+24;Organize desk drawer;physical;30min
+25;Review monthly budget;digital;45min
+26;Call insurance company;digital;20min
+27;Pick up dry cleaning;physical,out;30min
+28;Update resume;digital;2h

@@ -1,0 +1,270 @@
+from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import List
+import json
+from models import DatasetContent, ReferenceTask, Project, ClassificationResult, ClassificationRequest, ClassificationResponse
+
+class DatasetManager:
+    def __init__(self, base_path: Path = Path("data/datasets")):
+        self.base_path = base_path
+        self.base_path.mkdir(parents=True, exist_ok=True)
+    
+    def load_dataset(self, name: str) -> DatasetContent:
+        """Load dataset from files in data/datasets/{name}/"""
+        dataset_path = self.base_path / name
+        
+        if not dataset_path.exists():
+            raise FileNotFoundError(f"Dataset '{name}' not found at {dataset_path}")
+        
+        # Load reference tasks
+        reference_tasks = self._load_reference_tasks(dataset_path / "reference_tasks.txt")
+        
+        # Load projects
+        projects = self._load_projects(dataset_path / "projects.txt")
+        
+        # Load inbox tasks
+        inbox_tasks = self._load_inbox_tasks(dataset_path / "inbox_tasks.txt")
+        
+        return DatasetContent(
+            reference_tasks=reference_tasks,
+            projects=projects,
+            inbox_tasks=inbox_tasks
+        )
+    
+    def save_dataset(self, name: str, content: DatasetContent) -> None:
+        """Save dataset to files in data/datasets/{name}/"""
+        dataset_path = self.base_path / name
+        dataset_path.mkdir(parents=True, exist_ok=True)
+        
+        # Save reference tasks
+        self._save_reference_tasks(dataset_path / "reference_tasks.txt", content.reference_tasks)
+        
+        # Save projects
+        self._save_projects(dataset_path / "projects.txt", content.projects)
+        
+        # Save inbox tasks
+        self._save_inbox_tasks(dataset_path / "inbox_tasks.txt", content.inbox_tasks)
+    
+    def list_datasets(self) -> List[str]:
+        """List available dataset names"""
+        if not self.base_path.exists():
+            return []
+        return [d.name for d in self.base_path.iterdir() if d.is_dir()]
+    
+    def _load_reference_tasks(self, file_path: Path) -> List[ReferenceTask]:
+        """Parse reference tasks from CSV-like format: id;subject;tags;duration"""
+        if not file_path.exists():
+            return []
+        
+        tasks = []
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                
+                parts = line.split(';')
+                if len(parts) >= 3:
+                    tasks.append(ReferenceTask(
+                        id=parts[0].strip(),
+                        subject=parts[1].strip(),
+                        tags=[t.strip() for t in parts[2].split(',')],
+                        duration=parts[3].strip() if len(parts) > 3 else None
+                    ))
+        return tasks
+    
+    def _load_projects(self, file_path: Path) -> List[Project]:
+        """Parse projects from CSV-like format: pid;subject"""
+        if not file_path.exists():
+            return []
+        
+        projects = []
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                
+                parts = line.split(';')
+                if len(parts) >= 2:
+                    projects.append(Project(
+                        pid=parts[0].strip(),
+                        subject=parts[1].strip()
+                    ))
+        return projects
+    
+    def _load_inbox_tasks(self, file_path: Path) -> List[str]:
+        """Load inbox tasks, one per line"""
+        if not file_path.exists():
+            return []
+        
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return [line.strip() for line in f if line.strip()]
+    
+    def _save_reference_tasks(self, file_path: Path, tasks: List[ReferenceTask]) -> None:
+        """Save reference tasks in CSV-like format"""
+        with open(file_path, 'w', encoding='utf-8') as f:
+            for task in tasks:
+                tags_str = ','.join(task.tags)
+                duration_str = task.duration or ''
+                f.write(f"{task.id};{task.subject};{tags_str};{duration_str}\n")
+    
+    def _save_projects(self, file_path: Path, projects: List[Project]) -> None:
+        """Save projects in CSV-like format"""
+        with open(file_path, 'w', encoding='utf-8') as f:
+            for project in projects:
+                f.write(f"{project.pid};{project.subject}\n")
+    
+    def _save_inbox_tasks(self, file_path: Path, tasks: List[str]) -> None:
+        """Save inbox tasks, one per line"""
+        with open(file_path, 'w', encoding='utf-8') as f:
+            for task in tasks:
+                f.write(f"{task}\n")
+
+class PromptBuilder:
+    def __init__(self):
+        self._guidance_variants = {
+            "basic": """Act as my personal advisor and assistant. I need you to help me
+organize my tasks. Please be focused to detials and understan my tagging system and projects scope.
+Please first explain me how do you understnad my task and my tagging system.""",
+            
+            "diy_renovation": """Act as an experienced DIY home renovation expert and project manager. 
+You specialize in breaking down home improvement tasks, understanding material requirements, 
+tool needs, and realistic time estimates for DIY projects. Focus on safety considerations, 
+skill level requirements, and logical project sequencing."""
+        }
+    
+    def build_prompt(self, request: ClassificationRequest) -> str:
+        """Build complete prompt from request"""
+        guidance = self._get_guidance(request.prompt_variant)
+        projects_list = self._format_projects(request.dataset.projects)
+        tasks_list = self._format_inbox_tasks(request.dataset.inbox_tasks)
+        
+        return f"""{guidance}
+
+Available projects:
+{projects_list}
+
+Classify these tasks:
+{tasks_list}
+
+Available tags: 
+  physical, digial
+  out, out  - (if physical) 
+  need-material (if I migh have to buy material, ingredients, etc.) 
+  need-tools (if not bare handed then require tools)
+  buy (item goes to buy list)
+
+Response format:
+
+For each task, provide on separate lines:
+TASK: [original task]
+PROJECT: [best matching project OR unmatched]
+CONFIDENCE: [0.0-1.0]
+TAGS: [comma-separated tags]
+DURATION: [time estimate]
+REASONING: [brief explanation]
+---
+TASK: ...
+PROJECT: ..."""
+    
+    def _get_guidance(self, variant: str) -> str:
+        """Get guidance text for prompt variant"""
+        return self._guidance_variants.get(variant, "Act as a helpful task organizer.")
+    
+    def _format_projects(self, projects: List[Project]) -> str:
+        """Format projects list for prompt"""
+        return '\n'.join([f"  - {p.subject}" for p in projects])
+    
+    def _format_inbox_tasks(self, tasks: List[str]) -> str:
+        """Format inbox tasks for prompt"""
+        return '\n'.join([f"  - {task}" for task in tasks])
+
+class ResponseParser:
+    def parse(self, raw_response: str) -> List[ClassificationResult]:
+        """Parse multiline text response into structured data"""
+        results = []
+        current_task = {}
+
+        for line in raw_response.strip().split('\n'):
+            line = line.strip()
+            if not line:
+                continue
+
+            if line == "---" or line == "":
+                if current_task:
+                    results.append(self._create_result(current_task))
+                    current_task = {}
+                continue
+
+            if ':' in line:
+                key, value = line.split(':', 1)
+                key = key.strip().lower()
+                value = value.strip()
+
+                if key == "task":
+                    current_task['task'] = value
+                elif key == "project":
+                    current_task['suggested_project'] = value
+                elif key == "confidence":
+                    current_task['confidence'] = self._parse_confidence(value)
+                elif key == "tags":
+                    current_task['extracted_tags'] = [tag.strip() for tag in value.split(',') if tag.strip()]
+                elif key == "duration":
+                    current_task['estimated_duration'] = value
+                elif key == "reasoning":
+                    current_task['reasoning'] = value
+
+        # Add last task if exists
+        if current_task:
+            results.append(self._create_result(current_task))
+
+        return results
+    
+    def _parse_confidence(self, value: str) -> float:
+        """Parse confidence value with error handling"""
+        try:
+            return float(value)
+        except ValueError:
+            return 0.5
+    
+    def _create_result(self, task_data: dict) -> ClassificationResult:
+        """Create ClassificationResult with defaults for missing fields"""
+        return ClassificationResult(
+            task=task_data.get('task', ''),
+            suggested_project=task_data.get('suggested_project', 'unmatched'),
+            confidence=task_data.get('confidence', 0.5),
+            extracted_tags=task_data.get('extracted_tags', []),
+            estimated_duration=task_data.get('estimated_duration'),
+            reasoning=task_data.get('reasoning', '')
+        )
+
+class TaskClassifier:
+    def __init__(self, client, prompt_builder: PromptBuilder, parser: ResponseParser):
+        self.client = client
+        self.prompt_builder = prompt_builder
+        self.parser = parser
+    
+    def classify(self, request: ClassificationRequest) -> ClassificationResponse:
+        """Classify tasks using AI and return structured response"""
+        prompt = self.prompt_builder.build_prompt(request)
+        raw_response = self._call_api(prompt)
+        results = self.parser.parse(raw_response)
+        
+        return ClassificationResponse(
+            results=results,
+            prompt_used=prompt,
+            raw_response=raw_response
+        )
+    
+    def _call_api(self, prompt: str) -> str:
+        """Call Anthropic API with error handling"""
+        try:
+            response = self.client.messages.create(
+                model="claude-3-5-haiku-latest",
+                max_tokens=2000,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            return response.content[0].text
+        except Exception as e:
+            raise RuntimeError(f"API call failed: {e}")

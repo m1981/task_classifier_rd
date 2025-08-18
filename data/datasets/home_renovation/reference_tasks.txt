@@ -1,0 +1,8 @@
+13;Mount electrical socket;physical,electrical,need-tools;1h
+14;Retouch stencils on a wall;physical,painting,need-material;1h
+15;Create wall shelf;physical,carpentry,need-tools,need-material;2h
+16;Install bathroom faucet;physical,plumbing,need-tools;45min
+17;Paint bedroom walls;physical,painting,need-material,need-tools;4h
+18;Replace door handle;physical,hardware,need-tools;30min
+19;Tile kitchen backsplash;physical,tiling,need-material,need-tools;6h
+20;Fix squeaky floorboard;physical,carpentry,need-tools;1h
