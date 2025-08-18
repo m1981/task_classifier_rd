@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional
 from pathlib import Path
 
@@ -22,6 +22,11 @@ class ClassificationResult:
     extracted_tags: List[str]
     estimated_duration: Optional[str] = None
     reasoning: str = ""
+    alternative_projects: List[str] = field(default_factory=list)
+    
+    def __post_init__(self):
+        if self.alternative_projects is None:
+            self.alternative_projects = []
 
 @dataclass
 class DatasetContent:

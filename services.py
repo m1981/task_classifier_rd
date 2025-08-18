@@ -164,6 +164,7 @@ CONFIDENCE: [0.0-1.0]
 TAGS: [comma-separated tags]
 DURATION: [time estimate]
 REASONING: [brief explanation]
+ALTERNATIVES: [semicolon-separated list of other potential projects, or 'none']
 ---
 TASK: ...
 PROJECT: ..."""
@@ -191,7 +192,7 @@ class ResponseParser:
             if not line:
                 continue
 
-            if line == "---" or line == "":
+            if line == "---":
                 if current_task:
                     results.append(self._create_result(current_task))
                     current_task = {}
@@ -214,6 +215,11 @@ class ResponseParser:
                     current_task['estimated_duration'] = value
                 elif key == "reasoning":
                     current_task['reasoning'] = value
+                elif key == "alternatives":
+                    if value.lower() != 'none':
+                        current_task['alternative_projects'] = [alt.strip() for alt in value.split(';') if alt.strip()]
+                    else:
+                        current_task['alternative_projects'] = []
 
         # Add last task if exists
         if current_task:
@@ -226,17 +232,26 @@ class ResponseParser:
         try:
             return float(value)
         except ValueError:
+            print(f"  -> Failed to parse confidence '{value}', using 0.5")
             return 0.5
     
     def _create_result(self, task_data: dict) -> ClassificationResult:
         """Create ClassificationResult with defaults for missing fields"""
+        confidence = task_data.get('confidence', 0.5)
+        project = task_data.get('suggested_project', 'unmatched')
+        
+        # Auto-mark low confidence as unmatched
+        if confidence < 0.6:
+            project = 'unmatched'
+        
         return ClassificationResult(
             task=task_data.get('task', ''),
-            suggested_project=task_data.get('suggested_project', 'unmatched'),
-            confidence=task_data.get('confidence', 0.5),
+            suggested_project=project,
+            confidence=confidence,
             extracted_tags=task_data.get('extracted_tags', []),
             estimated_duration=task_data.get('estimated_duration'),
-            reasoning=task_data.get('reasoning', '')
+            reasoning=task_data.get('reasoning', ''),
+            alternative_projects=task_data.get('alternative_projects', [])
         )
 
 class TaskClassifier:

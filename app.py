@@ -2,7 +2,7 @@
 import streamlit as st
 import anthropic
 from services import DatasetManager, PromptBuilder, ResponseParser, TaskClassifier
-from models import ClassificationRequest
+from models import ClassificationRequest, Project
 
 st.set_page_config(page_title="AI Task Classification", layout="wide")
 
@@ -23,29 +23,57 @@ if 'response' in st.session_state and st.session_state.response.results:
     st.subheader("📊 Results")
     response = st.session_state.response
     
-    # Create results table
-    table_rows = ["| Task | Project | Confidence | Tags | Duration |", 
-                 "|------|---------|------------|------|----------|"]
-    
-    for result in response.results:
-        tags = ', '.join(result.extracted_tags)
-        duration = result.estimated_duration or 'N/A'
-        confidence = f"{result.confidence:.1%}"
-        table_rows.append(f"| {result.task} | {result.suggested_project} | {confidence} | {tags} | {duration} |")
-    
-    st.markdown('\n'.join(table_rows))
-    
-    # Metrics
-    avg_confidence = sum(r.confidence for r in response.results) / len(response.results)
-    high_confidence = sum(1 for r in response.results if r.confidence > 0.8)
-    
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Avg Confidence", f"{avg_confidence:.1%}")
-    with col2:
-        st.metric("High Confidence", high_confidence)
-    with col3:
-        st.metric("Total Tasks", len(response.results))
+    # Enhanced results display with edge case handling
+    if response.results:
+        # Categorize results by confidence
+        high_conf = [r for r in response.results if r.confidence >= 0.8]
+        medium_conf = [r for r in response.results if 0.6 <= r.confidence < 0.8]
+        low_conf = [r for r in response.results if r.confidence < 0.6]
+        unmatched = [r for r in response.results if r.suggested_project == 'unmatched']
+        
+        # Show confidence breakdown
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("✅ High Confidence", len(high_conf), help="80%+ confidence")
+        with col2:
+            st.metric("⚠️ Medium Confidence", len(medium_conf), help="60-80% confidence")
+        with col3:
+            st.metric("❓ Low Confidence", len(low_conf), help="<60% confidence")
+        with col4:
+            st.metric("🔍 Unmatched", len(unmatched), help="No good project match")
+        
+        # Results table with color coding
+        table_rows = ["| Task | Project | Confidence | Tags | Duration | Status |", 
+                     "|------|---------|------------|------|----------|--------|"]
+        
+        for result in response.results:
+            tags = ', '.join(result.extracted_tags)
+            duration = result.estimated_duration or 'N/A'
+            confidence = f"{result.confidence:.1%}"
+            
+            # Status indicator
+            if result.confidence >= 0.8:
+                status = "✅ Good"
+            elif result.confidence >= 0.6:
+                status = "⚠️ Review"
+            else:
+                status = "❓ Unclear"
+                
+            table_rows.append(f"| {result.task} | {result.suggested_project} | {confidence} | {tags} | {duration} | {status} |")
+        
+        st.markdown('\n'.join(table_rows))
+        
+        # Show problematic tasks for review
+        if low_conf or unmatched:
+            with st.expander(f"🔍 Review Needed ({len(low_conf + unmatched)} tasks)", expanded=False):
+                for result in low_conf + unmatched:
+                    st.write(f"**{result.task}**")
+                    st.write(f"- Suggested: {result.suggested_project} ({result.confidence:.1%})")
+                    if result.alternative_projects:
+                        alternatives = ', '.join(result.alternative_projects)
+                        st.write(f"- Alternatives: {alternatives}")
+                    st.write(f"- Reasoning: {result.reasoning}")
+                    st.write("---")
 else:
     st.info("👆 Load a dataset and run classification to see results table here")
 
