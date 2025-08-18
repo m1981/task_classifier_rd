@@ -1,3 +1,4 @@
+
 import streamlit as st
 import anthropic
 from services import DatasetManager, PromptBuilder, ResponseParser, TaskClassifier
@@ -16,8 +17,6 @@ def get_services():
     return dataset_manager, classifier
 
 dataset_manager, classifier = get_services()
-
-st.title("🔬 AI Task Classification Tool")
 
 # Results table at top (if available)
 if 'response' in st.session_state and st.session_state.response.results:
@@ -54,8 +53,6 @@ else:
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.subheader("📁 Dataset")
-    
     # Dataset selector
     available_datasets = dataset_manager.list_datasets()
     if available_datasets:
@@ -86,19 +83,44 @@ with col1:
         with col_c:
             st.metric("Inbox", len(dataset.inbox_tasks))
         
-        # Show projects
-        with st.expander("📋 Projects", expanded=False):
-            for project in dataset.projects:
-                st.write(f"- {project.subject}")
+        # Editable Projects
+        st.markdown("**Projects** (pid;subject)")
+        projects_text = '\n'.join([f"{p.pid};{p.subject}" for p in dataset.projects])
+        edited_projects = st.text_area(
+            "projects_editor",
+            value=projects_text,
+            height=100,
+            label_visibility="collapsed"
+        )
         
-        # Show inbox tasks
-        with st.expander("📥 Inbox Tasks", expanded=False):
-            for task in dataset.inbox_tasks:
-                st.write(f"- {task}")
+        # Editable Inbox Tasks
+        st.markdown("**Inbox Tasks** (one per line)")
+        inbox_text = '\n'.join(dataset.inbox_tasks)
+        edited_inbox = st.text_area(
+            "inbox_editor", 
+            value=inbox_text,
+            height=120,
+            label_visibility="collapsed"
+        )
+        
+        # Update dataset in session state when text changes
+        if edited_projects != projects_text or edited_inbox != inbox_text:
+            # Parse projects
+            new_projects = []
+            for line in edited_projects.strip().split('\n'):
+                if line.strip() and ';' in line:
+                    parts = line.split(';', 1)
+                    new_projects.append(Project(pid=parts[0].strip(), subject=parts[1].strip()))
+            
+            # Parse inbox tasks
+            new_inbox = [line.strip() for line in edited_inbox.split('\n') if line.strip()]
+            
+            # Update dataset
+            dataset.projects = new_projects
+            dataset.inbox_tasks = new_inbox
+            st.session_state.dataset = dataset
 
 with col2:
-    st.subheader("⚙️ Classification")
-    
     if 'dataset' in st.session_state:
         dataset = st.session_state.dataset
         
