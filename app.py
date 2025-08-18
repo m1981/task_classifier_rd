@@ -19,45 +19,94 @@ dataset_manager, classifier = get_services()
 
 st.title("🔬 AI Task Classification Tool")
 
-# Dataset selector
-col1, col2 = st.columns([3, 1])
-with col1:
-    available_datasets = dataset_manager.list_datasets()
-    if available_datasets:
-        selected_dataset = st.selectbox("📁 Dataset", available_datasets)
-    else:
-        st.warning("No datasets found. Create data/datasets/{name}/ folders first.")
-        st.stop()
-
-with col2:
-    if st.button("📂 Load Dataset"):
-        try:
-            dataset = dataset_manager.load_dataset(selected_dataset)
-            st.session_state.dataset = dataset
-            st.success(f"Loaded {selected_dataset}")
-            st.rerun()
-        except Exception as e:
-            st.error(f"Failed to load: {e}")
-
-# Show dataset info if loaded
-if 'dataset' in st.session_state:
-    dataset = st.session_state.dataset
+# Results table at top (if available)
+if 'response' in st.session_state and st.session_state.response.results:
+    st.subheader("📊 Results")
+    response = st.session_state.response
+    
+    # Create results table
+    table_rows = ["| Task | Project | Confidence | Tags | Duration |", 
+                 "|------|---------|------------|------|----------|"]
+    
+    for result in response.results:
+        tags = ', '.join(result.extracted_tags)
+        duration = result.estimated_duration or 'N/A'
+        confidence = f"{result.confidence:.1%}"
+        table_rows.append(f"| {result.task} | {result.suggested_project} | {confidence} | {tags} | {duration} |")
+    
+    st.markdown('\n'.join(table_rows))
+    
+    # Metrics
+    avg_confidence = sum(r.confidence for r in response.results) / len(response.results)
+    high_confidence = sum(1 for r in response.results if r.confidence > 0.8)
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Reference Tasks", len(dataset.reference_tasks))
+        st.metric("Avg Confidence", f"{avg_confidence:.1%}")
     with col2:
-        st.metric("Projects", len(dataset.projects))
+        st.metric("High Confidence", high_confidence)
     with col3:
-        st.metric("Inbox Tasks", len(dataset.inbox_tasks))
+        st.metric("Total Tasks", len(response.results))
+else:
+    st.info("👆 Load a dataset and run classification to see results table here")
+
+# Two column layout
+col1, col2 = st.columns([1, 1])
+
+with col1:
+    st.subheader("📁 Dataset")
     
-    # Classification controls
-    col1, col2 = st.columns([2, 1])
-    with col1:
+    # Dataset selector
+    available_datasets = dataset_manager.list_datasets()
+    if available_datasets:
+        selected_dataset = st.selectbox("Select Dataset", available_datasets)
+        
+        if st.button("📂 Load Dataset", use_container_width=True):
+            try:
+                dataset = dataset_manager.load_dataset(selected_dataset)
+                st.session_state.dataset = dataset
+                st.success(f"✅ Loaded {selected_dataset}")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Failed to load: {e}")
+    else:
+        st.warning("No datasets found. Create data/datasets/{name}/ folders first.")
+        st.stop()
+    
+    # Show dataset info if loaded
+    if 'dataset' in st.session_state:
+        dataset = st.session_state.dataset
+        
+        st.markdown("**Dataset Contents:**")
+        col_a, col_b, col_c = st.columns(3)
+        with col_a:
+            st.metric("Reference", len(dataset.reference_tasks))
+        with col_b:
+            st.metric("Projects", len(dataset.projects))
+        with col_c:
+            st.metric("Inbox", len(dataset.inbox_tasks))
+        
+        # Show projects
+        with st.expander("📋 Projects", expanded=False):
+            for project in dataset.projects:
+                st.write(f"- {project.subject}")
+        
+        # Show inbox tasks
+        with st.expander("📥 Inbox Tasks", expanded=False):
+            for task in dataset.inbox_tasks:
+                st.write(f"- {task}")
+
+with col2:
+    st.subheader("⚙️ Classification")
+    
+    if 'dataset' in st.session_state:
+        dataset = st.session_state.dataset
+        
+        # Prompt variant selector
         prompt_variant = st.selectbox("Prompt Strategy", ["basic", "diy_renovation"])
-    
-    with col2:
-        if st.button("🚀 Classify Tasks", type="primary"):
+        
+        # Classify button
+        if st.button("🚀 Classify Tasks", type="primary", use_container_width=True):
             if not dataset.inbox_tasks:
                 st.error("No inbox tasks to classify")
             else:
@@ -69,51 +118,35 @@ if 'dataset' in st.session_state:
                         )
                         response = classifier.classify(request)
                         st.session_state.response = response
-                        st.success(f"Classified {len(response.results)} tasks")
+                        st.success(f"✅ Classified {len(response.results)} tasks")
                         st.rerun()
                     except Exception as e:
                         st.error(f"Classification failed: {e}")
+        
+        # Show current prompt preview
+        builder = PromptBuilder()
+        request = ClassificationRequest(dataset=dataset, prompt_variant=prompt_variant)
+        current_prompt = builder.build_prompt(request)
+        
+        with st.expander("👁️ Current Prompt Preview", expanded=True):
+            st.code(current_prompt.strip(), language="text")
+            st.caption(f"Strategy: {prompt_variant} | Characters: {len(current_prompt)}")
+    else:
+        st.info("👆 Load a dataset first to see classification options")
 
-# Show results
+# Debug section at bottom
 if 'response' in st.session_state:
+    st.subheader("🔍 Request & Response Analysis")
     response = st.session_state.response
     
-    st.subheader("📊 Results")
+    tab1, tab2 = st.tabs(["📤 Request", "📥 Raw Response"])
     
-    if response.results:
-        # Results table
-        table_rows = ["| Task | Project | Confidence | Tags | Duration |", 
-                     "|------|---------|------------|------|----------|"]
-        
-        for result in response.results:
-            tags = ', '.join(result.extracted_tags)
-            duration = result.estimated_duration or 'N/A'
-            confidence = f"{result.confidence:.1%}"
-            table_rows.append(f"| {result.task} | {result.suggested_project} | {confidence} | {tags} | {duration} |")
-        
-        st.markdown('\n'.join(table_rows))
-        
-        # Metrics
-        avg_confidence = sum(r.confidence for r in response.results) / len(response.results)
-        high_confidence = sum(1 for r in response.results if r.confidence > 0.8)
-        
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Avg Confidence", f"{avg_confidence:.1%}")
-        with col2:
-            st.metric("High Confidence", high_confidence)
-        with col3:
-            st.metric("Total Tasks", len(response.results))
+    with tab1:
+        st.markdown("**Sent to AI:**")
+        st.code(response.prompt_used, language="text")
+        st.caption(f"Characters: {len(response.prompt_used)}")
     
-    # Debug info (expandable)
-    with st.expander("🔍 Debug Info"):
-        tab1, tab2 = st.tabs(["Prompt", "Raw Response"])
-        
-        with tab1:
-            st.code(response.prompt_used, language="text")
-        
-        with tab2:
-            st.code(response.raw_response, language="text")
-
-else:
-    st.info("👆 Load a dataset and run classification to see results")
+    with tab2:
+        st.markdown("**Raw AI Response:**")
+        st.code(response.raw_response, language="text")
+        st.caption(f"Characters: {len(response.raw_response)}")
