@@ -247,9 +247,11 @@ class ResponseParser:
         confidence = task_data.get('confidence', 0.5)
         project = task_data.get('suggested_project', 'unmatched')
         
-        # Auto-mark low confidence as unmatched
-        if confidence < 0.6:
-            project = 'unmatched'
+        # Normalize project name and auto-mark low confidence as unmatched
+        if project.lower() == 'unmatched' or confidence < 0.6:
+            project = 'unmatched'  # Always lowercase
+        
+        print(f"🔍 DEBUG: Creating result - Task: {task_data.get('task', 'UNKNOWN')}, Project: {project}, Confidence: {confidence}")
         
         return ClassificationResult(
             task=task_data.get('task', ''),

@@ -29,7 +29,9 @@ if 'response' in st.session_state and st.session_state.response.results:
         high_conf = [r for r in response.results if r.confidence >= 0.8]
         medium_conf = [r for r in response.results if 0.6 <= r.confidence < 0.8]
         low_conf = [r for r in response.results if r.confidence < 0.6]
-        unmatched = [r for r in response.results if r.suggested_project == 'unmatched']
+        unmatched = [r for r in response.results if r.suggested_project.lower() == 'unmatched']
+        
+        print(f"🔍 DEBUG: Confidence breakdown - High: {len(high_conf)}, Medium: {len(medium_conf)}, Low: {len(low_conf)}, Unmatched: {len(unmatched)}")
         
         # Show confidence breakdown
         col1, col2, col3, col4 = st.columns(4)
@@ -63,26 +65,27 @@ if 'response' in st.session_state and st.session_state.response.results:
         
         st.markdown('\n'.join(table_rows))
         
-        # Show problematic tasks for review
-        if low_conf or unmatched:
-            print(f"🔍 DEBUG: Showing review section with {len(low_conf)} low conf + {len(unmatched)} unmatched")
-            
-            # Combine and deduplicate by task name
-            review_tasks = low_conf + unmatched
-            seen_tasks = set()
-            unique_tasks = []
-            
-            for result in review_tasks:
-                if result.task not in seen_tasks:
-                    seen_tasks.add(result.task)
-                    unique_tasks.append(result)
-                else:
-                    print(f"🔍 DEBUG: Skipping duplicate task: {result.task}")
-            
-            print(f"🔍 DEBUG: After dedup: {len(unique_tasks)} unique tasks")
-            
-            with st.expander(f"🔍 Review Needed ({len(unique_tasks)} tasks)", expanded=False):
-                for result in unique_tasks:
+        # Show problematic tasks for review (combine low confidence AND unmatched)
+        review_tasks = []
+        for result in response.results:
+            if result.confidence < 0.8 or result.suggested_project.lower() == 'unmatched':
+                review_tasks.append(result)
+        
+        # Deduplicate by task name
+        seen_tasks = set()
+        unique_review_tasks = []
+        for result in review_tasks:
+            if result.task not in seen_tasks:
+                seen_tasks.add(result.task)
+                unique_review_tasks.append(result)
+            else:
+                print(f"🔍 DEBUG: Skipping duplicate task: {result.task}")
+        
+        print(f"🔍 DEBUG: Review tasks - Total: {len(review_tasks)}, Unique: {len(unique_review_tasks)}")
+        
+        if unique_review_tasks:
+            with st.expander(f"🔍 Review Needed ({len(unique_review_tasks)} tasks)", expanded=False):
+                for result in unique_review_tasks:
                     st.write(f"**{result.task}**")
                     st.write(f"- Suggested: {result.suggested_project} ({result.confidence:.1%})")
                     if result.alternative_projects:
