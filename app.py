@@ -2,7 +2,7 @@
 import streamlit as st
 import anthropic
 from services import DatasetManager, PromptBuilder, ResponseParser, TaskClassifier
-from models import ClassificationRequest, Project, ReferenceTask
+from models import ClassificationRequest, Project
 
 st.set_page_config(page_title="AI Task Classification", layout="wide")
 
@@ -121,32 +121,23 @@ with col1:
     if 'dataset' in st.session_state:
         dataset = st.session_state.dataset
 
-        st.markdown("**Dataset Contents:**")
-        col_a, col_b, col_c = st.columns(3)
-        with col_a:
-            st.metric("Reference", len(dataset.reference_tasks))
-        with col_b:
-            st.metric("Projects", len(dataset.projects))
-        with col_c:
-            st.metric("Inbox", len(dataset.inbox_tasks))
-
         # Editable Projects
-        st.markdown("**Projects** (id;name)")
-        projects_text = '\n'.join([f"{p.id};{p.name}" for p in dataset.projects])
+        st.markdown("**Projects**")
+        projects_text = '\n'.join([f"{p.name}" for p in dataset.projects])
         edited_projects = st.text_area(
             "projects_editor",
             value=projects_text,
-            height=100,
+            height=200,
             label_visibility="collapsed"
         )
 
         # Editable Inbox Tasks
-        st.markdown("**Inbox Tasks** (one per line)")
+        st.markdown("**Inbox Tasks**")
         inbox_text = '\n'.join(dataset.inbox_tasks)
         edited_inbox = st.text_area(
             "inbox_editor",
             value=inbox_text,
-            height=150,
+            height=350,
             label_visibility="collapsed"
         )
 
@@ -200,17 +191,9 @@ with col2:
     if 'dataset' in st.session_state:
         dataset = st.session_state.dataset
         
-        # Prompt variant selector - separate static vs dynamic
-        prompt_type = st.radio("Prompt Type", ["Dynamic (Live Data)", "Static (Testing)"])
+        prompt_variant = st.selectbox("Strategy", ["basic", "diy_renovation"])
+        st.info("💡 Uses your current dataset with prompt template")
 
-        if prompt_type == "Dynamic (Live Data)":
-            prompt_variant = st.selectbox("Strategy", ["basic", "diy_renovation"])
-            st.info("💡 Uses your current dataset with prompt template")
-        else:
-            available_static = [f.stem for f in Path("data/prompts").glob("*.md")]
-            prompt_variant = st.selectbox("Static Prompt", available_static)
-            st.info("📄 Uses complete prompt file (ignores current dataset)")
-        
         # Classify button
         if st.button("🚀 Classify Tasks", type="primary", use_container_width=True):
             if not dataset.inbox_tasks:

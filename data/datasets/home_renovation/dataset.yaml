@@ -1,7 +1,7 @@
 projects:
   kitchen_renovation:
     id: 1
-    name: "Kitchen Renovation"
+    name: "Kitchen Renovation2"
     status: "ongoing"
     tags: ["physical", "renovation", "kitchen"]
     tasks:

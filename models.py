@@ -1,12 +1,27 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
-from pathlib import Path
+
+@dataclass 
+class Project:
+    id: int
+    name: str
+    status: str = "ongoing"
+    tags: List[str] = field(default_factory=list)
 
 @dataclass
 class DatasetContent:
-    reference_tasks: List[UnifiedTask]
-    projects: List[UnifiedTask]
+    projects: List[Project]
     inbox_tasks: List[str]
+
+@dataclass
+class ClassificationResult:
+    task: str
+    suggested_project: str
+    confidence: float
+    extracted_tags: List[str] = field(default_factory=list)
+    estimated_duration: Optional[str] = None
+    reasoning: str = ""
+    alternative_projects: List[str] = field(default_factory=list)
 
 @dataclass
 class ClassificationRequest:
@@ -18,15 +33,3 @@ class ClassificationResponse:
     results: List[ClassificationResult]
     prompt_used: str
     raw_response: str
-
-@dataclass
-class ReferenceTask:
-    id: str
-    subject: str
-    tags: List[str]
-    duration: Optional[str] = None
-
-@dataclass
-class Project:
-    pid: str
-    subject: str
