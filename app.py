@@ -2,7 +2,7 @@
 import streamlit as st
 import anthropic
 from services import DatasetManager, PromptBuilder, ResponseParser, TaskClassifier
-from models import ClassificationRequest, Project
+from models import ClassificationRequest, Project, ReferenceTask
 
 st.set_page_config(page_title="AI Task Classification", layout="wide")
 
@@ -22,7 +22,7 @@ dataset_manager, classifier = get_services()
 if 'response' in st.session_state and st.session_state.response.results:
     st.subheader("📊 Results")
     response = st.session_state.response
-    
+
     # Enhanced results display with edge case handling
     if response.results:
         # Categorize results by confidence
@@ -30,9 +30,9 @@ if 'response' in st.session_state and st.session_state.response.results:
         medium_conf = [r for r in response.results if 0.6 <= r.confidence < 0.8]
         low_conf = [r for r in response.results if r.confidence < 0.6]
         unmatched = [r for r in response.results if r.suggested_project.lower() == 'unmatched']
-        
+
         print(f"🔍 DEBUG: Confidence breakdown - High: {len(high_conf)}, Medium: {len(medium_conf)}, Low: {len(low_conf)}, Unmatched: {len(unmatched)}")
-        
+
         # Show confidence breakdown
         col1, col2, col3, col4 = st.columns(4)
         with col1:
@@ -43,16 +43,16 @@ if 'response' in st.session_state and st.session_state.response.results:
             st.metric("❓ Low Confidence", len(low_conf), help="<60% confidence")
         with col4:
             st.metric("🔍 Unmatched", len(unmatched), help="No good project match")
-        
+
         # Results table with color coding
-        table_rows = ["| Task | Project | Confidence | Tags | Duration | Status |", 
+        table_rows = ["| Task | Project | Confidence | Tags | Duration | Status |",
                      "|------|---------|------------|------|----------|--------|"]
-        
+
         for result in response.results:
             tags = ', '.join(result.extracted_tags)
             duration = result.estimated_duration or 'N/A'
             confidence = f"{result.confidence:.1%}"
-            
+
             # Status indicator
             if result.confidence >= 0.8:
                 status = "✅ Good"
@@ -60,17 +60,17 @@ if 'response' in st.session_state and st.session_state.response.results:
                 status = "⚠️ Review"
             else:
                 status = "❓ Unclear"
-                
+
             table_rows.append(f"| {result.task} | {result.suggested_project} | {confidence} | {tags} | {duration} | {status} |")
-        
+
         st.markdown('\n'.join(table_rows))
-        
+
         # Show problematic tasks for review (combine low confidence AND unmatched)
         review_tasks = []
         for result in response.results:
             if result.confidence < 0.8 or result.suggested_project.lower() == 'unmatched':
                 review_tasks.append(result)
-        
+
         # Deduplicate by task name
         seen_tasks = set()
         unique_review_tasks = []
@@ -80,9 +80,9 @@ if 'response' in st.session_state and st.session_state.response.results:
                 unique_review_tasks.append(result)
             else:
                 print(f"🔍 DEBUG: Skipping duplicate task: {result.task}")
-        
+
         print(f"🔍 DEBUG: Review tasks - Total: {len(review_tasks)}, Unique: {len(unique_review_tasks)}")
-        
+
         if unique_review_tasks:
             with st.expander(f"🔍 Review Needed ({len(unique_review_tasks)} tasks)", expanded=False):
                 for result in unique_review_tasks:
@@ -104,7 +104,7 @@ with col1:
     available_datasets = dataset_manager.list_datasets()
     if available_datasets:
         selected_dataset = st.selectbox("Select Dataset", available_datasets)
-        
+
         if st.button("📂 Load Dataset", use_container_width=True):
             try:
                 dataset = dataset_manager.load_dataset(selected_dataset)
@@ -116,11 +116,11 @@ with col1:
     else:
         st.warning("No datasets found. Create data/datasets/{name}/ folders first.")
         st.stop()
-    
+
     # Show dataset info if loaded
     if 'dataset' in st.session_state:
         dataset = st.session_state.dataset
-        
+
         st.markdown("**Dataset Contents:**")
         col_a, col_b, col_c = st.columns(3)
         with col_a:
@@ -129,27 +129,27 @@ with col1:
             st.metric("Projects", len(dataset.projects))
         with col_c:
             st.metric("Inbox", len(dataset.inbox_tasks))
-        
+
         # Editable Projects
-        st.markdown("**Projects** (pid;subject)")
-        projects_text = '\n'.join([f"{p.pid};{p.subject}" for p in dataset.projects])
+        st.markdown("**Projects** (id;name)")
+        projects_text = '\n'.join([f"{p.id};{p.name}" for p in dataset.projects])
         edited_projects = st.text_area(
             "projects_editor",
             value=projects_text,
             height=100,
             label_visibility="collapsed"
         )
-        
+
         # Editable Inbox Tasks
         st.markdown("**Inbox Tasks** (one per line)")
         inbox_text = '\n'.join(dataset.inbox_tasks)
         edited_inbox = st.text_area(
-            "inbox_editor", 
+            "inbox_editor",
             value=inbox_text,
-            height=120,
+            height=150,
             label_visibility="collapsed"
         )
-        
+
         # Update dataset in session state when text changes
         if edited_projects != projects_text or edited_inbox != inbox_text:
             # Parse projects
@@ -157,7 +157,12 @@ with col1:
             for line in edited_projects.strip().split('\n'):
                 if line.strip() and ';' in line:
                     parts = line.split(';', 1)
-                    new_projects.append(Project(pid=parts[0].strip(), subject=parts[1].strip()))
+                    new_projects.append(Project(
+                        id=int(parts[0].strip()),
+                        name=parts[1].strip(),
+                        status="ongoing",
+                        tags=[]
+                    ))
             
             # Parse inbox tasks
             new_inbox = [line.strip() for line in edited_inbox.split('\n') if line.strip()]
@@ -195,8 +200,16 @@ with col2:
     if 'dataset' in st.session_state:
         dataset = st.session_state.dataset
         
-        # Prompt variant selector
-        prompt_variant = st.selectbox("Prompt Strategy", ["basic", "diy_renovation"])
+        # Prompt variant selector - separate static vs dynamic
+        prompt_type = st.radio("Prompt Type", ["Dynamic (Live Data)", "Static (Testing)"])
+
+        if prompt_type == "Dynamic (Live Data)":
+            prompt_variant = st.selectbox("Strategy", ["basic", "diy_renovation"])
+            st.info("💡 Uses your current dataset with prompt template")
+        else:
+            available_static = [f.stem for f in Path("data/prompts").glob("*.md")]
+            prompt_variant = st.selectbox("Static Prompt", available_static)
+            st.info("📄 Uses complete prompt file (ignores current dataset)")
         
         # Classify button
         if st.button("🚀 Classify Tasks", type="primary", use_container_width=True):

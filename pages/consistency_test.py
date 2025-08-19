@@ -227,3 +227,26 @@ with st.expander("💡 Testing Tips", expanded=False):
     - **Medium consistency**: 60-80% similarity (acceptable for most use cases)
     - **Low consistency**: <60% similarity (prompt needs refinement)
     """)
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "cli":
+        # CLI mode for automated testing
+        from test_framework.test_scenarios import ConsistencyTestRunner
+        
+        runner = ConsistencyTestRunner(classifier, dataset_manager)
+        
+        prompts = ["basic", "diy_renovation"]
+        scenarios = dataset_manager.list_datasets()
+        
+        print("🧪 Running matrix test...")
+        results = runner.run_matrix_test(prompts, scenarios, runs_per_combo=5)
+        
+        print("\n📊 Results:")
+        for key, summary in results['summary'].items():
+            print(f"  {key}: {summary['consistency']} ({summary['status']})")
+        
+        if results['recommendations']:
+            print("\n⚠️ Recommendations:")
+            for rec in results['recommendations']:
+                print(f"  - {rec}")

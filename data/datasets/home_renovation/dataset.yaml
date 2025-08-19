@@ -1,0 +1,56 @@
+projects:
+  kitchen_renovation:
+    id: 1
+    name: "Kitchen Renovation"
+    status: "ongoing"
+    tags: ["physical", "renovation", "kitchen"]
+    tasks:
+      - id: 13
+        name: "Mount electrical socket"
+        duration: "1h"
+        tags: ["physical", "electrical", "need-tools"]
+        notes: ""
+      - id: 19
+        name: "Tile kitchen backsplash"
+        duration: "6h"
+        tags: ["physical", "tiling", "need-material", "need-tools"]
+        notes: ""
+
+  bathroom_upgrade:
+    id: 2
+    name: "Bathroom Upgrade"
+    status: "ongoing"
+    tags: ["physical", "renovation", "bathroom"]
+    tasks:
+      - id: 16
+        name: "Install bathroom faucet"
+        duration: "45min"
+        tags: ["physical", "plumbing", "need-tools"]
+        notes: ""
+
+  bedroom_makeover:
+    id: 3
+    name: "Bedroom Makeover"
+    status: "ongoing"
+    tags: ["physical", "renovation", "bedroom"]
+    tasks:
+      - id: 17
+        name: "Paint bedroom walls"
+        duration: "4h"
+        tags: ["physical", "painting", "need-material", "need-tools"]
+        notes: ""
+      - id: 15
+        name: "Create wall shelf"
+        duration: "2h"
+        tags: ["physical", "carpentry", "need-tools", "need-material"]
+        notes: ""
+
+inbox_tasks:
+  - "Install new kitchen cabinet handles"
+  - "Fix leaky bathroom sink"
+  - "Paint accent wall in bedroom"
+  - "Replace broken light switch"
+  - "Caulk around bathtub"
+  - "Mount TV on living room wall"
+  - "Install ceiling fan in bedroom"
+  - "Repair loose deck railing"

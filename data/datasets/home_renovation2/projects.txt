@@ -1,3 +1,0 @@
-1;Kitchen Renovation
-2;Bathroom Upgrade
-3;Bedroom Makeover
