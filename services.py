@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List
 import json
-from models import DatasetContent, ReferenceTask, Project, ClassificationResult, ClassificationRequest, ClassificationResponse
+from models import DatasetContent, ReferenceTask, Project, ClassificationResult, ClassificationRequest, ClassificationResponse, BatchAnalysis, TaskBatch
 
 class DatasetManager:
     def __init__(self, base_path: Path = Path("data/datasets")):
@@ -298,3 +298,185 @@ class TaskClassifier:
             return response.content[0].text
         except Exception as e:
             raise RuntimeError(f"API call failed: {e}")
+
+class TaskBatcher:
+    def find_similar_tasks(self, results: List[ClassificationResult], task_type: str) -> BatchAnalysis:
+        """Find all tasks matching a specific type across projects"""
+        matching_tasks = []
+        for result in results:
+            if task_type.lower() in [tag.lower() for tag in result.extracted_tags]:
+                matching_tasks.append(result)
+        
+        return BatchAnalysis(
+            task_type=task_type,
+            matching_tasks=matching_tasks,
+            total_time_estimate=self._calculate_total_time(matching_tasks),
+            consolidated_materials=self._extract_materials(matching_tasks),
+            consolidated_tools=self._extract_tools(matching_tasks),
+            cross_project_count=len(set(task.suggested_project for task in matching_tasks))
+        )
+    
+    def create_batch(self, analysis: BatchAnalysis, batch_name: str) -> TaskBatch:
+        """Create a task batch from analysis"""
+        return TaskBatch(
+            name=batch_name,
+            task_type=analysis.task_type,
+            task_ids=[task.task for task in analysis.matching_tasks],  # Store task text
+            estimated_hours=float(analysis.total_time_estimate.replace('h', '')) if 'h' in analysis.total_time_estimate else 0.0,
+            suggested_sequence=self._suggest_sequence(analysis.matching_tasks)
+        )
+
+    def _calculate_total_time(self, tasks: List[ClassificationResult]) -> str:
+        """Simple time calculation from duration strings with robust parsing"""
+        print(f"🔍 DEBUG: _calculate_total_time called with {len(tasks)} tasks")
+        
+        total_minutes = 0
+        for i, task in enumerate(tasks):
+            print(f"🔍 DEBUG: Task {i}: '{task.task}'")
+            print(f"🔍 DEBUG: Task {i} duration: {repr(task.estimated_duration)} (type: {type(task.estimated_duration)})")
+            
+            if not task.estimated_duration:
+                print(f"🔍 DEBUG: Task {i} has no duration, skipping")
+                continue
+            
+            try:
+                duration = task.estimated_duration.lower().strip()
+                print(f"🔍 DEBUG: Task {i} normalized duration: '{duration}'")
+                
+                # Handle common variations and typos
+                duration = duration.replace('ours', 'h').replace('mins', 'min').replace('minutes', 'min')
+                print(f"🔍 DEBUG: Task {i} after replacements: '{duration}'")
+                
+                if 'h' in duration:
+                    # Extract first number before 'h' (handles "1-2h" -> "1")
+                    hours_part = duration.split('h')[0].strip()
+                    print(f"🔍 DEBUG: Task {i} hours_part: '{hours_part}'")
+                    
+                    if '-' in hours_part:
+                        # Take average of range "1-2" -> 1.5
+                        parts = hours_part.split('-')
+                        print(f"🔍 DEBUG: Task {i} range parts: {parts}")
+                        hours = (float(parts[0]) + float(parts[1])) / 2
+                        print(f"🔍 DEBUG: Task {i} calculated hours (average): {hours}")
+                    else:
+                        hours = float(hours_part)
+                        print(f"🔍 DEBUG: Task {i} calculated hours (single): {hours}")
+                    total_minutes += hours * 60
+                    
+                elif 'min' in duration:
+                    # Extract first number before 'min'
+                    min_part = duration.split('min')[0].strip()
+                    print(f"🔍 DEBUG: Task {i} min_part: '{min_part}'")
+                    
+                    if '-' in min_part:
+                        parts = min_part.split('-')
+                        print(f"🔍 DEBUG: Task {i} range parts: {parts}")
+                        minutes = (float(parts[0]) + float(parts[1])) / 2
+                        print(f"🔍 DEBUG: Task {i} calculated minutes (average): {minutes}")
+                    else:
+                        minutes = float(min_part)
+                        print(f"🔍 DEBUG: Task {i} calculated minutes (single): {minutes}")
+                    total_minutes += minutes
+                else:
+                    print(f"🔍 DEBUG: Task {i} no 'h' or 'min' found in duration: '{duration}'")
+                    
+            except (ValueError, IndexError) as e:
+                # Skip unparseable durations
+                print(f"⚠️ Could not parse duration: '{task.estimated_duration}' for task: {task.task} - Error: {e}")
+                continue
+        
+        hours = total_minutes / 60
+        result = f"{hours:.1f}h" if hours > 0 else "Unknown"
+        print(f"🔍 DEBUG: Total minutes: {total_minutes}, Final result: '{result}'")
+        return result
+
+    def _extract_materials(self, tasks: List[ClassificationResult]) -> List[str]:
+        """Extract materials from task descriptions using simple keywords"""
+        materials = set()
+        material_keywords = ['paint', 'primer', 'wood', 'screws', 'nails', 'caulk', 'tile']
+        
+        for task in tasks:
+            task_lower = task.task.lower()
+            for keyword in material_keywords:
+                if keyword in task_lower:
+                    materials.add(keyword.title())
+        
+        return sorted(list(materials))
+
+    def _extract_tools(self, tasks: List[ClassificationResult]) -> List[str]:
+        """Extract tools from tags and descriptions"""
+        tools = set()
+        
+        for task in tasks:
+            if 'need-tools' in task.extracted_tags:
+                # Simple mapping based on task type
+                if any(tag in ['painting'] for tag in task.extracted_tags):
+                    tools.update(['Brushes', 'Rollers', 'Drop cloths'])
+                elif any(tag in ['carpentry'] for tag in task.extracted_tags):
+                    tools.update(['Drill', 'Screwdriver', 'Level'])
+        
+        return sorted(list(tools))
+
+    def _suggest_sequence(self, tasks: List[ClassificationResult]) -> List[str]:
+        """Suggest optimal sequence for completing tasks"""
+        # Simple heuristic: sort by estimated duration (shortest first)
+        sorted_tasks = sorted(tasks, key=lambda t: self._parse_duration_minutes(t.estimated_duration or "0min"))
+        return [task.task for task in sorted_tasks]
+
+    def _parse_duration_minutes(self, duration_str: str) -> float:
+        """Helper to parse duration string into minutes for sorting"""
+        try:
+            duration = duration_str.lower().strip()
+            duration = duration.replace('ours', 'h').replace('mins', 'min').replace('minutes', 'min')
+            
+            if 'h' in duration:
+                hours_part = duration.split('h')[0].strip()
+                if '-' in hours_part:
+                    parts = hours_part.split('-')
+                    hours = (float(parts[0]) + float(parts[1])) / 2
+                else:
+                    hours = float(hours_part)
+                return hours * 60
+                
+            elif 'min' in duration:
+                min_part = duration.split('min')[0].strip()
+                if '-' in min_part:
+                    parts = min_part.split('-')
+                    minutes = (float(parts[0]) + float(parts[1])) / 2
+                else:
+                    minutes = float(min_part)
+                return minutes
+                
+        except (ValueError, IndexError):
+            pass
+        
+        return 0  # Default for unparseable durations
+
+class BatchManager:
+    def __init__(self, base_path: Path = Path("data/batches")):
+        self.base_path = base_path
+        self.base_path.mkdir(parents=True, exist_ok=True)
+    
+    def save_batch(self, batch: TaskBatch) -> None:
+        """Save batch to JSON file"""
+        file_path = self.base_path / f"{batch.name.lower().replace(' ', '_')}.json"
+        
+        batch_data = {
+            'name': batch.name,
+            'task_type': batch.task_type,
+            'task_ids': batch.task_ids,
+            'estimated_hours': batch.estimated_hours,
+            'created_date': batch.created_date
+        }
+        
+        with open(file_path, 'w') as f:
+            json.dump(batch_data, f, indent=2)
+    
+    def load_batches(self) -> List[TaskBatch]:
+        """Load all batches from files"""
+        batches = []
+        for file_path in self.base_path.glob("*.json"):
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+                batches.append(TaskBatch(**data))
+        return batches

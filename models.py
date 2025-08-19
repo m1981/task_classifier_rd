@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
 from pathlib import Path
+from datetime import datetime
 
 @dataclass
 class ReferenceTask:
@@ -44,3 +45,28 @@ class ClassificationResponse:
     results: List[ClassificationResult]
     prompt_used: str
     raw_response: str
+
+@dataclass
+class TaskBatch:
+    name: str
+    task_type: str
+    task_ids: List[str]  # Store task text for simplicity
+    estimated_hours: float
+    created_date: str = field(default_factory=lambda: datetime.now().isoformat())
+    suggested_sequence: List[str] = field(default_factory=list)
+
+@dataclass
+class BatchSummary:
+    materials: List[str]
+    tools: List[str]
+    projects_involved: List[str]
+    total_tasks: int
+
+@dataclass
+class BatchAnalysis:
+    task_type: str
+    matching_tasks: List[ClassificationResult]
+    total_time_estimate: str
+    consolidated_materials: List[str]
+    consolidated_tools: List[str]
+    cross_project_count: int

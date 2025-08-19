@@ -1,0 +1,14 @@
+{
+  "name": "Need-Tools Batch",
+  "task_type": "need-tools",
+  "task_ids": [
+    "Install new kitchen cabinet handles",
+    "Fix leaky bathroom sink",
+    "Replace broken light switch",
+    "Mount TV on living room wall",
+    "Install ceiling fan in bedroom",
+    "Repair loose deck railing"
+  ],
+  "estimated_hours": 11.1,
+  "created_date": "2025-08-19T15:19:37.709121"
+}

@@ -1,7 +1,7 @@
 
 import streamlit as st
 import anthropic
-from services import DatasetManager, PromptBuilder, ResponseParser, TaskClassifier
+from services import DatasetManager, PromptBuilder, ResponseParser, TaskClassifier, TaskBatcher, BatchManager
 from models import ClassificationRequest, Project
 
 st.set_page_config(page_title="AI Task Classification", layout="wide")
@@ -17,6 +17,14 @@ def get_services():
     return dataset_manager, classifier
 
 dataset_manager, classifier = get_services()
+
+@st.cache_resource
+def get_batch_services():
+    task_batcher = TaskBatcher()
+    batch_manager = BatchManager()
+    return task_batcher, batch_manager
+
+task_batcher, batch_manager = get_batch_services()
 
 # Results table at top (if available)
 if 'response' in st.session_state and st.session_state.response.results:
@@ -93,8 +101,50 @@ if 'response' in st.session_state and st.session_state.response.results:
                         st.write(f"- Alternatives: {alternatives}")
                     st.write(f"- Reasoning: {result.reasoning}")
                     st.write("---")
-else:
-    st.info("👆 Load a dataset and run classification to see results table here")
+    else:
+        st.info("👆 Load a dataset and run classification to see results table here")
+
+    st.subheader("🔨 Task Batching")
+    
+    # Step 1: Select Type
+    available_types = set()
+    for result in st.session_state.response.results:
+        available_types.update(result.extracted_tags)
+    
+    task_type = st.selectbox("Select task type for batching:", sorted(available_types))
+    
+    if st.button("🔍 Find Similar Tasks"):
+        analysis = task_batcher.find_similar_tasks(st.session_state.response.results, task_type)
+        st.session_state.batch_analysis = analysis
+        st.rerun()
+    
+    # Step 2: Review Analysis
+    if 'batch_analysis' in st.session_state:
+        analysis = st.session_state.batch_analysis
+        
+        st.write(f"**Found {len(analysis.matching_tasks)} {task_type} tasks**")
+        st.write(f"**Estimated time:** {analysis.total_time_estimate}")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.write("**Materials:**")
+            for material in analysis.consolidated_materials:
+                st.write(f"• {material}")
+        
+        with col2:
+            st.write("**Tools:**")
+            for tool in analysis.consolidated_tools:
+                st.write(f"• {tool}")
+        
+        # Step 3: Create Batch
+        batch_name = st.text_input("Batch name:", f"{task_type.title()} Batch")
+        
+        if st.button("🔨 Create Batch"):
+            batch = task_batcher.create_batch(analysis, batch_name)
+            batch_manager.save_batch(batch)
+            st.success(f"✅ Created batch: {batch_name}")
+            del st.session_state.batch_analysis
+            st.rerun()
 
 # Two column layout
 col1, col2 = st.columns([1, 1])
