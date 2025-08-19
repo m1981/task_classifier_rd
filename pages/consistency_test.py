@@ -5,6 +5,29 @@ import difflib
 from services import TaskClassifier, PromptBuilder, ResponseParser, DatasetManager
 from models import ClassificationRequest
 import anthropic
+from datetime import datetime
+
+# Create test_results directory
+test_results_dir = Path("test_results")
+test_results_dir.mkdir(exist_ok=True)
+
+def save_test_response(prompt_name: str, response_text: str, test_number: int, run_dir: Path) -> str:
+    """Save individual test response to file in run directory"""
+    filename = f"result_{test_number:02d}.txt"
+    filepath = run_dir / filename
+    
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write(response_text)
+    
+    return str(filepath)
+
+def create_run_directory(prompt_name: str) -> Path:
+    """Create timestamped run directory"""
+    timestamp = datetime.now().strftime("%m-%d_%H%M%S")
+    run_dir_name = f"{prompt_name}_{timestamp}"
+    run_dir = test_results_dir / run_dir_name
+    run_dir.mkdir(exist_ok=True)
+    return run_dir
 
 st.set_page_config(page_title="Prompt Consistency Testing", layout="wide")
 
@@ -22,94 +45,52 @@ classifier, dataset_manager = get_test_services()
 
 def normalize_response_text(text: str) -> str:
     """Normalize response text for consistent comparison"""
-    lines = []
-    for line in text.strip().split('\n'):
-        line = line.strip()
-        if line and not line.startswith('#'):
-            lines.append(line)
-    return '\n'.join(lines)
+    return text
 
-def calculate_similarity_score(expected: str, actual: str) -> float:
-    """Calculate similarity score between expected and actual results"""
-    expected_norm = normalize_response_text(expected)
-    actual_norm = normalize_response_text(actual)
+def calculate_similarity_score(expected: str, actual: str) -> dict:
+    """Calculate line-by-line similarity metrics"""
+    expected_lines = [line.strip() for line in expected.strip().split('\n') if line.strip()]
+    actual_lines = [line.strip() for line in actual.strip().split('\n') if line.strip()]
     
-    matcher = difflib.SequenceMatcher(None, expected_norm, actual_norm)
-    return matcher.ratio()
+    # Exact line matches
+    matching_lines = 0
+    total_expected = len(expected_lines)
+    total_actual = len(actual_lines)
+    
+    # Create sets for faster lookup
+    expected_set = set(expected_lines)
+    actual_set = set(actual_lines)
+    
+    # Count exact matches
+    matching_lines = len(expected_set.intersection(actual_set))
+    
+    # Calculate metrics
+    precision = matching_lines / total_actual if total_actual > 0 else 0.0
+    recall = matching_lines / total_expected if total_expected > 0 else 0.0
+    f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+    
+    return {
+        'matching_lines': matching_lines,
+        'total_expected': total_expected,
+        'total_actual': total_actual,
+        'precision': precision,
+        'recall': recall,
+        'f1_score': f1_score,
+        'exact_match': matching_lines == total_expected and total_expected == total_actual
+    }
 
-def show_diff_analysis(expected: str, actual_responses: list, test_results: dict):
-    """Display comprehensive diff analysis"""
-    st.subheader("📊 Consistency Analysis")
+def show_diff_analysis(expected: str, actual_responses: list, test_results: list):
+    """Display simple line-by-line comparison"""
+    st.subheader("📊 Line Matching Results")
     
-    # Overall metrics
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        avg_similarity = sum(test_results['similarities']) / len(test_results['similarities'])
-        st.metric("Avg Similarity", f"{avg_similarity:.1%}")
-    with col2:
-        st.metric("Best Match", f"{max(test_results['similarities']):.1%}")
-    with col3:
-        st.metric("Worst Match", f"{min(test_results['similarities']):.1%}")
-    with col4:
-        high_consistency = sum(1 for s in test_results['similarities'] if s >= 0.8)
-        st.metric("High Consistency", f"{high_consistency}/{len(actual_responses)}")
+    # Simple results table
+    table_rows = ["| Test # | Lines Matched | Total Expected |", 
+                  "|--------|---------------|----------------|"]
     
-    # Detailed results table
-    st.subheader("📋 Individual Test Results")
-    
-    table_rows = ["| Test # | Similarity | Status | Preview |", 
-                  "|--------|------------|--------|---------|"]
-    
-    for i, (response, similarity) in enumerate(zip(actual_responses, test_results['similarities']), 1):
-        status = "✅ Good" if similarity >= 0.8 else "⚠️ Medium" if similarity >= 0.6 else "❌ Poor"
-        preview = response[:50].replace('\n', ' ') + "..." if len(response) > 50 else response.replace('\n', ' ')
-        table_rows.append(f"| {i} | {similarity:.1%} | {status} | {preview} |")
+    for i, result in enumerate(test_results, 1):
+        table_rows.append(f"| {i} | {result['matching_lines']} | {result['total_expected']} |")
     
     st.markdown('\n'.join(table_rows))
-    
-    # Show detailed diff for problematic responses
-    poor_responses = [(i, resp, sim) for i, (resp, sim) in enumerate(zip(actual_responses, test_results['similarities'])) if sim < 0.8]
-    
-    if poor_responses:
-        with st.expander(f"🔍 Detailed Diff Analysis ({len(poor_responses)} responses need review)", expanded=False):
-            for i, response, similarity in poor_responses:
-                st.write(f"**Test #{i+1} - Similarity: {similarity:.1%}**")
-                
-                # Generate unified diff
-                expected_lines = normalize_response_text(expected).splitlines(keepends=True)
-                actual_lines = normalize_response_text(response).splitlines(keepends=True)
-                
-                diff = list(difflib.unified_diff(
-                    expected_lines, 
-                    actual_lines,
-                    fromfile='Expected',
-                    tofile=f'Actual #{i+1}',
-                    lineterm=''
-                ))
-                
-                if diff:
-                    diff_text = ''.join(diff)
-                    st.code(diff_text, language="diff")
-                else:
-                    st.info("No significant differences found")
-                st.write("---")
-    
-    # Response variance analysis
-    st.subheader("🔄 Response Variance")
-    if len(actual_responses) > 1:
-        # Find most common response patterns
-        response_counts = {}
-        for response in actual_responses:
-            normalized = normalize_response_text(response)
-            response_counts[normalized] = response_counts.get(normalized, 0) + 1
-        
-        if len(response_counts) == 1:
-            st.success("🎯 Perfect consistency - All responses identical!")
-        else:
-            st.write(f"Found {len(response_counts)} unique response patterns:")
-            for pattern, count in sorted(response_counts.items(), key=lambda x: x[1], reverse=True):
-                percentage = (count / len(actual_responses)) * 100
-                st.write(f"- **{count}/{len(actual_responses)} responses ({percentage:.1f}%)**: {pattern[:100]}...")
 
 st.title("🧪 Prompt Consistency Testing")
 
@@ -117,7 +98,7 @@ st.title("🧪 Prompt Consistency Testing")
 prompts_dir = Path("data/prompts")
 if prompts_dir.exists():
     prompt_files = [f.stem for f in prompts_dir.glob("*.md")]
-    selected_prompt = st.selectbox("Select Prompt Template", prompt_files)
+    selected_prompt = st.selectbox("Select Prompt Templ", prompt_files)
     
     # Test parameters
     col1, col2 = st.columns(2)
@@ -159,6 +140,9 @@ if prompts_dir.exists():
                     # Load dataset
                     dataset = dataset_manager.load_dataset(test_dataset)
                     
+                    # Create run directory
+                    run_dir = create_run_directory(selected_prompt)
+                    
                     # Run multiple requests
                     actual_responses = []
                     similarities = []
@@ -181,6 +165,9 @@ if prompts_dir.exists():
                         raw_response = response.raw_response
                         actual_responses.append(raw_response)
                         
+                        # Save individual response to run directory
+                        saved_path = save_test_response(selected_prompt, raw_response, i + 1, run_dir)
+                        
                         # Calculate similarity
                         similarity = calculate_similarity_score(expected_results, raw_response)
                         similarities.append(similarity)
@@ -198,9 +185,17 @@ if prompts_dir.exists():
                     }
                     
                     st.success(f"✅ Completed {num_requests} requests")
+                    st.info(f"📁 Responses saved to: {run_dir}/")
+                    
+                    # Show saved files
+                    with st.expander("📄 Saved Response Files", expanded=False):
+                        result_files = sorted(run_dir.glob("result_*.txt"))
+                        
+                        for filepath in result_files:
+                            st.code(f"{run_dir.name}/{filepath.name}", language="text")
                     
                     # Show comprehensive diff analysis
-                    show_diff_analysis(expected_results, actual_responses, test_results)
+                    show_diff_analysis(expected_results, actual_responses, similarities)
                     
                 except Exception as e:
                     st.error(f"Test failed: {str(e)}")
