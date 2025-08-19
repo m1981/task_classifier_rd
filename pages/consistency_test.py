@@ -90,6 +90,13 @@ def show_diff_analysis(expected: str, actual_responses: list, test_results: list
     for i, result in enumerate(test_results, 1):
         table_rows.append(f"| {i} | {result['matching_lines']} | {result['total_expected']} |")
     
+    # Add average row
+    if test_results:
+        avg_matched = sum(r['matching_lines'] for r in test_results) / len(test_results)
+        avg_expected = sum(r['total_expected'] for r in test_results) / len(test_results)
+        table_rows.append("|--------|---------------|----------------|")
+        table_rows.append(f"| **Avg** | **{avg_matched:.1f}** | **{avg_expected:.1f}** |")
+    
     st.markdown('\n'.join(table_rows))
 
 st.title("🧪 Prompt Consistency Testing")
