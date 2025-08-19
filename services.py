@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List
 import json
-from models import DatasetContent, ReferenceTask, Project, ClassificationResult, ClassificationRequest, ClassificationResponse
+from models import DatasetContent, UnifiedTask, ClassificationResult, ClassificationRequest, ClassificationResponse
 
 class DatasetManager:
     def __init__(self, base_path: Path = Path("data/datasets")):
@@ -16,13 +16,17 @@ class DatasetManager:
         if not dataset_path.exists():
             raise FileNotFoundError(f"Dataset '{name}' not found at {dataset_path}")
         
-        # Load reference tasks
-        reference_tasks = self._load_reference_tasks(dataset_path / "reference_tasks.txt")
+        # Try unified format first
+        unified_file = dataset_path / "unified_tasks.txt"
+        if unified_file.exists():
+            all_tasks = self._load_unified_tasks(unified_file)
+            reference_tasks = [t for t in all_tasks if t.is_task()]
+            projects = [t for t in all_tasks if t.is_project()]
+        else:
+            # Fallback to separate files
+            reference_tasks = self._load_reference_tasks(dataset_path / "reference_tasks.txt")
+            projects = self._load_projects(dataset_path / "projects.txt")
         
-        # Load projects
-        projects = self._load_projects(dataset_path / "projects.txt")
-        
-        # Load inbox tasks
         inbox_tasks = self._load_inbox_tasks(dataset_path / "inbox_tasks.txt")
         
         return DatasetContent(
@@ -51,7 +55,54 @@ class DatasetManager:
             return []
         return [d.name for d in self.base_path.iterdir() if d.is_dir()]
     
-    def _load_reference_tasks(self, file_path: Path) -> List[ReferenceTask]:
+    def _load_unified_tasks(self, file_path: Path) -> List[UnifiedTask]:
+        """Parse unified format: id;name;pid;duration;tags"""
+        if not file_path.exists():
+            return []
+        
+        tasks = []
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line_num, line in enumerate(f, 1):
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                
+                try:
+                    parts = line.split(';')
+                    if len(parts) < 4:
+                        raise ValueError(f"Line {line_num}: Expected at least 4 fields")
+                    
+                    task = UnifiedTask(
+                        id=int(parts[0].strip()),
+                        name=parts[1].strip(),
+                        pid=int(parts[2].strip()),  # 0 for projects, >0 for tasks, -1 for inbox
+                        duration=parts[3].strip() or "unknown",
+                        tags=[t.strip() for t in parts[4].split(',') if t.strip()] if len(parts) > 4 else []
+                    )
+                    tasks.append(task)
+                    
+                except (ValueError, IndexError) as e:
+                    print(f"⚠️ Skipping invalid line {line_num}: {e}")
+                    continue
+        
+        # Validate relationships
+        self._validate_task_relationships(tasks)
+        return tasks
+    
+    def _validate_task_relationships(self, tasks: List[UnifiedTask]) -> None:
+        """Validate parent-child relationships"""
+        task_ids = {t.id for t in tasks}
+        project_ids = {t.id for t in tasks if t.is_project()}
+        
+        errors = []
+        for task in tasks:
+            if task.is_task() and task.pid not in project_ids:
+                errors.append(f"Task '{task.name}' (id:{task.id}) references non-existent project (pid:{task.pid})")
+        
+        if errors:
+            raise ValueError("Relationship validation failed:\n" + "\n".join(errors))
+    
+    def _load_reference_tasks(self, file_path: Path) -> List[UnifiedTask]:
         """Parse reference tasks from CSV-like format: id;subject;tags;duration"""
         if not file_path.exists():
             return []
@@ -65,15 +116,16 @@ class DatasetManager:
                 
                 parts = line.split(';')
                 if len(parts) >= 3:
-                    tasks.append(ReferenceTask(
-                        id=parts[0].strip(),
-                        subject=parts[1].strip(),
-                        tags=[t.strip() for t in parts[2].split(',')],
-                        duration=parts[3].strip() if len(parts) > 3 else None
+                    tasks.append(UnifiedTask(
+                        id=int(parts[0].strip()),
+                        name=parts[1].strip(),
+                        pid=1,  # Assume they belong to project 1 for migration
+                        duration=parts[3].strip() if len(parts) > 3 else "unknown",
+                        tags=[t.strip() for t in parts[2].split(',')]
                     ))
         return tasks
     
-    def _load_projects(self, file_path: Path) -> List[Project]:
+    def _load_projects(self, file_path: Path) -> List[UnifiedTask]:
         """Parse projects from CSV-like format: pid;subject"""
         if not file_path.exists():
             return []
@@ -87,9 +139,12 @@ class DatasetManager:
                 
                 parts = line.split(';')
                 if len(parts) >= 2:
-                    projects.append(Project(
-                        pid=parts[0].strip(),
-                        subject=parts[1].strip()
+                    projects.append(UnifiedTask(
+                        id=int(parts[0].strip()),
+                        name=parts[1].strip(),
+                        pid=0,  # Projects have pid=0
+                        duration="ongoing",
+                        tags=[]
                     ))
         return projects
     
@@ -101,19 +156,19 @@ class DatasetManager:
         with open(file_path, 'r', encoding='utf-8') as f:
             return [line.strip() for line in f if line.strip()]
     
-    def _save_reference_tasks(self, file_path: Path, tasks: List[ReferenceTask]) -> None:
+    def _save_reference_tasks(self, file_path: Path, tasks: List[UnifiedTask]) -> None:
         """Save reference tasks in CSV-like format"""
         with open(file_path, 'w', encoding='utf-8') as f:
             for task in tasks:
                 tags_str = ','.join(task.tags)
                 duration_str = task.duration or ''
-                f.write(f"{task.id};{task.subject};{tags_str};{duration_str}\n")
+                f.write(f"{task.id};{task.name};{tags_str};{duration_str}\n")
     
-    def _save_projects(self, file_path: Path, projects: List[Project]) -> None:
+    def _save_projects(self, file_path: Path, projects: List[UnifiedTask]) -> None:
         """Save projects in CSV-like format"""
         with open(file_path, 'w', encoding='utf-8') as f:
             for project in projects:
-                f.write(f"{project.pid};{project.subject}\n")
+                f.write(f"{project.id};{project.name}\n")
     
     def _save_inbox_tasks(self, file_path: Path, tasks: List[str]) -> None:
         """Save inbox tasks, one per line"""
@@ -122,16 +177,11 @@ class DatasetManager:
                 f.write(f"{task}\n")
 
 class PromptBuilder:
-    def __init__(self):
+    def __init__(self, prompts_dir: Path = Path("data/prompts")):
+        self.prompts_dir = prompts_dir
         self._guidance_variants = {
-            "basic": """Act as my personal advisor and assistant. I need you to help me
-organize my tasks. Please be focused to detials and understan my tagging system and projects scope.
-Please first explain me how do you understnad my task and my tagging system.""",
-            
-            "diy_renovation": """Act as an experienced DIY home renovation expert and project manager. 
-You specialize in breaking down home improvement tasks, understanding material requirements, 
-tool needs, and realistic time estimates for DIY projects. Focus on safety considerations, 
-skill level requirements, and logical project sequencing."""
+            "basic": """Act as my personal advisor and assistant...""",
+            "diy_renovation": """Act as an experienced DIY home renovation expert..."""
         }
     
     def build_prompt(self, request: ClassificationRequest) -> str:
@@ -140,42 +190,50 @@ skill level requirements, and logical project sequencing."""
         projects_list = self._format_projects(request.dataset.projects)
         tasks_list = self._format_inbox_tasks(request.dataset.inbox_tasks)
         
-        return f"""{guidance}
+        return f"""{guidance}"""
 
-Available projects:
-{projects_list}
+    #     return f"""{guidance}
+    #
+    # Available projects:
+    # {projects_list}
+    #
+    # Classify these tasks:
+    # {tasks_list}
+    #
+    # Available tags:
+    #   physical, digial
+    #   out, out  - (if physical)
+    #   need-material (if I migh have to buy material, ingredients, etc.)
+    #   need-tools (if not bare handed then require tools)
+    #   buy (item goes to buy list)
+    #
+    # Response format:
+    #
+    # For each task, provide on separate lines:
+    # TASK: [original task]
+    # PROJECT: [best matching project OR unmatched]
+    # CONFIDENCE: [0.0-1.0]
+    # TAGS: [comma-separated tags]
+    # DURATION: [time estimate]
+    # REASONING: [brief explanation]
+    # ALTERNATIVES: [semicolon-separated list of other potential projects, or 'none']
+    # ---
+    # TASK: ...
+    # PROJECT: ..."""
 
-Classify these tasks:
-{tasks_list}
-
-Available tags: 
-  physical, digial
-  out, out  - (if physical) 
-  need-material (if I migh have to buy material, ingredients, etc.) 
-  need-tools (if not bare handed then require tools)
-  buy (item goes to buy list)
-
-Response format:
-
-For each task, provide on separate lines:
-TASK: [original task]
-PROJECT: [best matching project OR unmatched]
-CONFIDENCE: [0.0-1.0]
-TAGS: [comma-separated tags]
-DURATION: [time estimate]
-REASONING: [brief explanation]
-ALTERNATIVES: [semicolon-separated list of other potential projects, or 'none']
----
-TASK: ...
-PROJECT: ..."""
-    
     def _get_guidance(self, variant: str) -> str:
-        """Get guidance text for prompt variant"""
+        """Get guidance text for prompt variant - load from file or fallback to hardcoded"""
+        # Try to load from file first
+        prompt_file = self.prompts_dir / f"{variant}.md"
+        if prompt_file.exists():
+            return prompt_file.read_text(encoding='utf-8').strip()
+        
+        # Fallback to hardcoded variants
         return self._guidance_variants.get(variant, "Act as a helpful task organizer.")
     
-    def _format_projects(self, projects: List[Project]) -> str:
+    def _format_projects(self, projects: List[UnifiedTask]) -> str:
         """Format projects list for prompt"""
-        return '\n'.join([f"  - {p.subject}" for p in projects])
+        return '\n'.join([f"  - {p.name}" for p in projects])
     
     def _format_inbox_tasks(self, tasks: List[str]) -> str:
         """Format inbox tasks for prompt"""

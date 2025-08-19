@@ -1,0 +1,26 @@
+# Unified format: id;name;pid;duration;tags
+# pid=0 for projects, pid>0 for tasks under that project, pid=-1 for inbox
+
+# Projects (pid=0)
+1;Kitchen Renovation;0;ongoing;physical,renovation
+2;Bathroom Upgrade;0;2w;physical,renovation
+3;Career Development;0;ongoing;digital,personal
+
+# Tasks under Kitchen Renovation (pid=1)
+10;Install cabinet handles;1;60m;physical,need-tools,carpentry
+11;Fix leaky faucet;1;45m;physical,need-tools,plumbing
+12;Order new countertop;1;30m;digital,buy
+
+# Tasks under Bathroom Upgrade (pid=2)
+20;Replace toilet;2;2h;physical,need-tools,plumbing
+21;Tile shower walls;2;6h;physical,need-tools,need-material,tiling
+
+# Tasks under Career Development (pid=3)
+30;Update LinkedIn;3;30m;digital
+31;Practice coding interview;3;2h;digital
+
+# Inbox items (pid=-1) - unclassified tasks for AI processing
+9001;Install new kitchen cabinet handles;-1;unknown;
+9002;Fix leaky bathroom sink;-1;unknown;
+9003;Paint accent wall in bedroom;-1;unknown;
+9004;Replace broken light switch;-1;unknown;

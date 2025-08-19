@@ -2,52 +2,26 @@
 
 ## Overview
 
-Experimental  test AI capabilities for task categorization and attribute extraction using different prompt contexts. This is a research tool to optimize AI prompts for future production features.
+Production-ready MVP for experimenting with AI task classification using Anthropic Claude. Built with Streamlit for rapid iteration and dataset management. Designed to optimize AI prompts and evaluate classification accuracy across different domains (personal productivity, home renovation, etc.).
 
+## Architecture
 
-## Core Components
+### Core Services
+- **DatasetManager**: File-based dataset persistence (`data/datasets/{name}/`)
+- **TaskClassifier**: Claude API integration with error handling
+- **PromptBuilder**: Configurable prompt strategies for experimentation
+- **ResponseParser**: Robust parsing with fallback handling
 
-### 1. Reference Tasks Input
-- **Component**: `ReferenceTasksInput.svelte`
-- **Purpose**: Define training examples for AI context
-- **Format**: CSV-like text area
-- **Schema**: `id;subject;tags;duration`
+### UI Features
+- **Real-time Dataset Editing**: Modify projects/tasks without file system access
+- **Confidence Analysis**: Visual breakdown of classification quality
+- **Results Review**: Flagging system for low-confidence/unmatched tasks
+- **Prompt Preview**: Live preview of AI prompts before execution
+- **Debug Mode**: Full request/response inspection
 
-### 2. Current Projects Input  
-- **Component**: `CurrentProjectsInput.svelte`
-- **Purpose**: Available project categories for classification
-- **Format**: CSV-like text area
-- **Schema**: `pid;subject`
-
-### 3. Inbox Tasks Input
-- **Component**: `InboxTasksInput.svelte` 
-- **Purpose**: Tasks to be classified by AI
-- **Format**: Free text, one task per line
-
-### 4. Results Display
-- **Component**: `ClassificationResults.svelte`
-- **Purpose**: Show AI classification results with confidence scores
-
-## Data Models
+## Enhanced Data Models
 
 ```typescript
-interface ReferenceTask {
-  id: string;
-  subject: string;
-  tags: string[];
-  duration?: string;
-}
-
-interface Project {
-  pid: string;
-  subject: string;
-}
-
-interface InboxTask {
-  subject: string;
-  originalIndex: number;
-}
-
 interface ClassificationResult {
   task: string;
   suggestedProject: string;
@@ -55,96 +29,73 @@ interface ClassificationResult {
   extractedTags: string[];
   estimatedDuration?: string;
   reasoning: string;
+  alternativeProjects: string[]; // NEW: Alternative project suggestions
 }
 
-interface ExperimentRequest {
-  referenceTasks: ReferenceTask[];
-  projects: Project[];
-  inboxTasks: InboxTask[];
-  promptVariant?: 'basic' | 'detailed' | 'few-shot';
-}
-```
-
-## API Endpoint
-
-**Route**: `/api/rd/classify-tasks`
-
-### Request Format
-```typescript
-POST /api/rd/classify-tasks
-{
-  referenceTasks: ReferenceTask[];
-  projects: Project[];
-  inboxTasks: InboxTask[];
-  promptVariant: string;
-}
-```
-
-### Response Format
-```typescript
-{
-  success: boolean;
+interface ClassificationResponse {
   results: ClassificationResult[];
   promptUsed: string;
-  usage: {
-    inputTokens: number;
-    outputTokens: number;
-  };
-  error?: string;
+  rawResponse: string; // NEW: Full AI response for debugging
 }
 ```
 
-## Prompt Variants to Test
+## Current Prompt Strategies
 
 ### 1. Basic Context
-- Simple task list + projects
-- Minimal instructions
+- Simple task organization guidance
+- Minimal AI persona
 
-### 2. Detailed Context  
-- Reference tasks as examples
-- Explicit attribute extraction rules
-- Confidence scoring instructions
+### 2. DIY Renovation Expert
+- Domain-specific expertise (home improvement)
+- Safety and skill level considerations
+- Material/tool requirements focus
 
-### 3. Few-Shot Learning
-- Multiple reference examples per category
-- Pattern recognition emphasis
-- Tag consistency rules
+## Tag System
 
-## UI Layout
+**Core Tags:**
+- `physical` / `digital` - Task nature
+- `out` - Requires leaving home
+- `need-material` - Purchase requirements
+- `need-tools` - Tool requirements  
+- `buy` - Shopping list items
+
+**Domain-Specific Extensions:**
+- Renovation: `electrical`, `plumbing`, `carpentry`, `painting`, `tiling`
+- Duration estimates: `15min`, `1h`, `4h`, etc.
+
+## Results Analysis Features
+
+### Confidence Scoring
+- **High (≥80%)**: ✅ Ready to use
+- **Medium (60-79%)**: ⚠️ Review recommended  
+- **Low (<60%)**: ❓ Manual review required
+- **Unmatched**: 🔍 No suitable project found
+
+### Review System
+- Automatic flagging of problematic classifications
+- Alternative project suggestions
+- Reasoning explanations for manual review
+
+## Dataset Structure
 
 ```
-┌─────────────────────────────────────────┐
-│ AI Task Classification Research Tool     │
-├─────────────────────────────────────────┤
-│ Reference Tasks (Training Data)         │
-│ ┌─────────────────────────────────────┐ │
-│ │ id;subject;tags;duration            │ │
-│ │ 13;Mount socket;physical,1h;        │ │
-│ │ ...                                 │ │
-│ └─────────────────────────────────────┘ │
-├─────────────────────────────────────────┤
-│ Current Projects                        │
-│ ┌─────────────────────────────────────┐ │
-│ │ pid;subject                         │ │
-│ │ 3;Birthday party                    │ │
-│ └─────────────────────────────────────┘ │
-├─────────────────────────────────────────┤
-│ Inbox Tasks to Classify                 │
-│ ┌─────────────────────────────────────┐ │
-│ │ Buy decorations                     │ │
-│ │ Fix brake cable                     │ │
-│ │ Paint accent wall                   │ │
-│ └─────────────────────────────────────┘ │
-├─────────────────────────────────────────┤
-│ [Prompt Variant: Detailed ▼] [Classify]│
-├─────────────────────────────────────────┤
-│ Results                                 │
-│ ┌─────────────────────────────────────┐ │
-│ │ Task: Buy decorations               │ │
-│ │ Project: Birthday party (95%)       │ │
-│ │ Tags: shopping, physical            │ │
-│ │ Duration: 30min                     │ │
-│ │ Reasoning: Party-related shopping   │ │
-│ └─────────────────────────────────────┘ │
-└─────────────────────────────────────────┘
+data/datasets/{name}/
+├── reference_tasks.txt    # id;subject;tags;duration
+├── projects.txt          # pid;subject  
+└── inbox_tasks.txt       # one task per line
 ```
+
+## API Integration
+
+**Model**: Claude 3.5 Haiku (fast, cost-effective)
+**Max Tokens**: 2000
+**Error Handling**: Comprehensive with user-friendly messages
+
+## Production Considerations
+
+### Implemented
+- ✅ Structured error handling
+- ✅ Session state management
+- ✅ File-based persistence
+- ✅ Debug logging
+- ✅ Response validation
