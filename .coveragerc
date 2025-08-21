@@ -1,0 +1,25 @@
+[run]
+source = .
+omit = 
+    */venv/*
+    */env/*
+    */__pycache__/*
+    */test_*
+    */tests/*
+    app.py
+    pages/*
+    .streamlit/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    
+show_missing = True
+precision = 2
+
+[html]
+directory = htmlcov

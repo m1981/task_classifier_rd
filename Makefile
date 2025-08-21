@@ -39,13 +39,14 @@ detect-regressions: ## Check for performance regressions against baselines
 test-consistency: ## Run consistency test for specific prompt+dataset (PROMPT=basic DATASET=example)
 	PYTHONPATH=. python -c "from test_framework.automated_testing import run_consistency_test; print(f'Consistency: {run_consistency_test(\"$(PROMPT)\", \"$(DATASET)\"):.2%}')"
 
-.PHONY: test-dataset
-test-dataset: ## Run dataset operation tests
-	PYTHONPATH=. pytest test_dataset_operations.py -v
+.PHONY: test-coverage
+test-coverage: ## Run tests with coverage report
+	PYTHONPATH=. pytest --cov=services --cov=models --cov=dataset_io --cov-report=term-missing -v
 
-.PHONY: test-dataset-watch
-test-dataset-watch: ## Run dataset tests in watch mode
-	PYTHONPATH=. pytest test_dataset_operations.py -v --tb=short -f
+.PHONY: test-coverage-html
+test-coverage-html: ## Generate HTML coverage report
+	PYTHONPATH=. pytest --cov=services --cov=models --cov=dataset_io --cov-report=html --cov-report=term-missing -v
+	@echo "Coverage report generated in htmlcov/index.html"
 
 ##@ Data Management
 .PHONY: list-datasets
