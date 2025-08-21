@@ -1,48 +1,32 @@
 
 import streamlit as st
 import anthropic
-from services import DatasetManager, PromptBuilder, ResponseParser, TaskClassifier
+from services import DatasetManager, PromptBuilder, ResponseParser, TaskClassifier, SaveDatasetCommand, DatasetProjector
 from models import ClassificationRequest, Project
-from dataclasses import dataclass
-from typing import List, Optional
-
-@dataclass
-class SaveDatasetRequest:
-    name: str
-    source_dataset: str
-    projects: List[str]
-    inbox_tasks: List[str]
-    
-    def validate(self) -> Optional[str]:
-        if not self.name.strip():
-            return "Dataset name cannot be empty"
-        return None
-
-class DatasetUIProjector:
-    @staticmethod
-    def from_session_state(dataset, name: str):
-        return SaveDatasetRequest(
-            name=name,
-            source_dataset="",
-            projects=[p.name for p in dataset.projects],
-            inbox_tasks=dataset.inbox_tasks
-        )
+from models.dtos import SaveDatasetRequest
 
 st.set_page_config(page_title="AI Task Classification", layout="wide")
 
-# Initialize services (simplified)
 @st.cache_resource
 def get_services():
+    # Initialize core services
     dataset_manager = DatasetManager()
-    client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
     prompt_builder = PromptBuilder()
-    parser = ResponseParser()
-    classifier = TaskClassifier(client, prompt_builder, parser)
+    response_parser = ResponseParser()
+    
+    # Initialize Anthropic client
+    client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+    classifier = TaskClassifier(client, prompt_builder, response_parser)
+    
+    # Initialize command/projector services
+    projector = DatasetProjector()
+    save_command = SaveDatasetCommand(dataset_manager, projector)
     
     return {
         'dataset_manager': dataset_manager,
-        'projector': DatasetUIProjector(),
-        'classifier': classifier
+        'classifier': classifier,
+        'projector': projector,
+        'save_command': save_command
     }
 
 services = get_services()
@@ -59,8 +43,6 @@ if 'response' in st.session_state and st.session_state.response.results:
         medium_conf = [r for r in response.results if 0.6 <= r.confidence < 0.8]
         low_conf = [r for r in response.results if r.confidence < 0.6]
         unmatched = [r for r in response.results if r.suggested_project.lower() == 'unmatched']
-
-        print(f"🔍 DEBUG: Confidence breakdown - High: {len(high_conf)}, Medium: {len(medium_conf)}, Low: {len(low_conf)}, Unmatched: {len(unmatched)}")
 
         # Show confidence breakdown
         col1, col2, col3, col4 = st.columns(4)
@@ -94,7 +76,7 @@ if 'response' in st.session_state and st.session_state.response.results:
 
         st.markdown('\n'.join(table_rows))
 
-        # Show problematic tasks for review (combine low confidence AND unmatched)
+        # Show problematic tasks for review
         review_tasks = []
         for result in response.results:
             if result.confidence < 0.8 or result.suggested_project.lower() == 'unmatched':
@@ -107,10 +89,6 @@ if 'response' in st.session_state and st.session_state.response.results:
             if result.task not in seen_tasks:
                 seen_tasks.add(result.task)
                 unique_review_tasks.append(result)
-            else:
-                print(f"🔍 DEBUG: Skipping duplicate task: {result.task}")
-
-        print(f"🔍 DEBUG: Review tasks - Total: {len(review_tasks)}, Unique: {len(unique_review_tasks)}")
 
         if unique_review_tasks:
             with st.expander(f"🔍 Review Needed ({len(unique_review_tasks)} tasks)", expanded=False):
@@ -229,25 +207,20 @@ with col1:
         
         with col_save2:
             if st.button("💾 Save as Dataset", use_container_width=True):
-                # Data projection
-                save_request = services['projector'].from_session_state(
+                # Use new command pattern
+                save_request = services['projector'].from_ui_state(
                     dataset, new_dataset_name.strip()
                 )
                 
-                # Direct save (until CQRS is implemented)
-                validation_error = save_request.validate()
-                if validation_error:
-                    st.error(f"Invalid name: {validation_error}")
-                else:
-                    try:
-                        result = services['dataset_manager'].save_dataset(save_request.name, dataset)
-                        if result["success"]:
-                            st.success(result.get("message", "Saved successfully"))
-                            st.rerun()
-                        else:
-                            st.error(f"Save failed: {result.get('error', 'Unknown error')}")
-                    except Exception as e:
-                        st.error(f"Save failed: {str(e)}")
+                try:
+                    result = services['save_command'].execute(save_request, dataset)
+                    if result.success:
+                        st.success(result.message)
+                        st.rerun()
+                    else:
+                        st.error(f"Save failed: {result.message}")
+                except Exception as e:
+                    st.error(f"Save failed: {str(e)}")
 
 with col2:
     if 'dataset' in st.session_state:
