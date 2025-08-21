@@ -252,59 +252,50 @@ None identified - this provides comprehensive quality overview.
 ## UC-011: Create Project from Unmatched Tasks
 **Primary Actor**: User  
 **Goal**: Handle orphaned tasks by creating a new project to contain them  
-**Preconditions**: I have multiple unmatched tasks that seem related  
-**Success Guarantee**: New project is created and unmatched tasks are assigned to it  
+**Preconditions**: I have unmatched tasks that seem related  
+**Success Guarantee**: New project is created and selected unmatched tasks are assigned to it  
 
 ### Main Success Scenario:
-1. I see 4 tasks were classified as "Unmatched":
+1. I see 6 unmatched tasks including vacation and car maintenance items:
    - "Plan vacation itinerary"
-   - "Book hotel reservations"
+   - "Book hotel reservations"  
    - "Research flight prices"
-   - "Get travel insurance"
-2. I realize these all belong to a "Summer Vacation" project I haven't created
-3. I click "📁 Create Project from Unmatched" button
-4. App shows dialog: "Create new project for unmatched tasks?"
-5. I enter project name: "Summer Vacation Planning"
-6. App creates new project with ID and default settings
-7. App automatically assigns all 4 unmatched tasks to this new project
-8. App shows "✅ Created 'Summer Vacation Planning' project with 4 tasks"
-9. My dataset now includes the new project with these tasks
-
-### Extensions:
-5a. Project name already exists:
-   - App shows error and suggests different name
-   - I can modify the name or merge with existing project
-
----
-
-## UC-011A: Selectively Create Project from Chosen Tasks
-**Primary Actor**: User  
-**Goal**: Create a new project for only some of my unmatched tasks  
-**Preconditions**: I have unmatched tasks but only some belong together  
-**Success Guarantee**: New project contains only my selected tasks  
-
-### Main Success Scenario:
-1. I see 6 unmatched tasks including vacation and car maintenance items
-2. I click "🎯 Select Tasks for New Project" button
-3. App shows checkbox interface:
+   - "Change car oil"
+   - "Rotate tires"
+   - "Buy groceries"
+2. I click "📁 Create Project from Unmatched" button
+3. App shows checkbox interface with all unmatched tasks:
    - ☑️ "Plan vacation itinerary"
    - ☑️ "Book hotel reservations"  
    - ☑️ "Research flight prices"
    - ☐ "Change car oil"
    - ☐ "Rotate tires"
    - ☐ "Buy groceries"
-4. I check the 3 vacation-related tasks
+4. I check the 3 vacation-related tasks I want to group
 5. I enter project name: "Summer Vacation Planning"
 6. I click "Create Project with Selected Tasks"
 7. App creates new project with only the 3 selected tasks
 8. App shows "✅ Created 'Summer Vacation Planning' with 3 tasks. 3 tasks remain unmatched"
-9. Remaining unmatched tasks stay in inbox for future processing
+9. My dataset now includes the new project with these tasks
+10. Remaining unmatched tasks stay in inbox for future processing
 
 ### Extensions:
-4a. I select only 1 task:
-   - App warns "Consider if single task needs its own project"
-   - I can proceed or cancel
+3a. Only one unmatched task exists:
+   - App shows "Select All" checkbox (checked by default)
+   - User can proceed with single-task project
 
-6a. No tasks selected:
+4a. No tasks selected:
    - App shows "Please select at least one task"
-   - I must select tasks or cancel
+   - User must select tasks or cancel
+
+4b. User selects only 1 task:
+   - App warns "Consider if single task needs its own project"
+   - User can proceed or cancel
+
+5a. Project name already exists:
+   - App shows error and suggests different name
+   - User can modify the name or merge with existing project
+
+5b. Project name is empty or invalid:
+   - App shows validation error
+   - User must enter valid name
