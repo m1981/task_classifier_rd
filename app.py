@@ -3,20 +3,49 @@ import streamlit as st
 import anthropic
 from services import DatasetManager, PromptBuilder, ResponseParser, TaskClassifier
 from models import ClassificationRequest, Project
+from dataclasses import dataclass
+from typing import List, Optional
+
+@dataclass
+class SaveDatasetRequest:
+    name: str
+    source_dataset: str
+    projects: List[str]
+    inbox_tasks: List[str]
+    
+    def validate(self) -> Optional[str]:
+        if not self.name.strip():
+            return "Dataset name cannot be empty"
+        return None
+
+class DatasetUIProjector:
+    @staticmethod
+    def from_session_state(dataset, name: str):
+        return SaveDatasetRequest(
+            name=name,
+            source_dataset="",
+            projects=[p.name for p in dataset.projects],
+            inbox_tasks=dataset.inbox_tasks
+        )
 
 st.set_page_config(page_title="AI Task Classification", layout="wide")
 
-# Initialize services
+# Initialize services (simplified)
 @st.cache_resource
 def get_services():
-    client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
     dataset_manager = DatasetManager()
+    client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
     prompt_builder = PromptBuilder()
     parser = ResponseParser()
     classifier = TaskClassifier(client, prompt_builder, parser)
-    return dataset_manager, classifier
+    
+    return {
+        'dataset_manager': dataset_manager,
+        'projector': DatasetUIProjector(),
+        'classifier': classifier
+    }
 
-dataset_manager, classifier = get_services()
+services = get_services()
 
 # Results table at top (if available)
 if 'response' in st.session_state and st.session_state.response.results:
@@ -101,13 +130,13 @@ col1, col2 = st.columns([1, 1])
 
 with col1:
     # Dataset selector
-    available_datasets = dataset_manager.list_datasets()
+    available_datasets = services['dataset_manager'].list_datasets()
     if available_datasets:
         selected_dataset = st.selectbox("Select Dataset", available_datasets)
 
         if st.button("📂 Load Dataset", use_container_width=True):
             try:
-                dataset = dataset_manager.load_dataset(selected_dataset)
+                dataset = services['dataset_manager'].load_dataset(selected_dataset)
                 st.session_state.dataset = dataset
                 st.success(f"✅ Loaded {selected_dataset}")
                 st.rerun()
@@ -143,17 +172,41 @@ with col1:
 
         # Update dataset in session state when text changes
         if edited_projects != projects_text or edited_inbox != inbox_text:
-            # Parse projects
-            new_projects = []
-            for line in edited_projects.strip().split('\n'):
-                if line.strip() and ';' in line:
-                    parts = line.split(';', 1)
-                    new_projects.append(Project(
-                        id=int(parts[0].strip()),
-                        name=parts[1].strip(),
-                        status="ongoing",
-                        tags=[]
-                    ))
+            # Fix: Preserve original project structure when possible
+            if edited_projects != projects_text:
+                new_projects = []
+                original_projects = {p.name: p for p in dataset.projects}  # Lookup table
+                
+                for line in edited_projects.strip().split('\n'):
+                    if line.strip():
+                        if ';' in line:
+                            parts = line.split(';', 1)
+                            project_id = int(parts[0].strip())
+                            project_name = parts[1].strip()
+                        else:
+                            # Handle name-only format
+                            project_name = line.strip()
+                            project_id = len(new_projects) + 1
+                        
+                        # Preserve original data if project exists
+                        if project_name in original_projects:
+                            original = original_projects[project_name]
+                            new_projects.append(Project(
+                                id=project_id,
+                                name=project_name,
+                                status=original.status,
+                                tags=original.tags,
+                                tasks=original.tasks  # Preserve existing tasks!
+                            ))
+                        else:
+                            # New project
+                            new_projects.append(Project(
+                                id=project_id,
+                                name=project_name,
+                                status="ongoing",
+                                tags=[],
+                                tasks=[]
+                            ))
             
             # Parse inbox tasks
             new_inbox = [line.strip() for line in edited_inbox.split('\n') if line.strip()]
@@ -176,16 +229,25 @@ with col1:
         
         with col_save2:
             if st.button("💾 Save as Dataset", use_container_width=True):
-                if new_dataset_name.strip():
-                    try:
-                        dataset_manager.save_dataset(new_dataset_name.strip(), dataset)
-                        st.success(f"✅ Saved as '{new_dataset_name}'")
-                        # Refresh available datasets
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Save failed: {e}")
+                # Data projection
+                save_request = services['projector'].from_session_state(
+                    dataset, new_dataset_name.strip()
+                )
+                
+                # Direct save (until CQRS is implemented)
+                validation_error = save_request.validate()
+                if validation_error:
+                    st.error(f"Invalid name: {validation_error}")
                 else:
-                    st.error("Please enter a dataset name")
+                    try:
+                        result = services['dataset_manager'].save_dataset(save_request.name, dataset)
+                        if result["success"]:
+                            st.success(result.get("message", "Saved successfully"))
+                            st.rerun()
+                        else:
+                            st.error(f"Save failed: {result.get('error', 'Unknown error')}")
+                    except Exception as e:
+                        st.error(f"Save failed: {str(e)}")
 
 with col2:
     if 'dataset' in st.session_state:
@@ -205,7 +267,7 @@ with col2:
                             dataset=dataset,
                             prompt_variant=prompt_variant
                         )
-                        response = classifier.classify(request)
+                        response = services['classifier'].classify(request)
                         st.session_state.response = response
                         st.success(f"✅ Classified {len(response.results)} tasks")
                         st.rerun()

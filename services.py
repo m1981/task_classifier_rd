@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import List
 from models import DatasetContent, Project, ClassificationResult, ClassificationRequest, ClassificationResponse
-from dataset_io import YamlDatasetLoader, YamlDatasetSaver, LegacyDatasetLoader
+from dataset_io import YamlDatasetLoader, YamlDatasetSaver
 
 class DatasetManager:
     def __init__(self, base_path: Path = Path("data/datasets")):
@@ -9,7 +9,6 @@ class DatasetManager:
         self.base_path.mkdir(parents=True, exist_ok=True)
         self._yaml_loader = YamlDatasetLoader()
         self._yaml_saver = YamlDatasetSaver()
-        self._legacy_loader = LegacyDatasetLoader()
 
     def load_dataset(self, name: str) -> DatasetContent:
         """Load dataset - try YAML first, fallback to legacy format"""
@@ -19,12 +18,34 @@ class DatasetManager:
         if yaml_file.exists():
             return self._yaml_loader.load(yaml_file)
         else:
-            return self._legacy_loader.load(dataset_path)
+            raise Error();
 
-    def save_dataset(self, name: str, content: DatasetContent) -> None:
-        """Save dataset in YAML format"""
-        dataset_path = self.base_path / name
-        self._yaml_saver.save(dataset_path, content)
+    def save_dataset(self, name: str, content: DatasetContent) -> dict:
+        """Save dataset with validation and detailed result"""
+        # Validate name
+        validation_error = self._validate_dataset_name(name)
+        if validation_error:
+            return {"success": False, "error": validation_error, "type": "validation"}
+        
+        try:
+            self._yaml_saver.save(self.base_path / name, content)
+            return {"success": True, "message": f"Dataset '{name}' saved successfully"}
+        except PermissionError:
+            return {"success": False, "error": "Permission denied - check folder permissions", "type": "permission"}
+        except OSError as e:
+            return {"success": False, "error": f"File system error: {str(e)}", "type": "filesystem"}
+        except Exception as e:
+            return {"success": False, "error": f"Unexpected error: {str(e)}", "type": "unknown"}
+    
+    def _validate_dataset_name(self, name: str) -> str:
+        """Validate dataset name, return error message or empty string"""
+        if not name or not name.strip():
+            return "Dataset name cannot be empty"
+        if len(name) > 50:
+            return "Dataset name too long (max 50 characters)"
+        if not name.replace('_', '').replace('-', '').isalnum():
+            return "Dataset name can only contain letters, numbers, hyphens, and underscores"
+        return ""
 
     def list_datasets(self) -> List[str]:
         """List available dataset names"""
