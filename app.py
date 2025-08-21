@@ -100,8 +100,6 @@ if 'response' in st.session_state and st.session_state.response.results:
                         st.write(f"- Alternatives: {alternatives}")
                     st.write(f"- Reasoning: {result.reasoning}")
                     st.write("---")
-else:
-    st.info("👆 Load a dataset and run classification to see results table here")
 
 # Two column layout
 col1, col2 = st.columns([1, 1])
@@ -226,7 +224,6 @@ with col2:
         dataset = st.session_state.dataset
         
         prompt_variant = st.selectbox("Strategy", ["basic", "diy_renovation"])
-        st.info("💡 Uses your current dataset with prompt template")
 
         # Classify button
         if st.button("🚀 Classify Tasks", type="primary", use_container_width=True):
@@ -254,8 +251,6 @@ with col2:
         with st.expander("👁️ Current Prompt Preview", expanded=True):
             st.code(current_prompt.strip(), language="text")
             st.caption(f"Strategy: {prompt_variant} | Characters: {len(current_prompt)}")
-    else:
-        st.info("👆 Load a dataset first to see classification options")
 
 # Debug section at bottom
 if 'response' in st.session_state:
