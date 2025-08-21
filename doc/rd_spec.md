@@ -39,6 +39,108 @@ interface ClassificationResponse {
 }
 ```
 
+## Architecture Patterns
+
+### DTOs (Data Transfer Objects)
+**Purpose**: Clean separation between UI state and domain models
+- `SaveDatasetRequest`: Encapsulates dataset save operations with validation
+- `SaveDatasetResponse`: Structured response with success/error details
+- **Benefits**: Type safety, validation encapsulation, API contract clarity
+
+```python
+@dataclass
+class SaveDatasetRequest:
+    name: str
+    source_dataset: str
+    projects: List[str]
+    inbox_tasks: List[str]
+    
+    def validate(self) -> Optional[str]:
+        # Built-in validation logic
+```
+
+### CQRS Commands
+**Purpose**: Separate read/write operations with clear command boundaries
+- `SaveDatasetCommand`: Handles dataset persistence with validation and error handling
+- **Benefits**: Single responsibility, testable business logic, consistent error handling
+
+```python
+class SaveDatasetCommand:
+    def execute(self, request: SaveDatasetRequest, source_dataset: DatasetContent) -> SaveDatasetResponse:
+        # 1. Validate → 2. Project → 3. Persist → 4. Return structured response
+```
+
+### Data Projection
+**Purpose**: Transform between different data representations without coupling
+- `DatasetProjector`: Converts between UI state, DTOs, and domain models
+- **Benefits**: Loose coupling, reusable transformations, clean boundaries
+
+```python
+class DatasetProjector:
+    @staticmethod
+    def from_ui_state(dataset: DatasetContent, name: str) -> SaveDatasetRequest
+    
+    @staticmethod  
+    def project_for_save(dataset: DatasetContent, request: SaveDatasetRequest) -> DatasetContent
+```
+
+### Single Responsibility Principle
+**Implementation**:
+- `DatasetManager`: Only handles file I/O operations
+- `TaskClassifier`: Only handles AI API communication
+- `ResponseParser`: Only handles response parsing logic
+- `PromptBuilder`: Only handles prompt construction
+- **Benefits**: Easier testing, clearer debugging, maintainable code
+
+### DRY (Don't Repeat Yourself)
+**Implementation**:
+- Shared validation logic in DTOs (`SaveDatasetRequest.validate()`)
+- Reusable error handling patterns in `DatasetManager.save_dataset()`
+- Common parsing utilities in `ResponseParser._parse_confidence()`
+- Centralized service initialization in `get_services()`
+- **Benefits**: Consistent behavior, single source of truth, easier maintenance
+
+## API Contracts
+
+### Dataset Management API
+```python
+# Load Dataset
+DatasetManager.load_dataset(name: str) -> DatasetContent
+# Raises: FileNotFoundError
+
+# Save Dataset  
+DatasetManager.save_dataset(name: str, content: DatasetContent) -> dict
+# Returns: {"success": bool, "message": str, "type": str}
+
+# List Datasets
+DatasetManager.list_datasets() -> List[str]
+```
+
+### Classification API
+```python
+# Classify Tasks
+TaskClassifier.classify(request: ClassificationRequest) -> ClassificationResponse
+# Raises: RuntimeError for API failures
+
+# Build Prompt
+PromptBuilder.build_prompt(request: ClassificationRequest) -> str
+# Auto-detects static vs dynamic prompts
+
+# Parse Response
+ResponseParser.parse(raw_response: str) -> List[ClassificationResult]
+# Handles malformed responses gracefully
+```
+
+### Command API
+```python
+# Save Dataset Command
+SaveDatasetCommand.execute(
+    request: SaveDatasetRequest, 
+    source_dataset: DatasetContent
+) -> SaveDatasetResponse
+# Encapsulates: Validate → Project → Persist → Response
+```
+
 ## Current Prompt Strategies
 
 ### 1. Basic Context
@@ -80,9 +182,8 @@ interface ClassificationResponse {
 
 ```
 data/datasets/{name}/
-├── reference_tasks.txt    # id;subject;tags;duration
-├── projects.txt          # pid;subject  
-└── inbox_tasks.txt       # one task per line
+├── dataset.yaml          # YAML format with projects and inbox_tasks
+└── (legacy files)        # reference_tasks.txt, projects.txt, inbox_tasks.txt
 ```
 
 ## API Integration
@@ -99,3 +200,8 @@ data/datasets/{name}/
 - ✅ File-based persistence
 - ✅ Debug logging
 - ✅ Response validation
+- ✅ CQRS command pattern
+- ✅ DTO validation
+- ✅ Data projection layer
+- ✅ Single responsibility services
+- ✅ DRY principle implementation

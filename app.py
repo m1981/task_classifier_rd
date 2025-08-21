@@ -151,8 +151,9 @@ with col1:
         # Update dataset in session state when text changes
         if edited_projects != projects_text or edited_inbox != inbox_text:
             # Fix: Preserve original project structure when possible
+            new_projects = []  # Initialize here
+            
             if edited_projects != projects_text:
-                new_projects = []
                 original_projects = {p.name: p for p in dataset.projects}  # Lookup table
                 
                 for line in edited_projects.strip().split('\n'):
@@ -185,6 +186,9 @@ with col1:
                                 tags=[],
                                 tasks=[]
                             ))
+            else:
+                # Projects unchanged, keep original
+                new_projects = dataset.projects
             
             # Parse inbox tasks
             new_inbox = [line.strip() for line in edited_inbox.split('\n') if line.strip()]
