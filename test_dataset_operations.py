@@ -188,6 +188,73 @@ class TestDatasetOperations:
         assert error is not None
         assert "name" in error.lower()
 
+    def test_dataset_manager_error_handling(self, temp_dir):
+        """Test error handling in DatasetManager methods"""
+        manager = DatasetManager(temp_dir)
+        sample_dataset = DatasetContent(projects=[], inbox_tasks=[])
+        
+        # Test validation errors
+        result = manager.save_dataset("", sample_dataset)
+        assert result["success"] is False
+        assert result["type"] == "validation"
+        assert "empty" in result["error"]
+        
+        # Test long name validation
+        long_name = "a" * 51
+        result = manager.save_dataset(long_name, sample_dataset)
+        assert result["success"] is False
+        assert result["type"] == "validation"
+        assert "too long" in result["error"]
+        
+        # Test invalid characters
+        result = manager.save_dataset("invalid@name!", sample_dataset)
+        assert result["success"] is False
+        assert result["type"] == "validation"
+        assert "letters, numbers" in result["error"]
+
+    def test_list_datasets_empty_directory(self, temp_dir):
+        """Test list_datasets with empty/nonexistent directory"""
+        # Test with empty directory
+        manager = DatasetManager(temp_dir)
+        assert manager.list_datasets() == []
+        
+        # Test with nonexistent directory
+        nonexistent = temp_dir / "nonexistent"
+        manager = DatasetManager(nonexistent)
+        assert manager.list_datasets() == []
+
+    def test_save_dataset_permission_error(self, temp_dir, monkeypatch):
+        """Test save_dataset handles permission errors"""
+        manager = DatasetManager(temp_dir)
+        sample_dataset = DatasetContent(projects=[], inbox_tasks=[])
+        
+        # Mock YamlDatasetSaver to raise PermissionError
+        def mock_save(*args, **kwargs):
+            raise PermissionError("Access denied")
+        
+        monkeypatch.setattr(manager._yaml_saver, 'save', mock_save)
+        
+        result = manager.save_dataset("test", sample_dataset)
+        assert result["success"] is False
+        assert result["type"] == "permission"
+        assert "Permission denied" in result["error"]
+
+    def test_save_dataset_filesystem_error(self, temp_dir, monkeypatch):
+        """Test save_dataset handles filesystem errors"""
+        manager = DatasetManager(temp_dir)
+        sample_dataset = DatasetContent(projects=[], inbox_tasks=[])
+        
+        # Mock YamlDatasetSaver to raise OSError
+        def mock_save(*args, **kwargs):
+            raise OSError("Disk full")
+        
+        monkeypatch.setattr(manager._yaml_saver, 'save', mock_save)
+        
+        result = manager.save_dataset("test", sample_dataset)
+        assert result["success"] is False
+        assert result["type"] == "filesystem"
+        assert "File system error" in result["error"]
+
 # Integration test for the full workflow
 class TestDatasetWorkflow:
     
