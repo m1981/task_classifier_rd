@@ -130,12 +130,11 @@ with col1:
 
         # Editable Projects
         st.markdown("**Projects**")
-        projects_text = '\n'.join([f"{p.name}" for p in dataset.projects])
+        projects_text = '\n'.join([f"{p.id};{p.name}" for p in dataset.projects])
         edited_projects = st.text_area(
-            "projects_editor",
+            "Projects (Format: ID;Name)",
             value=projects_text,
-            height=200,
-            label_visibility="collapsed"
+            help="Edit format: 1;Kitchen Renovation, 2;Bathroom Upgrade"
         )
 
         # Editable Inbox Tasks
@@ -150,44 +149,40 @@ with col1:
 
         # Update dataset in session state when text changes
         if edited_projects != projects_text or edited_inbox != inbox_text:
-            # Fix: Preserve original project structure when possible
-            new_projects = []  # Initialize here
+            new_projects = []
             
             if edited_projects != projects_text:
-                original_projects = {p.name: p for p in dataset.projects}  # Lookup table
+                # Create lookup by position/order to preserve data when names change
+                original_projects_list = dataset.projects
+                project_lines = [line.strip() for line in edited_projects.strip().split('\n') if line.strip()]
                 
-                for line in edited_projects.strip().split('\n'):
-                    if line.strip():
-                        if ';' in line:
-                            parts = line.split(';', 1)
-                            project_id = int(parts[0].strip())
-                            project_name = parts[1].strip()
-                        else:
-                            # Handle name-only format
-                            project_name = line.strip()
-                            project_id = len(new_projects) + 1
+                for line in project_lines:
+                    if ';' in line:
+                        parts = line.split(';', 1)
+                        project_id = int(parts[0].strip())
+                        project_name = parts[1].strip()
                         
-                        # Preserve original data if project exists
-                        if project_name in original_projects:
-                            original = original_projects[project_name]
+                        # Find original by ID (not position or name)
+                        original = next((p for p in dataset.projects if p.id == project_id), None)
+                        if original:
+                            # Preserve all data, update name only
                             new_projects.append(Project(
                                 id=project_id,
                                 name=project_name,
                                 status=original.status,
                                 tags=original.tags,
-                                tasks=original.tasks  # Preserve existing tasks!
+                                tasks=original.tasks
                             ))
-                        else:
-                            # New project
-                            new_projects.append(Project(
-                                id=project_id,
-                                name=project_name,
-                                status="ongoing",
-                                tags=[],
-                                tasks=[]
-                            ))
+                    else:
+                        project_name = line.strip()
+                        new_projects.append(Project(
+                            id=len(new_projects) + 1,
+                            name=project_name,
+                            status="ongoing",
+                            tags=[],
+                            tasks=[]
+                        ))
             else:
-                # Projects unchanged, keep original
                 new_projects = dataset.projects
             
             # Parse inbox tasks

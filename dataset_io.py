@@ -56,34 +56,33 @@ class YamlDatasetSaver(DatasetSaver):
         self._setup_yaml_representer()
 
     def _setup_yaml_representer(self):
-        """Configure YAML to always use block style for lists"""
-
+        """Configure YAML for VCS-friendly, consistent output"""
+        
         def represent_list(dumper, data):
+            # Always use block style for lists
             return dumper.represent_sequence('tag:yaml.org,2002:seq', data, flow_style=False)
 
         def represent_dict(dumper, data):
+            # Always use block style for dicts
             return dumper.represent_mapping('tag:yaml.org,2002:map', data, flow_style=False)
 
         def represent_str(dumper, data):
-            # Only quote strings that need it (contain special chars)
-            if any(char in data for char in ':#@[]{}'):
+            # Never quote strings unless absolutely necessary
+            if data and any(char in data for char in ':#@[]{}|>'):
                 return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='"')
             return dumper.represent_scalar('tag:yaml.org,2002:str', data)
 
         yaml.add_representer(list, represent_list)
-        yaml.add_representer(dict, represent_dict)
+        yaml.add_representer(dict, represent_dict) 
         yaml.add_representer(str, represent_str)
 
     def save(self, dataset_path: Path, content: DatasetContent) -> None:
         dataset_path.mkdir(parents=True, exist_ok=True)
 
-        # Format the data structure
-        projects_dict = self._format_projects(content.projects)
-
-        # Create the full data structure
+        # Create the full data structure with consistent ordering
         yaml_data = {
-            'projects': projects_dict,
-            'inbox_tasks': content.inbox_tasks
+            'projects': self._format_projects(content.projects),
+            'inbox_tasks': sorted(content.inbox_tasks)  # Sort inbox tasks
         }
 
         yaml_file = dataset_path / "dataset.yaml"
@@ -95,31 +94,41 @@ class YamlDatasetSaver(DatasetSaver):
                 allow_unicode=True,
                 indent=2,
                 width=1000,
-                sort_keys=False
+                sort_keys=True  # Sort keys at top level
             )
 
     def _format_projects(self, projects: List[Project]) -> dict:
+        """Format projects with consistent ordering"""
         projects_data = {}
-        for project in projects:
-            key = project.name.lower().replace(' ', '_')
+        
+        # Sort projects by ID for consistent ordering
+        sorted_projects = sorted(projects, key=lambda p: p.id)
+        
+        for project in sorted_projects:
+            # Use consistent key generation
+            key = project.name.lower().replace(' ', '_').replace('/', '_')
             projects_data[key] = {
                 'id': project.id,
                 'name': project.name,
                 'status': project.status,
-                'tags': project.tags,
+                'tags': sorted(project.tags),  # Sort tags for consistency
                 'tasks': self._format_tasks(project.tasks)
             }
         return projects_data
 
     def _format_tasks(self, tasks: List[Task]) -> List[dict]:
+        """Format tasks with consistent ordering"""
+        # Sort tasks by ID for consistent ordering
+        sorted_tasks = sorted(tasks, key=lambda t: t.id)
+        
         return [
             {
                 'id': task.id,
                 'name': task.name,
                 'duration': task.duration,
-                'tags': task.tags,
+                'tags': sorted(task.tags),  # Sort tags for consistency
                 'notes': task.notes
             }
-            for task in tasks
+            for task in sorted_tasks
         ]
 
