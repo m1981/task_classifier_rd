@@ -1,5 +1,0 @@
-1;Health & Wellness
-2;Career Development
-3;Home Organization
-4;Financial Planning
-5;Social & Family

@@ -1,36 +1,41 @@
 
 import streamlit as st
 import anthropic
-from services import DatasetManager, PromptBuilder, ResponseParser, TaskClassifier, TaskBatcher, BatchManager
+from services import DatasetManager, PromptBuilder, ResponseParser, TaskClassifier, SaveDatasetCommand, DatasetProjector
 from models import ClassificationRequest, Project
+from models.dtos import SaveDatasetRequest
 
 st.set_page_config(page_title="AI Task Classification", layout="wide")
 
-# Initialize services
 @st.cache_resource
 def get_services():
-    client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+    # Initialize core services
     dataset_manager = DatasetManager()
     prompt_builder = PromptBuilder()
-    parser = ResponseParser()
-    classifier = TaskClassifier(client, prompt_builder, parser)
-    return dataset_manager, classifier
+    response_parser = ResponseParser()
+    
+    # Initialize Anthropic client
+    client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+    classifier = TaskClassifier(client, prompt_builder, response_parser)
+    
+    # Initialize command/projector services
+    projector = DatasetProjector()
+    save_command = SaveDatasetCommand(dataset_manager, projector)
+    
+    return {
+        'dataset_manager': dataset_manager,
+        'classifier': classifier,
+        'projector': projector,
+        'save_command': save_command
+    }
 
-dataset_manager, classifier = get_services()
-
-@st.cache_resource
-def get_batch_services():
-    task_batcher = TaskBatcher()
-    batch_manager = BatchManager()
-    return task_batcher, batch_manager
-
-task_batcher, batch_manager = get_batch_services()
+services = get_services()
 
 # Results table at top (if available)
 if 'response' in st.session_state and st.session_state.response.results:
     st.subheader("📊 Results")
     response = st.session_state.response
-    
+
     # Enhanced results display with edge case handling
     if response.results:
         # Categorize results by confidence
@@ -38,9 +43,7 @@ if 'response' in st.session_state and st.session_state.response.results:
         medium_conf = [r for r in response.results if 0.6 <= r.confidence < 0.8]
         low_conf = [r for r in response.results if r.confidence < 0.6]
         unmatched = [r for r in response.results if r.suggested_project.lower() == 'unmatched']
-        
-        print(f"🔍 DEBUG: Confidence breakdown - High: {len(high_conf)}, Medium: {len(medium_conf)}, Low: {len(low_conf)}, Unmatched: {len(unmatched)}")
-        
+
         # Show confidence breakdown
         col1, col2, col3, col4 = st.columns(4)
         with col1:
@@ -51,16 +54,16 @@ if 'response' in st.session_state and st.session_state.response.results:
             st.metric("❓ Low Confidence", len(low_conf), help="<60% confidence")
         with col4:
             st.metric("🔍 Unmatched", len(unmatched), help="No good project match")
-        
+
         # Results table with color coding
-        table_rows = ["| Task | Project | Confidence | Tags | Duration | Status |", 
+        table_rows = ["| Task | Project | Confidence | Tags | Duration | Status |",
                      "|------|---------|------------|------|----------|--------|"]
-        
+
         for result in response.results:
             tags = ', '.join(result.extracted_tags)
             duration = result.estimated_duration or 'N/A'
             confidence = f"{result.confidence:.1%}"
-            
+
             # Status indicator
             if result.confidence >= 0.8:
                 status = "✅ Good"
@@ -68,17 +71,17 @@ if 'response' in st.session_state and st.session_state.response.results:
                 status = "⚠️ Review"
             else:
                 status = "❓ Unclear"
-                
+
             table_rows.append(f"| {result.task} | {result.suggested_project} | {confidence} | {tags} | {duration} | {status} |")
-        
+
         st.markdown('\n'.join(table_rows))
-        
-        # Show problematic tasks for review (combine low confidence AND unmatched)
+
+        # Show problematic tasks for review
         review_tasks = []
         for result in response.results:
             if result.confidence < 0.8 or result.suggested_project.lower() == 'unmatched':
                 review_tasks.append(result)
-        
+
         # Deduplicate by task name
         seen_tasks = set()
         unique_review_tasks = []
@@ -86,11 +89,7 @@ if 'response' in st.session_state and st.session_state.response.results:
             if result.task not in seen_tasks:
                 seen_tasks.add(result.task)
                 unique_review_tasks.append(result)
-            else:
-                print(f"🔍 DEBUG: Skipping duplicate task: {result.task}")
-        
-        print(f"🔍 DEBUG: Review tasks - Total: {len(review_tasks)}, Unique: {len(unique_review_tasks)}")
-        
+
         if unique_review_tasks:
             with st.expander(f"🔍 Review Needed ({len(unique_review_tasks)} tasks)", expanded=False):
                 for result in unique_review_tasks:
@@ -101,63 +100,21 @@ if 'response' in st.session_state and st.session_state.response.results:
                         st.write(f"- Alternatives: {alternatives}")
                     st.write(f"- Reasoning: {result.reasoning}")
                     st.write("---")
-    else:
-        st.info("👆 Load a dataset and run classification to see results table here")
-
-    st.subheader("🔨 Task Batching")
-    
-    # Step 1: Select Type
-    available_types = set()
-    for result in st.session_state.response.results:
-        available_types.update(result.extracted_tags)
-    
-    task_type = st.selectbox("Select task type for batching:", sorted(available_types))
-    
-    if st.button("🔍 Find Similar Tasks"):
-        analysis = task_batcher.find_similar_tasks(st.session_state.response.results, task_type)
-        st.session_state.batch_analysis = analysis
-        st.rerun()
-    
-    # Step 2: Review Analysis
-    if 'batch_analysis' in st.session_state:
-        analysis = st.session_state.batch_analysis
-        
-        st.write(f"**Found {len(analysis.matching_tasks)} {task_type} tasks**")
-        st.write(f"**Estimated time:** {analysis.total_time_estimate}")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.write("**Materials:**")
-            for material in analysis.consolidated_materials:
-                st.write(f"• {material}")
-        
-        with col2:
-            st.write("**Tools:**")
-            for tool in analysis.consolidated_tools:
-                st.write(f"• {tool}")
-        
-        # Step 3: Create Batch
-        batch_name = st.text_input("Batch name:", f"{task_type.title()} Batch")
-        
-        if st.button("🔨 Create Batch"):
-            batch = task_batcher.create_batch(analysis, batch_name)
-            batch_manager.save_batch(batch)
-            st.success(f"✅ Created batch: {batch_name}")
-            del st.session_state.batch_analysis
-            st.rerun()
+else:
+    st.info("👆 Load a dataset and run classification to see results table here")
 
 # Two column layout
 col1, col2 = st.columns([1, 1])
 
 with col1:
     # Dataset selector
-    available_datasets = dataset_manager.list_datasets()
+    available_datasets = services['dataset_manager'].list_datasets()
     if available_datasets:
         selected_dataset = st.selectbox("Select Dataset", available_datasets)
-        
+
         if st.button("📂 Load Dataset", use_container_width=True):
             try:
-                dataset = dataset_manager.load_dataset(selected_dataset)
+                dataset = services['dataset_manager'].load_dataset(selected_dataset)
                 st.session_state.dataset = dataset
                 st.success(f"✅ Loaded {selected_dataset}")
                 st.rerun()
@@ -166,48 +123,67 @@ with col1:
     else:
         st.warning("No datasets found. Create data/datasets/{name}/ folders first.")
         st.stop()
-    
+
     # Show dataset info if loaded
     if 'dataset' in st.session_state:
         dataset = st.session_state.dataset
-        
-        st.markdown("**Dataset Contents:**")
-        col_a, col_b, col_c = st.columns(3)
-        with col_a:
-            st.metric("Reference", len(dataset.reference_tasks))
-        with col_b:
-            st.metric("Projects", len(dataset.projects))
-        with col_c:
-            st.metric("Inbox", len(dataset.inbox_tasks))
-        
+
         # Editable Projects
-        st.markdown("**Projects** (pid;subject)")
-        projects_text = '\n'.join([f"{p.pid};{p.subject}" for p in dataset.projects])
+        st.markdown("**Projects**")
+        projects_text = '\n'.join([f"{p.id};{p.name}" for p in dataset.projects])
         edited_projects = st.text_area(
-            "projects_editor",
+            "Projects (Format: ID;Name)",
             value=projects_text,
-            height=100,
-            label_visibility="collapsed"
+            help="Edit format: 1;Kitchen Renovation, 2;Bathroom Upgrade"
         )
-        
+
         # Editable Inbox Tasks
-        st.markdown("**Inbox Tasks** (one per line)")
+        st.markdown("**Inbox Tasks**")
         inbox_text = '\n'.join(dataset.inbox_tasks)
         edited_inbox = st.text_area(
-            "inbox_editor", 
+            "inbox_editor",
             value=inbox_text,
-            height=120,
+            height=350,
             label_visibility="collapsed"
         )
-        
+
         # Update dataset in session state when text changes
         if edited_projects != projects_text or edited_inbox != inbox_text:
-            # Parse projects
             new_projects = []
-            for line in edited_projects.strip().split('\n'):
-                if line.strip() and ';' in line:
-                    parts = line.split(';', 1)
-                    new_projects.append(Project(pid=parts[0].strip(), subject=parts[1].strip()))
+            
+            if edited_projects != projects_text:
+                # Create lookup by position/order to preserve data when names change
+                original_projects_list = dataset.projects
+                project_lines = [line.strip() for line in edited_projects.strip().split('\n') if line.strip()]
+                
+                for line in project_lines:
+                    if ';' in line:
+                        parts = line.split(';', 1)
+                        project_id = int(parts[0].strip())
+                        project_name = parts[1].strip()
+                        
+                        # Find original by ID (not position or name)
+                        original = next((p for p in dataset.projects if p.id == project_id), None)
+                        if original:
+                            # Preserve all data, update name only
+                            new_projects.append(Project(
+                                id=project_id,
+                                name=project_name,
+                                status=original.status,
+                                tags=original.tags,
+                                tasks=original.tasks
+                            ))
+                    else:
+                        project_name = line.strip()
+                        new_projects.append(Project(
+                            id=len(new_projects) + 1,
+                            name=project_name,
+                            status="ongoing",
+                            tags=[],
+                            tasks=[]
+                        ))
+            else:
+                new_projects = dataset.projects
             
             # Parse inbox tasks
             new_inbox = [line.strip() for line in edited_inbox.split('\n') if line.strip()]
@@ -230,24 +206,28 @@ with col1:
         
         with col_save2:
             if st.button("💾 Save as Dataset", use_container_width=True):
-                if new_dataset_name.strip():
-                    try:
-                        dataset_manager.save_dataset(new_dataset_name.strip(), dataset)
-                        st.success(f"✅ Saved as '{new_dataset_name}'")
-                        # Refresh available datasets
+                # Use new command pattern
+                save_request = services['projector'].from_ui_state(
+                    dataset, new_dataset_name.strip()
+                )
+                
+                try:
+                    result = services['save_command'].execute(save_request, dataset)
+                    if result.success:
+                        st.success(result.message)
                         st.rerun()
-                    except Exception as e:
-                        st.error(f"Save failed: {e}")
-                else:
-                    st.error("Please enter a dataset name")
+                    else:
+                        st.error(f"Save failed: {result.message}")
+                except Exception as e:
+                    st.error(f"Save failed: {str(e)}")
 
 with col2:
     if 'dataset' in st.session_state:
         dataset = st.session_state.dataset
         
-        # Prompt variant selector
-        prompt_variant = st.selectbox("Prompt Strategy", ["basic", "diy_renovation"])
-        
+        prompt_variant = st.selectbox("Strategy", ["basic", "diy_renovation"])
+        st.info("💡 Uses your current dataset with prompt template")
+
         # Classify button
         if st.button("🚀 Classify Tasks", type="primary", use_container_width=True):
             if not dataset.inbox_tasks:
@@ -259,7 +239,7 @@ with col2:
                             dataset=dataset,
                             prompt_variant=prompt_variant
                         )
-                        response = classifier.classify(request)
+                        response = services['classifier'].classify(request)
                         st.session_state.response = response
                         st.success(f"✅ Classified {len(response.results)} tasks")
                         st.rerun()

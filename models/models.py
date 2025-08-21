@@ -35,7 +35,7 @@ class ClassificationResult:
 @dataclass
 class ClassificationRequest:
     dataset: DatasetContent
-    prompt_variant: str
+    prompt_variant: str = "basic"
 
 @dataclass
 class ClassificationResponse:

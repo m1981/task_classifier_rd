@@ -1,0 +1,6 @@
+anthropic==0.64.0
+streamlit==1.48.1
+pyyaml
+pytest
+pytest-cov
+pytest-watch

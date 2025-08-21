@@ -1,0 +1,80 @@
+inbox_tasks:
+- Caulk around bathtub
+- Fix leaky bathroom sink
+- Install ceiling fan in bedroom
+- Install new kitchen cabinet handles
+- Mount TV on living room wall
+- Paint accent wall in bedroom
+- Repair loose deck railing
+- Replace broken light switch
+projects:
+  bathroom_upgrade:
+    id: 2
+    name: Bathroom Upgrade
+    status: ongoing
+    tags:
+    - bathroom
+    - physical
+    - renovation
+    tasks:
+    - duration: 45min
+      id: 16
+      name: Install bathroom faucet
+      notes: ''
+      tags:
+      - need-tools
+      - physical
+      - plumbing
+  bedroom_makeover:
+    id: 3
+    name: Bedroom Makeover
+    status: ongoing
+    tags:
+    - bedroom
+    - physical
+    - renovation
+    tasks:
+    - duration: 2h
+      id: 15
+      name: Create wall shelf
+      notes: ''
+      tags:
+      - carpentry
+      - need-material
+      - need-tools
+      - physical
+    - duration: 4h
+      id: 17
+      name: Paint bedroom walls
+      notes: ''
+      tags:
+      - need-material
+      - need-tools
+      - painting
+      - physical
+  kitchen_renovation2:
+    id: 1
+    name: Kitchen Renovation
+    status: ongoing
+    tags:
+    - kitchen
+    - physical
+    - renovation
+    tasks:
+    - duration: 1h
+      id: 13
+      name: Mount electrical socket
+      notes: ''
+      tags:
+      - electrical
+      - need-tools
+      - physical
+    - duration: 6h
+      id: 19
+      name: Tile kitchen backsplash
+      notes: ''
+      tags:
+      - need-material
+      - need-tools
+      - physical
+      - tiling
