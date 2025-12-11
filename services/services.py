@@ -62,6 +62,23 @@ class PromptBuilder:
             "diy_renovation": """Act as an experienced DIY home renovation expert..."""
         }
 
+    def build_single_task_prompt(self, task_text: str, projects: List[str]) -> str:
+        project_list = ", ".join([f'"{p}"' for p in projects])
+        return f"""
+        You are a task organization assistant.
+        Task to classify: "{task_text}"
+    
+        Available Projects: [{project_list}]
+    
+        Analyze the task and return a JSON object (no markdown, just raw JSON) with these keys:
+        {{
+            "suggested_project": "Exact name of best matching project or 'Unmatched'",
+            "confidence": 0.95,
+            "reasoning": "Short explanation why",
+            "tags": ["tag1", "tag2"]
+        }}
+        """
+
     def build_prompt(self, request: ClassificationRequest) -> str:
         """Build prompt - auto-detect static vs dynamic based on variant name"""
         if self._is_static_prompt(request.prompt_variant):
@@ -127,6 +144,28 @@ ALTERNATIVES: [semicolon-separated list of other potential projects, or 'none']
         return '\n'.join([f"  - {task}" for task in tasks])
 
 class ResponseParser:
+    def parse_single_json(self, raw_response: str, task_text: str) -> ClassificationResult:
+        try:
+            # Clean up if LLM wraps in ```json ... ```
+            clean_json = raw_response.replace("```json", "").replace("```", "").strip()
+            data = json.loads(clean_json)
+
+            return ClassificationResult(
+                task=task_text,
+                suggested_project=data.get("suggested_project", "Unmatched"),
+                confidence=float(data.get("confidence", 0.0)),
+                reasoning=data.get("reasoning", ""),
+                extracted_tags=data.get("tags", [])
+            )
+        except Exception as e:
+            # Fallback if JSON fails
+            return ClassificationResult(
+                task=task_text,
+                suggested_project="Unmatched",
+                confidence=0.0,
+                reasoning=f"Parsing error: {str(e)}"
+            )
+
     def parse(self, raw_response: str) -> List[ClassificationResult]:
         """Parse multiline text response into structured data"""
         print(f"🔍 DEBUG: Parsing response with {len(raw_response)} characters")
