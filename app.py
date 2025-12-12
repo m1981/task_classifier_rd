@@ -5,18 +5,16 @@ from services import DatasetManager, SaveDatasetCommand, DatasetProjector
 from models import Project, Task
 
 # --- Configuration ---
-st.set_page_config(page_title="AI Task Classification", layout="wide")
+# We keep layout="wide" so it stretches nicely on desktop,
+# but the design is optimized for narrow screens.
+st.set_page_config(page_title="AI Task Triage", layout="wide", initial_sidebar_state="collapsed")
 
 
 # --- Service Initialization ---
 @st.cache_resource
 def get_services():
-    # We only initialize what we actually use for the Tinder-style workflow
     dataset_manager = DatasetManager()
-
-    # Initialize Anthropic client
     client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
-
     projector = DatasetProjector()
     save_command = SaveDatasetCommand(dataset_manager, projector)
 
@@ -31,21 +29,14 @@ def get_services():
 services = get_services()
 
 
-# --- Helper Functions ---
+# --- Helper Functions (Logic Unchanged) ---
 
 def analyze_single_task(client, task_text: str, projects: list[str]):
-    """
-    Returns a dictionary containing the parsed result AND debug metadata.
-    """
     project_list = ", ".join([f'"{p}"' for p in projects])
-
-    # 1. Construct Prompt
     prompt = f"""
     You are an expert task organizer.
-
     Task to classify: "{task_text}"
     Available Projects: [{project_list}]
-
     Analyze the task and return a JSON object (no markdown, just raw JSON) with these keys:
     {{
         "suggested_project": "The exact name of the best matching project from the list, or 'Unmatched'",
@@ -54,66 +45,42 @@ def analyze_single_task(client, task_text: str, projects: list[str]):
         "tags": ["tag1", "tag2"]
     }}
     """
-
-    result_structure = {
-        "parsed": None,
-        "debug_prompt": prompt,
-        "debug_raw_response": ""
-    }
-
+    result_structure = {"parsed": None}
     try:
-        # 2. Call API
         response = client.messages.create(
             model="claude-3-5-haiku-latest",
             max_tokens=500,
             messages=[{"role": "user", "content": prompt}]
         )
         content = response.content[0].text
-        result_structure["debug_raw_response"] = content
-
-        # 3. Parse JSON
         clean_json = content.replace("```json", "").replace("```", "").strip()
         result_structure["parsed"] = json.loads(clean_json)
-
     except Exception as e:
-        # Fallback on error
-        result_structure["debug_raw_response"] += f"\n\nERROR: {str(e)}"
         result_structure["parsed"] = {
             "suggested_project": "Unmatched",
             "confidence": 0.0,
             "reasoning": f"Error: {str(e)}",
             "tags": []
         }
-
     return result_structure
 
 
 def move_task_to_project(dataset, task_text, project_name, tags=None):
-    """Moves a task string from inbox to a Project object"""
     target_project = next((p for p in dataset.projects if p.name == project_name), None)
-
     if not target_project:
         st.error(f"Project '{project_name}' not found!")
         return
 
     new_task_id = len(target_project.tasks) + 1
-    new_task = Task(
-        id=new_task_id,
-        name=task_text,
-        tags=tags if tags else [],
-        duration="unknown"
-    )
-
+    new_task = Task(id=new_task_id, name=task_text, tags=tags if tags else [], duration="unknown")
     target_project.tasks.append(new_task)
 
     if task_text in dataset.inbox_tasks:
         dataset.inbox_tasks.remove(task_text)
 
-    # Clear cache for the next item
     if 'current_prediction' in st.session_state:
         del st.session_state.current_prediction
 
-    # Add to history
     if 'history' not in st.session_state:
         st.session_state.history = []
     st.session_state.history.insert(0, f"Moved '{task_text}' → {project_name}")
@@ -121,7 +88,7 @@ def move_task_to_project(dataset, task_text, project_name, tags=None):
 
 def create_project_and_move(dataset, task_text, new_project_name):
     if any(p.name.lower() == new_project_name.lower() for p in dataset.projects):
-        st.warning("Project already exists, moving there instead.")
+        st.toast(f"Project '{new_project_name}' already exists, moving there.", icon="ℹ️")
         move_task_to_project(dataset, task_text, new_project_name)
         return
 
@@ -131,145 +98,144 @@ def create_project_and_move(dataset, task_text, new_project_name):
     move_task_to_project(dataset, task_text, new_project_name)
 
 
-# --- Main Layout ---
+# --- UI LAYOUT START ---
 
-st.title("⚡ Task Triage")
+# 1. SIDEBAR: Admin Controls (Hidden by default on mobile)
+with st.sidebar:
+    st.header("⚙️ Settings")
 
-col1, col2 = st.columns([1, 2])
-
-# --- LEFT COLUMN: Dataset & Controls ---
-with col1:
-    st.subheader("📂 Dataset")
-
+    # Dataset Loading
     available_datasets = services['dataset_manager'].list_datasets()
     if available_datasets:
-        selected_dataset = st.selectbox("Select Dataset", available_datasets)
-
-        if st.button("Load Dataset", use_container_width=True):
+        selected_dataset = st.selectbox("Dataset", available_datasets)
+        if st.button("📂 Load", use_container_width=True):
             try:
                 dataset = services['dataset_manager'].load_dataset(selected_dataset)
                 st.session_state.dataset = dataset
-                # Reset state
                 if 'current_prediction' in st.session_state: del st.session_state.current_prediction
                 if 'history' in st.session_state: del st.session_state.history
-                st.success(f"Loaded {len(dataset.inbox_tasks)} inbox tasks")
+                st.toast(f"Loaded {len(dataset.inbox_tasks)} tasks", icon="✅")
                 st.rerun()
             except Exception as e:
                 st.error(f"Error: {e}")
-    else:
-        st.warning("No datasets found.")
-        st.stop()
 
+    st.divider()
+
+    # Saving
     if 'dataset' in st.session_state:
-        dataset = st.session_state.dataset
-        total_tasks = len(dataset.inbox_tasks) + sum(len(p.tasks) for p in dataset.projects)
-        processed = sum(len(p.tasks) for p in dataset.projects)
-
-        st.metric("Inbox Remaining", len(dataset.inbox_tasks))
-        st.progress(processed / total_tasks if total_tasks > 0 else 0)
-
-        st.markdown("---")
-        new_name = st.text_input("Save As", value=selected_dataset)
-        if st.button("💾 Save Progress", use_container_width=True):
-            req = services['projector'].from_ui_state(dataset, new_name)
-            res = services['save_command'].execute(req, dataset)
+        st.subheader("💾 Save")
+        new_name = st.text_input("Filename", value=selected_dataset)
+        if st.button("Save Progress", type="primary", use_container_width=True):
+            req = services['projector'].from_ui_state(st.session_state.dataset, new_name)
+            res = services['save_command'].execute(req, st.session_state.dataset)
             if res.success:
-                st.success("Saved!")
+                st.toast("Progress Saved!", icon="💾")
             else:
                 st.error(res.message)
 
+        # History
         if 'history' in st.session_state and st.session_state.history:
-            st.markdown("---")
-            st.caption("Recent Actions:")
+            st.divider()
+            st.caption("Recent History")
             for action in st.session_state.history[:5]:
-                st.caption(f"✅ {action}")
+                st.caption(f"• {action}")
 
-# --- RIGHT COLUMN: Active Task ---
-with col2:
-    if 'dataset' not in st.session_state:
-        st.info("👈 Please load a dataset to begin.")
+# 2. MAIN SCREEN
+if 'dataset' not in st.session_state:
+    st.info("👈 Open the sidebar (top-left) to load a dataset.")
+    st.stop()
 
-    elif not st.session_state.dataset.inbox_tasks:
-        st.balloons()
-        st.success("🎉 Inbox Zero! Great job.")
+dataset = st.session_state.dataset
 
-    else:
-        current_task_text = st.session_state.dataset.inbox_tasks[0]
+# 2a. Compact Header (Progress Bar)
+if dataset.inbox_tasks:
+    total_tasks = len(dataset.inbox_tasks) + sum(len(p.tasks) for p in dataset.projects)
+    processed = sum(len(p.tasks) for p in dataset.projects)
+    progress = processed / total_tasks if total_tasks > 0 else 0
 
-        # --- AI PREDICTION (Cached) ---
-        if 'current_prediction' not in st.session_state or st.session_state.current_task_ref != current_task_text:
-            with st.spinner("🤖 AI Analyzing..."):
-                full_result = analyze_single_task(
-                    services['client'],
+    # Use columns to put text and bar on same line
+    h_col1, h_col2 = st.columns([1, 3])
+    h_col1.caption(f"**Inbox: {len(dataset.inbox_tasks)}**")
+    h_col2.progress(progress)
+else:
+    st.progress(1.0)
+
+# 2b. Main Logic
+if not dataset.inbox_tasks:
+    st.balloons()
+    st.success("🎉 Inbox Zero!")
+    st.caption("Use the sidebar to save your work.")
+else:
+    current_task_text = dataset.inbox_tasks[0]
+
+    # AI Prediction (Cached)
+    if 'current_prediction' not in st.session_state or st.session_state.current_task_ref != current_task_text:
+        with st.spinner("Thinking..."):
+            full_result = analyze_single_task(
+                services['client'],
+                current_task_text,
+                [p.name for p in dataset.projects]
+            )
+            st.session_state.current_prediction = full_result
+            st.session_state.current_task_ref = current_task_text
+
+    parsed_pred = st.session_state.current_prediction['parsed']
+
+    # --- THE CARD (Mobile Optimized) ---
+    with st.container(border=True):
+        st.caption("Current Task")
+        st.markdown(f"### {current_task_text}")
+
+        # AI Suggestion Box
+        if parsed_pred['suggested_project'] != "Unmatched":
+            st.info(
+                f"**💡 {parsed_pred['suggested_project']}**\n\n"
+                f"_{parsed_pred['reasoning']}_"
+            )
+        else:
+            st.warning(f"❓ Unsure. _{parsed_pred['reasoning']}_")
+
+        st.write("")  # Spacer
+
+        # PRIMARY ACTION: Big Button
+        if parsed_pred['suggested_project'] != "Unmatched":
+            if st.button(f"Move to {parsed_pred['suggested_project']}", type="primary", use_container_width=True):
+                move_task_to_project(
+                    dataset,
                     current_task_text,
-                    [p.name for p in st.session_state.dataset.projects]
+                    parsed_pred['suggested_project'],
+                    parsed_pred.get('tags')
                 )
-                st.session_state.current_prediction = full_result
-                st.session_state.current_task_ref = current_task_text
-
-        # Access the full result structure
-        full_result = st.session_state.current_prediction
-        parsed_pred = full_result['parsed']
-
-        # --- THE CARD UI ---
-        with st.container(border=True):
-            st.caption("Current Task")
-            st.markdown(f"### {current_task_text}")
-
-            # AI Insight
-            if parsed_pred['suggested_project'] != "Unmatched":
-                st.info(
-                    f"💡 Suggestion: **{parsed_pred['suggested_project']}** ({parsed_pred['confidence']:.0%})\n\n_{parsed_pred['reasoning']}_")
-            else:
-                st.warning(f"❓ Unsure. Reasoning: _{parsed_pred['reasoning']}_")
-
-            st.markdown("---")
-
-            # 1. Accept AI
-            if parsed_pred['suggested_project'] != "Unmatched":
-                if st.button(f"✅ Move to {parsed_pred['suggested_project']}", type="primary", use_container_width=True):
-                    move_task_to_project(
-                        st.session_state.dataset,
-                        current_task_text,
-                        parsed_pred['suggested_project'],
-                        parsed_pred.get('tags')
-                    )
-                    st.rerun()
-
-            # 2. Manual Override
-            st.markdown("**Or choose manually:**")
-            projects = st.session_state.dataset.projects
-            cols = st.columns(3)
-            for i, project in enumerate(projects):
-                if project.name == parsed_pred['suggested_project']:
-                    continue
-                if cols[i % 3].button(project.name, use_container_width=True):
-                    move_task_to_project(st.session_state.dataset, current_task_text, project.name)
-                    st.rerun()
-
-            # 3. Create New
-            st.markdown("---")
-            c1, c2 = st.columns([3, 1])
-            with c1:
-                new_proj_name = st.text_input("New Project Name", placeholder="e.g. Vacation Planning",
-                                              label_visibility="collapsed")
-            with c2:
-                if st.button("Create & Move", use_container_width=True):
-                    if new_proj_name:
-                        create_project_and_move(st.session_state.dataset, current_task_text, new_proj_name)
-                        st.rerun()
-
-            # 4. Skip
-            if st.button("⏭️ Skip (Move to end)", type="secondary"):
-                task = st.session_state.dataset.inbox_tasks.pop(0)
-                st.session_state.dataset.inbox_tasks.append(task)
-                del st.session_state.current_prediction
                 st.rerun()
 
-        # --- DEBUG MONITORING ---
-        with st.expander("🛠️ AI Debug Info (Input/Output)"):
-            st.markdown("**📤 Prompt Sent:**")
-            st.code(full_result['debug_prompt'], language="text")
+    # --- MANUAL OVERRIDES (Outside the card to reduce visual noise inside) ---
+    st.write("")
+    st.caption("Or choose manually:")
 
-            st.markdown("**📥 Raw Response:**")
-            st.code(full_result['debug_raw_response'], language="json")
+    # 1. Pills for existing projects (Horizontal scrolling/wrapping)
+    # Filter out the suggested one to avoid duplicate options
+    project_options = [p.name for p in dataset.projects if p.name != parsed_pred['suggested_project']]
+
+    # st.pills is available in Streamlit 1.40+. If using older version, fallback to multiselect or buttons.
+    selected_project = st.pills("Projects", project_options, selection_mode="single", label_visibility="collapsed")
+
+    if selected_project:
+        move_task_to_project(dataset, current_task_text, selected_project)
+        st.rerun()
+
+    # 2. Create New (Collapsed)
+    with st.expander("➕ Create New Project"):
+        c1, c2 = st.columns([3, 1])
+        new_proj_name = c1.text_input("Name", placeholder="e.g. Vacation", label_visibility="collapsed")
+        if c2.button("Add", use_container_width=True):
+            if new_proj_name:
+                create_project_and_move(dataset, current_task_text, new_proj_name)
+                st.rerun()
+
+    # 3. Skip (Bottom, low prominence)
+    st.write("")
+    if st.button("⏭️ Skip for now", use_container_width=True):
+        task = dataset.inbox_tasks.pop(0)
+        dataset.inbox_tasks.append(task)
+        del st.session_state.current_prediction
+        st.rerun()
