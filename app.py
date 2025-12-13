@@ -7,31 +7,66 @@ from models import Project, Task
 # --- Configuration ---
 st.set_page_config(page_title="Task Triage", layout="wide", initial_sidebar_state="collapsed")
 
-# --- CSS: Visual Hierarchy & Mobile Optimization ---
+# --- CSS: Visual Styling ---
 st.markdown("""
     <style>
-        /* Remove massive top padding */
+        /* Clean up spacing */
         .block-container {
             padding-top: 1rem !important;
-            padding-bottom: 2rem !important;
+            padding-bottom: 5rem !important;
         }
-        /* Headers */
-        h1 { font-size: 1.2rem !important; margin-bottom: 0rem !important; }
-        h4 { font-size: 1.1rem !important; font-weight: 600 !important; margin-top: 0.2rem !important; }
 
-        /* Card Styling */
+        /* Typography */
+        h4 { font-size: 1.1rem !important; margin-bottom: 0.2rem !important; }
+        .ai-hint { font-size: 0.9rem; color: #888; font-style: italic; margin-bottom: 1rem; }
+        .dest-project { font-size: 1.3rem; font-weight: bold; color: #4DA6FF; margin-bottom: 0.5rem; }
+
+        /* Card Background */
         div[data-testid="stVerticalBlockBorderWrapper"] {
-            background-color: #1E1E1E; /* Darker card background */
+            background-color: #1E1E1E;
             border-radius: 12px;
+            padding: 1rem;
         }
 
-        /* Custom Button Colors via CSS targeting */
-        /* We use specific keys to target buttons later in Python */
-
-        /* Hide Deploy/Footer */
+        /* Hide Footer */
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
+
+        /* --- BUTTON COLOR HACKS --- */
+
+        /* 1. Target the Main "Add" button (Green) */
+        /* We look for the button containing the text "Add" inside the main card area */
+        div[data-testid="stVerticalBlockBorderWrapper"] button p:contains("Add") {
+            color: white !important;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"] button:has(p:contains("Add")) {
+            background-color: #28a745 !important;
+            border-color: #28a745 !important;
+        }
+
+        /* 2. Target the "Skip" button (Blue) */
+        button:has(p:contains("Skip")) {
+            background-color: #007bff !important;
+            border-color: #007bff !important;
+        }
     </style>
+
+    <!-- JS Fallback for older browsers that don't support :has() CSS -->
+    <script>
+        const buttons = window.parent.document.querySelectorAll('button');
+        buttons.forEach(btn => {
+            if (btn.innerText === "Add") {
+                btn.style.backgroundColor = "#28a745";
+                btn.style.borderColor = "#28a745";
+                btn.style.color = "white";
+            }
+            if (btn.innerText.includes("Skip")) {
+                btn.style.backgroundColor = "#007bff";
+                btn.style.borderColor = "#007bff";
+                btn.style.color = "white";
+            }
+        });
+    </script>
 """, unsafe_allow_html=True)
 
 
@@ -68,7 +103,7 @@ def analyze_single_task(client, task_text: str, projects: list[str]):
         "tags": ["tag1"]
     }}
     """
-    result_structure = {"parsed": None}
+    result_structure = {"parsed": None, "debug_prompt": prompt, "debug_raw_response": ""}
     try:
         response = client.messages.create(
             model="claude-3-5-haiku-latest",
@@ -76,6 +111,7 @@ def analyze_single_task(client, task_text: str, projects: list[str]):
             messages=[{"role": "user", "content": prompt}]
         )
         content = response.content[0].text
+        result_structure["debug_raw_response"] = content
         clean_json = content.replace("```json", "").replace("```", "").strip()
         result_structure["parsed"] = json.loads(clean_json)
     except Exception as e:
@@ -85,6 +121,7 @@ def analyze_single_task(client, task_text: str, projects: list[str]):
             "reasoning": "Error",
             "tags": []
         }
+        result_structure["debug_raw_response"] = str(e)
     return result_structure
 
 
@@ -116,7 +153,7 @@ def create_project_and_move(dataset, task_text, new_project_name):
 
 # --- UI LAYOUT ---
 
-# 1. SIDEBAR (Admin)
+# 1. SIDEBAR
 with st.sidebar:
     st.header("⚙️ Settings")
     available_datasets = services['dataset_manager'].list_datasets()
@@ -147,7 +184,7 @@ if 'dataset' not in st.session_state:
 
 dataset = st.session_state.dataset
 
-# Header: Progress
+# Header
 if dataset.inbox_tasks:
     total = len(dataset.inbox_tasks) + sum(len(p.tasks) for p in dataset.projects)
     done = sum(len(p.tasks) for p in dataset.projects)
@@ -170,18 +207,26 @@ else:
             st.session_state.current_prediction = full_result
             st.session_state.current_task_ref = current_task_text
 
-    parsed_pred = st.session_state.current_prediction['parsed']
+    full_result = st.session_state.current_prediction
+    parsed_pred = full_result['parsed']
 
     # --- THE CARD ---
     with st.container(border=True):
-        # Task Title
+        # 1. Task Name
         st.markdown(f"#### {current_task_text}")
 
-        # AI Suggestion
+        # 2. AI Hint
         if parsed_pred['suggested_project'] != "Unmatched":
-            st.caption(f"💡 {parsed_pred['reasoning']}")
-            # Primary Action (Red/Primary Theme)
-            if st.button(f"➡️ {parsed_pred['suggested_project']}", type="primary", use_container_width=True):
+            st.markdown(f"<div class='ai-hint'>💡 {parsed_pred['reasoning']}</div>", unsafe_allow_html=True)
+
+            # 3. Project Name (Destination)
+            st.markdown(f"<div class='dest-project'>➡️ {parsed_pred['suggested_project']}</div>",
+                        unsafe_allow_html=True)
+
+            # 4. Add Button (Narrow, Green via CSS)
+            # We use columns to make the button narrow (not full width)
+            b_col1, b_col2 = st.columns([1, 3])
+            if b_col1.button("Add", type="primary"):
                 move_task_to_project(dataset, current_task_text, parsed_pred['suggested_project'],
                                      parsed_pred.get('tags'))
                 st.rerun()
@@ -198,57 +243,26 @@ else:
 
     st.markdown("---")
 
-    # --- CREATE NEW (Green Button) ---
-    # We use a form to group the input and button tightly
+    # --- CREATE NEW ---
     with st.form(key="create_form", clear_on_submit=True, border=False):
         c_input, c_btn = st.columns([3, 1], vertical_alignment="bottom")
         new_proj_name = c_input.text_input("New Project", placeholder="New Project Name", label_visibility="collapsed")
-
-        # Note: Streamlit doesn't support direct color changing of buttons easily without themes,
-        # but we can use the 'primary' type for the main action and default for others.
-        # To force green/blue, we rely on the visual hierarchy of position.
-
-        # Using a form submit button for "Add"
-        if c_btn.form_submit_button("➕ Add", type="primary", use_container_width=True):
+        if c_btn.form_submit_button("Create"):
             if new_proj_name:
                 create_project_and_move(dataset, current_task_text, new_proj_name)
                 st.rerun()
 
-    # --- SKIP (Blue/Secondary) ---
-    # We use type="secondary" (usually grey/white) but we can inject CSS to make this specific button blue if needed.
-    # For standard Streamlit, we keep it simple.
+    # --- SKIP ---
     if st.button("⏭️ Skip", use_container_width=True):
         task = dataset.inbox_tasks.pop(0)
         dataset.inbox_tasks.append(task)
         del st.session_state.current_prediction
         st.rerun()
 
-    # CSS Hack to color specific buttons based on their label content
-    # This is fragile but works for visual demos
-    st.markdown("""
-    <style>
-        /* Target the "Add" button inside the form */
-        button[kind="primaryFormSubmit"] {
-            background-color: #28a745 !important; /* Green */
-            border-color: #28a745 !important;
-            color: white !important;
-        }
-        /* Target the "Skip" button by its text content */
-        div.stButton > button:has(div p:contains("Skip")) {
-            background-color: #007bff !important; /* Blue */
-            border-color: #007bff !important;
-            color: white !important;
-        }
-    </style>
-    <script>
-        // JS fallback for :has selector if browser doesn't support it (older browsers)
-        const buttons = window.parent.document.querySelectorAll('button');
-        buttons.forEach(btn => {
-            if (btn.innerText.includes("Skip")) {
-                btn.style.backgroundColor = "#007bff";
-                btn.style.color = "white";
-                btn.style.borderColor = "#007bff";
-            }
-        });
-    </script>
-    """, unsafe_allow_html=True)
+    # --- DEBUG SECTION ---
+    st.markdown("---")
+    with st.expander("🛠️ Debug Info"):
+        st.markdown("**Prompt:**")
+        st.text(full_result.get('debug_prompt', ''))
+        st.markdown("**Response:**")
+        st.code(full_result.get('debug_raw_response', ''), language='json')
