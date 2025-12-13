@@ -1,5 +1,5 @@
 import streamlit as st
-from services import DatasetManager, SaveDatasetCommand, DatasetProjector, TaskClassifier, PromptBuilder, ResponseParser
+from services import DatasetManager, SaveDatasetCommand, DatasetProjector, TaskClassifier, PromptBuilder
 from models import Project, Task
 from models.dtos import SingleTaskClassificationRequest # Import DTO
 import anthropic # Only needed for client init, not logic
@@ -79,8 +79,10 @@ def get_services():
 
     # 2. Domain Services
     prompt_builder = PromptBuilder()
-    parser = ResponseParser()
-    classifier = TaskClassifier(client, prompt_builder, parser) # Wired up!
+
+    # UPDATED: Classifier now only needs client and prompt_builder
+    classifier = TaskClassifier(client, prompt_builder)
+
     projector = DatasetProjector()
 
     # 3. Commands
@@ -88,7 +90,7 @@ def get_services():
 
     return {
         'dataset_manager': dataset_manager,
-        'classifier': classifier, # Expose classifier
+        'classifier': classifier,
         'projector': projector,
         'save_command': save_command
     }

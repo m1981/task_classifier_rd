@@ -1,13 +1,28 @@
 from pathlib import Path
 from typing import List
-import json
-from models import DatasetContent, Project, ClassificationResult, ClassificationRequest, ClassificationResponse
-from models.models import SystemConfig  # Import Config
-from models.dtos import SingleTaskClassificationRequest  # Import DTO
-from dataset_io import YamlDatasetLoader, YamlDatasetSaver
 import anthropic
+import json
+
+# Import Domain Models and DTOs
+from models import (
+    DatasetContent,
+    Project,
+    ClassificationResult,
+    ClassificationRequest,
+    ClassificationResponse
+)
+from models.models import SystemConfig
+from models.dtos import SingleTaskClassificationRequest
+
+# Import Infrastructure
+from dataset_io import YamlDatasetLoader, YamlDatasetSaver
+
 
 class DatasetManager:
+    """
+    Infrastructure Service: Handles File I/O for Datasets.
+    """
+
     def __init__(self, base_path: Path = Path("data/datasets")):
         self.base_path = base_path
         self.base_path.mkdir(parents=True, exist_ok=True)
@@ -15,10 +30,10 @@ class DatasetManager:
         self._yaml_saver = YamlDatasetSaver()
 
     def load_dataset(self, name: str) -> DatasetContent:
-        """Load dataset - try YAML first, fallback to legacy format"""
+        """Load dataset - try YAML first"""
         dataset_path = self.base_path / name
         yaml_file = dataset_path / "dataset.yaml"
-        
+
         if yaml_file.exists():
             return self._yaml_loader.load(yaml_file)
         else:
@@ -26,11 +41,10 @@ class DatasetManager:
 
     def save_dataset(self, name: str, content: DatasetContent) -> dict:
         """Save dataset with validation and detailed result"""
-        # Validate name
         validation_error = self._validate_dataset_name(name)
         if validation_error:
             return {"success": False, "error": validation_error, "type": "validation"}
-        
+
         try:
             self._yaml_saver.save(self.base_path / name, content)
             return {"success": True, "message": f"Dataset '{name}' saved successfully"}
@@ -40,9 +54,8 @@ class DatasetManager:
             return {"success": False, "error": f"File system error: {str(e)}", "type": "filesystem"}
         except Exception as e:
             return {"success": False, "error": f"Unexpected error: {str(e)}", "type": "unknown"}
-    
+
     def _validate_dataset_name(self, name: str) -> str:
-        """Validate dataset name, return error message or empty string"""
         if not name or not name.strip():
             return "Dataset name cannot be empty"
         if len(name) > 50:
@@ -52,63 +65,56 @@ class DatasetManager:
         return ""
 
     def list_datasets(self) -> List[str]:
-        """List available dataset names"""
         if not self.base_path.exists():
             return []
         return [d.name for d in self.base_path.iterdir() if d.is_dir()]
 
+
 class PromptBuilder:
+    """
+    Domain Service: Constructs prompts for the AI.
+    Now simplified because we rely on Structured Outputs for formatting.
+    """
+
     def __init__(self, prompts_dir: Path = Path("data/prompts")):
         self.prompts_dir = prompts_dir
-        self.config = SystemConfig()  # Load Config
+        self.config = SystemConfig()
         self._dynamic_variants = {
-            "basic": """Act as my personal advisor and assistant...""",
+            "basic": """Act as my personal advisor and assistant.""",
         }
 
-    # --- UPDATED: Accepts DTO now ---
     def build_single_task_prompt(self, request: SingleTaskClassificationRequest) -> str:
+        """
+        Builds a prompt for a single task.
+        Note: We don't need to describe the JSON format here anymore.
+        """
         project_list = ", ".join([f'"{p}"' for p in request.available_projects])
-
-        # Use tags from Config
         tags_str = ", ".join(self.config.DEFAULT_TAGS)
 
         return f"""
         You are a task organization assistant.
+
         Task to classify: "{request.task_text}"
 
         Available Projects: [{project_list}]
         Allowed Tags: [{tags_str}]
 
-        Analyze the task and return a JSON object (no markdown, just raw JSON) with these keys:
-        {{
-            "suggested_project": "Exact name of best matching project or 'Unmatched'",
-            "confidence": 0.65,
-            "reasoning": "Short explanation why",
-            "tags": ["tag1", "tag2"]
-        }}
+        Analyze the task and determine the best project, confidence score, and tags.
         """
 
     def build_prompt(self, request: ClassificationRequest) -> str:
-        """Build prompt - auto-detect static vs dynamic based on variant name"""
-        if self._is_static_prompt(request.prompt_variant):
-            return self._build_static_prompt(request.prompt_variant)
-        else:
-            return self._build_dynamic_prompt(request)
-
-    def _is_static_prompt(self, variant: str) -> bool:
-        """Check if this is a static prompt file"""
-        return (self.prompts_dir / f"{variant}.md").exists()
-
-    def _build_static_prompt(self, variant: str) -> str:
-        """Load complete prompt from file (for testing)"""
-        prompt_file = self.prompts_dir / f"{variant}.md"
-        content = prompt_file.read_text(encoding='utf-8').strip()
-        return content
+        """Build prompt for batch processing"""
+        # For batch processing, we might still need manual parsing if we want
+        # multiple items in one response, OR we can use a List[Model] output format.
+        # For simplicity in this refactor, we will focus on the single task flow
+        # which is what the App uses.
+        return self._build_dynamic_prompt(request)
 
     def _build_dynamic_prompt(self, request: ClassificationRequest) -> str:
         guidance = self._get_dynamic_guidance(request.prompt_variant)
         projects_list = self._format_projects(request.dataset.projects)
         tasks_list = self._format_inbox_tasks(request.dataset.inbox_tasks)
+        tags_list = "\n".join([f"  {t}" for t in self.config.DEFAULT_TAGS])
 
         return f"""{guidance}
 
@@ -119,106 +125,75 @@ Classify these tasks:
 {tasks_list}
 
 Available tags:
-  physical, digital
-  out - (if physical)
-  need-material (if I might have to buy material, ingredients, etc.)
-  need-tools (if not bare handed then require tools)
-  buy (item goes to buy list)
-
-Response format:
-
-For each task, provide on separate lines:
-TASK: [original task]
-PROJECT: [best matching project OR unmatched]
-CONFIDENCE: [0.0-1.0]
-TAGS: [comma-separated tags]
-DURATION: [time estimate]
-REASONING: [brief explanation]
-ALTERNATIVES: [semicolon-separated list of other potential projects, or 'none']
----"""
+{tags_list}
+"""
 
     def _get_dynamic_guidance(self, variant: str) -> str:
-        """Get guidance for dynamic prompts"""
         return self._dynamic_variants.get(variant, "Act as a helpful task organizer.")
 
     def _format_projects(self, projects: List[Project]) -> str:
-        """Format projects list for prompt"""
         return '\n'.join([f"  - {p.name}" for p in projects])
 
     def _format_inbox_tasks(self, tasks: List[str]) -> str:
-        """Format inbox tasks for prompt"""
         if not tasks:
             return "  [NO TASKS TO CLASSIFY]"
         return '\n'.join([f"  - {task}" for task in tasks])
 
-class ResponseParser:
-    def parse_single_json(self, raw_response: str, task_text: str) -> ClassificationResult:
-        try:
-            # 1. Robust Extraction: Find the first '{' and last '}'
-            start_idx = raw_response.find('{')
-            end_idx = raw_response.rfind('}')
-
-            if start_idx == -1 or end_idx == -1:
-                raise ValueError("No JSON object found in response")
-
-            clean_json = raw_response[start_idx:end_idx + 1]
-
-            # 2. Parse
-            data = json.loads(clean_json)
-
-            return ClassificationResult(
-                task=task_text,
-                suggested_project=data.get("suggested_project", "Unmatched"),
-                confidence=float(data.get("confidence", 0.0)),
-                reasoning=data.get("reasoning", ""),
-                extracted_tags=data.get("tags", [])
-            )
-        except Exception as e:
-            return ClassificationResult(
-                task=task_text,
-                suggested_project="Unmatched",
-                confidence=0.0,
-                reasoning=f"Parsing error: {str(e)}"  # This was being hidden!
-            )
-
 
 class TaskClassifier:
-    def __init__(self, client, prompt_builder: PromptBuilder, parser: ResponseParser):
+    """
+    Application Service: Orchestrates the AI classification.
+    Uses Anthropic Structured Outputs for reliability.
+    """
+
+    def __init__(self, client, prompt_builder: PromptBuilder):
         self.client = client
         self.prompt_builder = prompt_builder
-        self.parser = parser
 
-    # --- NEW METHOD: Handles Single Task via DTO ---
     def classify_single(self, request: SingleTaskClassificationRequest) -> ClassificationResponse:
-        """Classify a single task using the JSON strategy"""
+        """
+        Classify a single task using Pydantic validation (Structured Outputs).
+        """
         prompt = self.prompt_builder.build_single_task_prompt(request)
 
-        raw_response = self._call_api(prompt)
-
-        # Use the specific JSON parser for single tasks
-        result = self.parser.parse_single_json(raw_response, request.task_text)
-
-        return ClassificationResponse(
-            results=[result],
-            prompt_used=prompt,
-            raw_response=raw_response
-        )
-
-    def classify(self, request: ClassificationRequest) -> ClassificationResponse:
-        # ... [Existing batch logic] ...
-        prompt = self.prompt_builder.build_prompt(request)
-        raw_response = self._call_api(prompt)
-        results = self.parser.parse(raw_response)
-        return ClassificationResponse(results=results, prompt_used=prompt, raw_response=raw_response)
-
-    def _call_api(self, prompt: str) -> str:
-        # ... [Remains unchanged] ...
         try:
-            response = self.client.messages.create(
-                model="claude-3-5-haiku-latest",
-                max_tokens=2000,
-                messages=[{"role": "user", "content": prompt}]
+            # Use the .parse() method for automatic Pydantic validation
+            response = self.client.beta.messages.parse(
+                model="claude-haiku-4-5",
+                max_tokens=1024,
+                betas=["structured-outputs-2025-11-13"],
+                messages=[{"role": "user", "content": prompt}],
+                output_format=ClassificationResult,  # Pass the Pydantic model class
             )
-            return response.content[0].text
+
+            # The SDK returns a parsed object directly
+            parsed_result = response.parsed_output
+
+            # We need to manually inject the original task text back into the result
+            # because the LLM output doesn't necessarily repeat it.
+            # (Assuming ClassificationResult has a 'task' field, we set it here)
+            # Note: Pydantic models are mutable by default unless config=frozen
+            parsed_result.task = request.task_text
+
+            return ClassificationResponse(
+                results=[parsed_result],
+                prompt_used=prompt,
+                raw_response=str(parsed_result.model_dump())  # Debug info
+            )
+
         except Exception as e:
-            raise RuntimeError(f"API call failed: {e}")
+            # Fallback for API errors or Validation errors
+            # We return a "safe" failure response
+            error_result = ClassificationResult(
+                task=request.task_text,
+                suggested_project="Unmatched",
+                confidence=0.0,
+                reasoning=f"AI Error: {str(e)}",
+                extracted_tags=[]
+            )
+            return ClassificationResponse(
+                results=[error_result],
+                prompt_used=prompt,
+                raw_response=str(e)
+            )
+
