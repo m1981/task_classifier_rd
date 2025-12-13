@@ -183,7 +183,6 @@ SaveDatasetCommand.execute(
 ```
 data/datasets/{name}/
 ├── dataset.yaml          # YAML format with projects and inbox_tasks
-└── (legacy files)        # reference_tasks.txt, projects.txt, inbox_tasks.txt
 ```
 
 ## API Integration

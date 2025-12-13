@@ -1,10 +1,10 @@
 import streamlit as st
-import anthropic
-import json
-from services import DatasetManager, SaveDatasetCommand, DatasetProjector
+from services import DatasetManager, SaveDatasetCommand, DatasetProjector, TaskClassifier, PromptBuilder, ResponseParser
 from models import Project, Task
+from models.dtos import SingleTaskClassificationRequest # Import DTO
+import anthropic # Only needed for client init, not logic
 
-# --- Configuration ---
+# --- Configuration & CSS ---
 st.set_page_config(page_title="Task Triage", layout="wide", initial_sidebar_state="collapsed")
 
 # --- CSS: Visual Styling ---
@@ -73,57 +73,30 @@ st.markdown("""
 # --- Service Initialization ---
 @st.cache_resource
 def get_services():
+    # 1. Infrastructure
     dataset_manager = DatasetManager()
     client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+
+    # 2. Domain Services
+    prompt_builder = PromptBuilder()
+    parser = ResponseParser()
+    classifier = TaskClassifier(client, prompt_builder, parser) # Wired up!
     projector = DatasetProjector()
+
+    # 3. Commands
     save_command = SaveDatasetCommand(dataset_manager, projector)
+
     return {
         'dataset_manager': dataset_manager,
-        'client': client,
+        'classifier': classifier, # Expose classifier
         'projector': projector,
         'save_command': save_command
     }
 
-
 services = get_services()
 
-
-# --- Helper Functions ---
-def analyze_single_task(client, task_text: str, projects: list[str]):
-    project_list = ", ".join([f'"{p}"' for p in projects])
-    prompt = f"""
-    You are an expert task organizer.
-    Task to classify: "{task_text}"
-    Available Projects: [{project_list}]
-    Analyze the task and return a JSON object (no markdown, just raw JSON) with these keys:
-    {{
-        "suggested_project": "The exact name of the best matching project from the list, or 'Unmatched'",
-        "confidence": 0.95,
-        "reasoning": "Max 10 words explanation",
-        "tags": ["tag1"]
-    }}
-    """
-    result_structure = {"parsed": None, "debug_prompt": prompt, "debug_raw_response": ""}
-    try:
-        response = client.messages.create(
-            model="claude-3-5-haiku-latest",
-            max_tokens=300,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        content = response.content[0].text
-        result_structure["debug_raw_response"] = content
-        clean_json = content.replace("```json", "").replace("```", "").strip()
-        result_structure["parsed"] = json.loads(clean_json)
-    except Exception as e:
-        result_structure["parsed"] = {
-            "suggested_project": "Unmatched",
-            "confidence": 0.0,
-            "reasoning": "Error",
-            "tags": []
-        }
-        result_structure["debug_raw_response"] = str(e)
-    return result_structure
-
+# --- Helper Functions (UI Logic Only) ---
+# REMOVED: analyze_single_task (Logic moved to TaskClassifier)
 
 def move_task_to_project(dataset, task_text, project_name, tags=None):
     target_project = next((p for p in dataset.projects if p.name == project_name), None)
@@ -163,17 +136,25 @@ with st.sidebar:
             try:
                 dataset = services['dataset_manager'].load_dataset(selected_dataset)
                 st.session_state.dataset = dataset
+                st.session_state.loaded_dataset_name = selected_dataset # Track source name
                 if 'current_prediction' in st.session_state: del st.session_state.current_prediction
-                if 'history' in st.session_state: del st.session_state.history
                 st.rerun()
             except Exception as e:
                 st.error(f"Error: {e}")
 
     st.divider()
     if 'dataset' in st.session_state:
-        new_name = st.text_input("Filename", value=selected_dataset)
+        # Default to loaded name, or empty if new
+        source_name = st.session_state.get('loaded_dataset_name', "")
+        new_name = st.text_input("Filename", value=source_name)
+
         if st.button("💾 Save", type="primary", use_container_width=True):
-            req = services['projector'].from_ui_state(st.session_state.dataset, new_name)
+            # UPDATED: Pass source_name to projector
+            req = services['projector'].from_ui_state(
+                st.session_state.dataset,
+                new_name,
+                source_name
+            )
             services['save_command'].execute(req, st.session_state.dataset)
             st.toast("Saved!", icon="💾")
 
@@ -203,12 +184,22 @@ else:
     # AI Prediction
     if 'current_prediction' not in st.session_state or st.session_state.current_task_ref != current_task_text:
         with st.spinner("..."):
-            full_result = analyze_single_task(services['client'], current_task_text, [p.name for p in dataset.projects])
-            st.session_state.current_prediction = full_result
+            # --- REFACTORED: Use DTO and Service ---
+            request_dto = SingleTaskClassificationRequest(
+                task_text=current_task_text,
+                available_projects=[p.name for p in dataset.projects]
+            )
+
+            # Call Service
+            response_obj = services['classifier'].classify_single(request_dto)
+
+            # Store the ClassificationResponse object directly
+            st.session_state.current_prediction = response_obj
             st.session_state.current_task_ref = current_task_text
 
-    full_result = st.session_state.current_prediction
-    parsed_pred = full_result['parsed']
+    # Get the ClassificationResult (first item)
+    response_obj = st.session_state.current_prediction
+    result = response_obj.results[0]
 
     # --- THE CARD ---
     with st.container(border=True):
@@ -216,25 +207,24 @@ else:
         st.markdown(f"#### {current_task_text}")
 
         # 2. AI Hint
-        if parsed_pred['suggested_project'] != "Unmatched":
-            st.markdown(f"<div class='ai-hint'>💡 {parsed_pred['reasoning']}</div>", unsafe_allow_html=True)
+        if result.suggested_project != "Unmatched":
+            st.markdown(f"<div class='ai-hint'>💡 {result.reasoning}</div>", unsafe_allow_html=True)
 
             # 3. Project Name (Destination)
-            st.markdown(f"<div class='dest-project'>➡️ {parsed_pred['suggested_project']}</div>",
+            st.markdown(f"<div class='dest-project'>➡️ {result.suggested_project}</div>",
                         unsafe_allow_html=True)
 
-            # 4. Add Button (Narrow, Green via CSS)
-            # We use columns to make the button narrow (not full width)
+            # 4. Add Button
             b_col1, b_col2 = st.columns([1, 3])
             if b_col1.button("Add", type="primary"):
-                move_task_to_project(dataset, current_task_text, parsed_pred['suggested_project'],
-                                     parsed_pred.get('tags'))
+                move_task_to_project(dataset, current_task_text, result.suggested_project, result.extracted_tags)
                 st.rerun()
         else:
             st.warning("❓ Unsure where to put this.")
+            st.caption(f"Reasoning/Error: {result.reasoning}")
 
     # --- MANUAL SELECTION ---
-    project_options = [p.name for p in dataset.projects if p.name != parsed_pred['suggested_project']]
+    project_options = [p.name for p in dataset.projects if p.name != result.suggested_project]
     selected_project = st.pills("Manual", project_options, selection_mode="single", label_visibility="collapsed")
 
     if selected_project:
@@ -263,6 +253,6 @@ else:
     st.markdown("---")
     with st.expander("🛠️ Debug Info"):
         st.markdown("**Prompt:**")
-        st.text(full_result.get('debug_prompt', ''))
+        st.text(response_obj.prompt_used) # Access via Object
         st.markdown("**Response:**")
-        st.code(full_result.get('debug_raw_response', ''), language='json')
+        st.code(response_obj.raw_response, language='json') # Access via Object

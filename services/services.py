@@ -1,6 +1,9 @@
 from pathlib import Path
 from typing import List
+import json
 from models import DatasetContent, Project, ClassificationResult, ClassificationRequest, ClassificationResponse
+from models.models import SystemConfig  # Import Config
+from models.dtos import SingleTaskClassificationRequest  # Import DTO
 from dataset_io import YamlDatasetLoader, YamlDatasetSaver
 import anthropic
 
@@ -57,23 +60,29 @@ class DatasetManager:
 class PromptBuilder:
     def __init__(self, prompts_dir: Path = Path("data/prompts")):
         self.prompts_dir = prompts_dir
+        self.config = SystemConfig()  # Load Config
         self._dynamic_variants = {
             "basic": """Act as my personal advisor and assistant...""",
-            "diy_renovation": """Act as an experienced DIY home renovation expert..."""
         }
 
-    def build_single_task_prompt(self, task_text: str, projects: List[str]) -> str:
-        project_list = ", ".join([f'"{p}"' for p in projects])
+    # --- UPDATED: Accepts DTO now ---
+    def build_single_task_prompt(self, request: SingleTaskClassificationRequest) -> str:
+        project_list = ", ".join([f'"{p}"' for p in request.available_projects])
+
+        # Use tags from Config
+        tags_str = ", ".join(self.config.DEFAULT_TAGS)
+
         return f"""
         You are a task organization assistant.
-        Task to classify: "{task_text}"
-    
+        Task to classify: "{request.task_text}"
+
         Available Projects: [{project_list}]
-    
+        Allowed Tags: [{tags_str}]
+
         Analyze the task and return a JSON object (no markdown, just raw JSON) with these keys:
         {{
             "suggested_project": "Exact name of best matching project or 'Unmatched'",
-            "confidence": 0.95,
+            "confidence": 0.65,
             "reasoning": "Short explanation why",
             "tags": ["tag1", "tag2"]
         }}
@@ -97,7 +106,6 @@ class PromptBuilder:
         return content
 
     def _build_dynamic_prompt(self, request: ClassificationRequest) -> str:
-        """Build dynamic prompt with injected data (for app)"""
         guidance = self._get_dynamic_guidance(request.prompt_variant)
         projects_list = self._format_projects(request.dataset.projects)
         tasks_list = self._format_inbox_tasks(request.dataset.inbox_tasks)
@@ -146,8 +154,16 @@ ALTERNATIVES: [semicolon-separated list of other potential projects, or 'none']
 class ResponseParser:
     def parse_single_json(self, raw_response: str, task_text: str) -> ClassificationResult:
         try:
-            # Clean up if LLM wraps in ```json ... ```
-            clean_json = raw_response.replace("```json", "").replace("```", "").strip()
+            # 1. Robust Extraction: Find the first '{' and last '}'
+            start_idx = raw_response.find('{')
+            end_idx = raw_response.rfind('}')
+
+            if start_idx == -1 or end_idx == -1:
+                raise ValueError("No JSON object found in response")
+
+            clean_json = raw_response[start_idx:end_idx + 1]
+
+            # 2. Parse
             data = json.loads(clean_json)
 
             return ClassificationResult(
@@ -158,104 +174,13 @@ class ResponseParser:
                 extracted_tags=data.get("tags", [])
             )
         except Exception as e:
-            # Fallback if JSON fails
             return ClassificationResult(
                 task=task_text,
                 suggested_project="Unmatched",
                 confidence=0.0,
-                reasoning=f"Parsing error: {str(e)}"
+                reasoning=f"Parsing error: {str(e)}"  # This was being hidden!
             )
 
-    def parse(self, raw_response: str) -> List[ClassificationResult]:
-        """Parse multiline text response into structured data"""
-        print(f"🔍 DEBUG: Parsing response with {len(raw_response)} characters")
-        print(f"🔍 DEBUG: First 200 chars: {repr(raw_response[:200])}")
-
-        results = []
-        current_task = {}
-
-        for line_num, line in enumerate(raw_response.strip().split('\n'), 1):
-            line = line.strip()
-            if not line:
-                continue
-
-            print(f"🔍 DEBUG: Line {line_num}: {repr(line)}")
-
-            if line == "---":
-                if current_task:
-                    print(f"🔍 DEBUG: Adding task: {current_task.get('task', 'UNKNOWN')}")
-                    results.append(self._create_result(current_task))
-                    current_task = {}
-                continue
-
-            # Parse key-value pairs
-            if ':' in line:
-                key, value = line.split(':', 1)
-                key = key.strip().upper()
-                value = value.strip()
-
-                print(f"🔍 DEBUG: Parsed key='{key}', value='{value}'")
-
-                if key == 'TASK':
-                    current_task['task'] = value
-                elif key == 'PROJECT':
-                    current_task['suggested_project'] = value
-                elif key == 'CONFIDENCE':
-                    current_task['confidence'] = self._parse_confidence(value)
-                elif key == 'TAGS':
-                    current_task['extracted_tags'] = [tag.strip() for tag in value.split(',') if tag.strip()]
-                elif key == 'DURATION':
-                    current_task['estimated_duration'] = value
-                elif key == 'REASONING':
-                    current_task['reasoning'] = value
-                elif key == 'ALTERNATIVES':
-                    if value.lower() != 'none':
-                        current_task['alternative_projects'] = [alt.strip() for alt in value.split(';') if alt.strip()]
-            else:
-                print(f"🔍 DEBUG: Skipping line without colon: {repr(line)}")
-
-        # Add last task if exists
-        if current_task:
-            print(f"🔍 DEBUG: Adding final task: {current_task.get('task', 'UNKNOWN')}")
-            results.append(self._create_result(current_task))
-
-        print(f"🔍 DEBUG: Parsed {len(results)} total results")
-        for i, result in enumerate(results):
-            print(f"🔍 DEBUG: Result {i}: {result.task} -> {result.suggested_project}")
-
-        return results
-
-    def _parse_confidence(self, value: str) -> float:
-        """Parse confidence value with error handling"""
-        try:
-            if '%' in value:
-                return float(value.replace('%', '')) / 100
-            return float(value)
-        except ValueError:
-            print(f"  -> Failed to parse confidence '{value}', using 0.5")
-            return 0.5
-
-    def _create_result(self, task_data: dict) -> ClassificationResult:
-        """Create ClassificationResult with defaults for missing fields"""
-        confidence = task_data.get('confidence', 0.5)
-        project = task_data.get('suggested_project', 'unmatched')
-
-        # Normalize project name and auto-mark low confidence as unmatched
-        if project.lower() == 'unmatched' or confidence < 0.6:
-            project = 'unmatched'  # Always lowercase
-
-        print(
-            f"🔍 DEBUG: Creating result - Task: {task_data.get('task', 'UNKNOWN')}, Project: {project}, Confidence: {confidence}")
-
-        return ClassificationResult(
-            task=task_data.get('task', ''),
-            suggested_project=project,
-            confidence=confidence,
-            extracted_tags=task_data.get('extracted_tags', []),
-            estimated_duration=task_data.get('estimated_duration'),
-            reasoning=task_data.get('reasoning', ''),
-            alternative_projects=task_data.get('alternative_projects', [])
-        )
 
 class TaskClassifier:
     def __init__(self, client, prompt_builder: PromptBuilder, parser: ResponseParser):
@@ -263,26 +188,31 @@ class TaskClassifier:
         self.prompt_builder = prompt_builder
         self.parser = parser
 
-    def classify(self, request: ClassificationRequest) -> ClassificationResponse:
-        """Classify tasks using AI and return structured response"""
-        prompt = self.prompt_builder.build_prompt(request)
-        print(f"🔍 DEBUG: Sending prompt with {len(prompt)} characters")
-        print(f"🔍 DEBUG: Classifying {len(request.dataset.inbox_tasks)} inbox tasks")
+    # --- NEW METHOD: Handles Single Task via DTO ---
+    def classify_single(self, request: SingleTaskClassificationRequest) -> ClassificationResponse:
+        """Classify a single task using the JSON strategy"""
+        prompt = self.prompt_builder.build_single_task_prompt(request)
 
         raw_response = self._call_api(prompt)
-        print(f"🔍 DEBUG: Received response with {len(raw_response)} characters")
 
-        results = self.parser.parse(raw_response)
-        print(f"🔍 DEBUG: Classification complete: {len(results)} results")
+        # Use the specific JSON parser for single tasks
+        result = self.parser.parse_single_json(raw_response, request.task_text)
 
         return ClassificationResponse(
-            results=results,
+            results=[result],
             prompt_used=prompt,
             raw_response=raw_response
         )
 
+    def classify(self, request: ClassificationRequest) -> ClassificationResponse:
+        # ... [Existing batch logic] ...
+        prompt = self.prompt_builder.build_prompt(request)
+        raw_response = self._call_api(prompt)
+        results = self.parser.parse(raw_response)
+        return ClassificationResponse(results=results, prompt_used=prompt, raw_response=raw_response)
+
     def _call_api(self, prompt: str) -> str:
-        """Call Anthropic API with error handling"""
+        # ... [Remains unchanged] ...
         try:
             response = self.client.messages.create(
                 model="claude-3-5-haiku-latest",

@@ -1,6 +1,15 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
 
+# --- NEW CONFIGURATION CLASS ---
+@dataclass(frozen=True)
+class SystemConfig:
+    """Central configuration for domain logic"""
+    DEFAULT_TAGS: List[str] = field(default_factory=lambda: [
+        "physical", "digital",
+        "out", "need-material", "need-tools", "buy"
+    ])
+
 @dataclass
 class Task:
     id: int
