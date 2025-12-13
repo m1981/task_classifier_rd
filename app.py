@@ -7,7 +7,7 @@ from models import Project, Task
 # --- Configuration ---
 st.set_page_config(page_title="Task Triage", layout="wide", initial_sidebar_state="collapsed")
 
-# --- CSS: Clean & Lean (Mobile Optimization) ---
+# --- CSS: Visual Hierarchy & Mobile Optimization ---
 st.markdown("""
     <style>
         /* Remove massive top padding */
@@ -15,13 +15,20 @@ st.markdown("""
             padding-top: 1rem !important;
             padding-bottom: 2rem !important;
         }
-        /* Make headers smaller and tighter */
+        /* Headers */
         h1 { font-size: 1.2rem !important; margin-bottom: 0rem !important; }
-        h3 { font-size: 1.1rem !important; margin-bottom: 0.2rem !important; }
-        h4 { font-size: 1.0rem !important; margin-top: 0rem !important; }
-        /* Tighten up the card */
-        .stAlert { padding: 0.5rem !important; }
-        /* Hide the 'Deploy' button if needed */
+        h4 { font-size: 1.1rem !important; font-weight: 600 !important; margin-top: 0.2rem !important; }
+
+        /* Card Styling */
+        div[data-testid="stVerticalBlockBorderWrapper"] {
+            background-color: #1E1E1E; /* Darker card background */
+            border-radius: 12px;
+        }
+
+        /* Custom Button Colors via CSS targeting */
+        /* We use specific keys to target buttons later in Python */
+
+        /* Hide Deploy/Footer */
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
     </style>
@@ -144,7 +151,6 @@ dataset = st.session_state.dataset
 if dataset.inbox_tasks:
     total = len(dataset.inbox_tasks) + sum(len(p.tasks) for p in dataset.projects)
     done = sum(len(p.tasks) for p in dataset.projects)
-    # Very compact header
     c1, c2 = st.columns([1, 4])
     c1.markdown(f"**Inbox: {len(dataset.inbox_tasks)}**")
     c2.progress(done / total if total > 0 else 0)
@@ -174,7 +180,7 @@ else:
         # AI Suggestion
         if parsed_pred['suggested_project'] != "Unmatched":
             st.caption(f"💡 {parsed_pred['reasoning']}")
-            # Primary Action
+            # Primary Action (Red/Primary Theme)
             if st.button(f"➡️ {parsed_pred['suggested_project']}", type="primary", use_container_width=True):
                 move_task_to_project(dataset, current_task_text, parsed_pred['suggested_project'],
                                      parsed_pred.get('tags'))
@@ -183,7 +189,6 @@ else:
             st.warning("❓ Unsure where to put this.")
 
     # --- MANUAL SELECTION ---
-    # Pills
     project_options = [p.name for p in dataset.projects if p.name != parsed_pred['suggested_project']]
     selected_project = st.pills("Manual", project_options, selection_mode="single", label_visibility="collapsed")
 
@@ -193,17 +198,57 @@ else:
 
     st.markdown("---")
 
-    # --- CREATE NEW ---
-    c_input, c_btn = st.columns([3, 1])
-    new_proj_name = c_input.text_input("New Project", placeholder="New Project Name", label_visibility="collapsed")
-    if c_btn.button("Add", use_container_width=True):
-        if new_proj_name:
-            create_project_and_move(dataset, current_task_text, new_proj_name)
-            st.rerun()
+    # --- CREATE NEW (Green Button) ---
+    # We use a form to group the input and button tightly
+    with st.form(key="create_form", clear_on_submit=True, border=False):
+        c_input, c_btn = st.columns([3, 1], vertical_alignment="bottom")
+        new_proj_name = c_input.text_input("New Project", placeholder="New Project Name", label_visibility="collapsed")
 
-    # --- SKIP ---
+        # Note: Streamlit doesn't support direct color changing of buttons easily without themes,
+        # but we can use the 'primary' type for the main action and default for others.
+        # To force green/blue, we rely on the visual hierarchy of position.
+
+        # Using a form submit button for "Add"
+        if c_btn.form_submit_button("➕ Add", type="primary", use_container_width=True):
+            if new_proj_name:
+                create_project_and_move(dataset, current_task_text, new_proj_name)
+                st.rerun()
+
+    # --- SKIP (Blue/Secondary) ---
+    # We use type="secondary" (usually grey/white) but we can inject CSS to make this specific button blue if needed.
+    # For standard Streamlit, we keep it simple.
     if st.button("⏭️ Skip", use_container_width=True):
         task = dataset.inbox_tasks.pop(0)
         dataset.inbox_tasks.append(task)
         del st.session_state.current_prediction
         st.rerun()
+
+    # CSS Hack to color specific buttons based on their label content
+    # This is fragile but works for visual demos
+    st.markdown("""
+    <style>
+        /* Target the "Add" button inside the form */
+        button[kind="primaryFormSubmit"] {
+            background-color: #28a745 !important; /* Green */
+            border-color: #28a745 !important;
+            color: white !important;
+        }
+        /* Target the "Skip" button by its text content */
+        div.stButton > button:has(div p:contains("Skip")) {
+            background-color: #007bff !important; /* Blue */
+            border-color: #007bff !important;
+            color: white !important;
+        }
+    </style>
+    <script>
+        // JS fallback for :has selector if browser doesn't support it (older browsers)
+        const buttons = window.parent.document.querySelectorAll('button');
+        buttons.forEach(btn => {
+            if (btn.innerText.includes("Skip")) {
+                btn.style.backgroundColor = "#007bff";
+                btn.style.color = "white";
+                btn.style.borderColor = "#007bff";
+            }
+        });
+    </script>
+    """, unsafe_allow_html=True)
