@@ -2,6 +2,12 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 @dataclass
+class SingleTaskClassificationRequest:
+    task_text: str
+    available_projects: List[str]
+    prompt_variant: str = "basic"
+
+@dataclass
 class SaveDatasetRequest:
     name: str
     source_dataset: str

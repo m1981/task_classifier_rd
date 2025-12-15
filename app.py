@@ -1,27 +1,93 @@
-
 import streamlit as st
-import anthropic
-from services import DatasetManager, PromptBuilder, ResponseParser, TaskClassifier, SaveDatasetCommand, DatasetProjector
-from models import ClassificationRequest, Project
-from models.dtos import SaveDatasetRequest
+from services import DatasetManager, SaveDatasetCommand, DatasetProjector, TaskClassifier, PromptBuilder
+from models import Project, Task
+from models.dtos import SingleTaskClassificationRequest # Import DTO
+import anthropic # Only needed for client init, not logic
 
-st.set_page_config(page_title="AI Task Classification", layout="wide")
+# --- Configuration & CSS ---
+st.set_page_config(page_title="Task Triage", layout="wide", initial_sidebar_state="collapsed")
 
+# --- CSS: Visual Styling ---
+st.markdown("""
+    <style>
+        /* Clean up spacing */
+        .block-container {
+            padding-top: 1rem !important;
+            padding-bottom: 5rem !important;
+        }
+
+        /* Typography */
+        h4 { font-size: 1.1rem !important; margin-bottom: 0.2rem !important; }
+        .ai-hint { font-size: 0.9rem; color: #888; font-style: italic; margin-bottom: 1rem; }
+        .dest-project { font-size: 1.3rem; font-weight: bold; color: #4DA6FF; margin-bottom: 0.5rem; }
+
+        /* Card Background */
+        div[data-testid="stVerticalBlockBorderWrapper"] {
+            background-color: #1E1E1E;
+            border-radius: 12px;
+            padding: 1rem;
+        }
+
+        /* Hide Footer */
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+
+        /* --- BUTTON COLOR HACKS --- */
+
+        /* 1. Target the Main "Add" button (Green) */
+        /* We look for the button containing the text "Add" inside the main card area */
+        div[data-testid="stVerticalBlockBorderWrapper"] button p:contains("Add") {
+            color: white !important;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"] button:has(p:contains("Add")) {
+            background-color: #28a745 !important;
+            border-color: #28a745 !important;
+        }
+
+        /* 2. Target the "Skip" button (Blue) */
+        button:has(p:contains("Skip")) {
+            background-color: #007bff !important;
+            border-color: #007bff !important;
+        }
+    </style>
+
+    <!-- JS Fallback for older browsers that don't support :has() CSS -->
+    <script>
+        const buttons = window.parent.document.querySelectorAll('button');
+        buttons.forEach(btn => {
+            if (btn.innerText === "Add") {
+                btn.style.backgroundColor = "#28a745";
+                btn.style.borderColor = "#28a745";
+                btn.style.color = "white";
+            }
+            if (btn.innerText.includes("Skip")) {
+                btn.style.backgroundColor = "#007bff";
+                btn.style.borderColor = "#007bff";
+                btn.style.color = "white";
+            }
+        });
+    </script>
+""", unsafe_allow_html=True)
+
+
+# --- Service Initialization ---
 @st.cache_resource
 def get_services():
-    # Initialize core services
+    # 1. Infrastructure
     dataset_manager = DatasetManager()
-    prompt_builder = PromptBuilder()
-    response_parser = ResponseParser()
-    
-    # Initialize Anthropic client
     client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
-    classifier = TaskClassifier(client, prompt_builder, response_parser)
-    
-    # Initialize command/projector services
+
+    # 2. Domain Services
+    prompt_builder = PromptBuilder()
+
+    # UPDATED: Classifier now only needs client and prompt_builder
+    classifier = TaskClassifier(client, prompt_builder)
+
     projector = DatasetProjector()
+
+    # 3. Commands
     save_command = SaveDatasetCommand(dataset_manager, projector)
-    
+
     return {
         'dataset_manager': dataset_manager,
         'classifier': classifier,
@@ -31,245 +97,164 @@ def get_services():
 
 services = get_services()
 
-# Results table at top (if available)
-if 'response' in st.session_state and st.session_state.response.results:
-    st.subheader("📊 Results")
-    response = st.session_state.response
+# --- Helper Functions (UI Logic Only) ---
+# REMOVED: analyze_single_task (Logic moved to TaskClassifier)
 
-    # Enhanced results display with edge case handling
-    if response.results:
-        # Categorize results by confidence
-        high_conf = [r for r in response.results if r.confidence >= 0.8]
-        medium_conf = [r for r in response.results if 0.6 <= r.confidence < 0.8]
-        low_conf = [r for r in response.results if r.confidence < 0.6]
-        unmatched = [r for r in response.results if r.suggested_project.lower() == 'unmatched']
+def move_task_to_project(dataset, task_text, project_name, tags=None):
+    target_project = next((p for p in dataset.projects if p.name == project_name), None)
+    if not target_project: return
 
-        # Show confidence breakdown
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("✅ High Confidence", len(high_conf), help="80%+ confidence")
-        with col2:
-            st.metric("⚠️ Medium Confidence", len(medium_conf), help="60-80% confidence")
-        with col3:
-            st.metric("❓ Low Confidence", len(low_conf), help="<60% confidence")
-        with col4:
-            st.metric("🔍 Unmatched", len(unmatched), help="No good project match")
+    new_task_id = len(target_project.tasks) + 1
+    new_task = Task(id=new_task_id, name=task_text, tags=tags if tags else [], duration="unknown")
+    target_project.tasks.append(new_task)
 
-        # Results table with color coding
-        table_rows = ["| Task | Project | Confidence | Tags | Duration | Status |",
-                     "|------|---------|------------|------|----------|--------|"]
+    if task_text in dataset.inbox_tasks:
+        dataset.inbox_tasks.remove(task_text)
 
-        for result in response.results:
-            tags = ', '.join(result.extracted_tags)
-            duration = result.estimated_duration or 'N/A'
-            confidence = f"{result.confidence:.1%}"
+    if 'current_prediction' in st.session_state: del st.session_state.current_prediction
+    if 'history' not in st.session_state: st.session_state.history = []
+    st.session_state.history.insert(0, f"Moved '{task_text}' → {project_name}")
 
-            # Status indicator
-            if result.confidence >= 0.8:
-                status = "✅ Good"
-            elif result.confidence >= 0.6:
-                status = "⚠️ Review"
-            else:
-                status = "❓ Unclear"
 
-            table_rows.append(f"| {result.task} | {result.suggested_project} | {confidence} | {tags} | {duration} | {status} |")
+def create_project_and_move(dataset, task_text, new_project_name):
+    if any(p.name.lower() == new_project_name.lower() for p in dataset.projects):
+        move_task_to_project(dataset, task_text, new_project_name)
+        return
+    new_id = max([p.id for p in dataset.projects], default=0) + 1
+    new_proj = Project(id=new_id, name=new_project_name)
+    dataset.projects.append(new_proj)
+    move_task_to_project(dataset, task_text, new_project_name)
 
-        st.markdown('\n'.join(table_rows))
 
-        # Show problematic tasks for review
-        review_tasks = []
-        for result in response.results:
-            if result.confidence < 0.8 or result.suggested_project.lower() == 'unmatched':
-                review_tasks.append(result)
+# --- UI LAYOUT ---
 
-        # Deduplicate by task name
-        seen_tasks = set()
-        unique_review_tasks = []
-        for result in review_tasks:
-            if result.task not in seen_tasks:
-                seen_tasks.add(result.task)
-                unique_review_tasks.append(result)
-
-        if unique_review_tasks:
-            with st.expander(f"🔍 Review Needed ({len(unique_review_tasks)} tasks)", expanded=False):
-                for result in unique_review_tasks:
-                    st.write(f"**{result.task}**")
-                    st.write(f"- Suggested: {result.suggested_project} ({result.confidence:.1%})")
-                    if result.alternative_projects:
-                        alternatives = ', '.join(result.alternative_projects)
-                        st.write(f"- Alternatives: {alternatives}")
-                    st.write(f"- Reasoning: {result.reasoning}")
-                    st.write("---")
-else:
-    st.info("👆 Load a dataset and run classification to see results table here")
-
-# Two column layout
-col1, col2 = st.columns([1, 1])
-
-with col1:
-    # Dataset selector
+# 1. SIDEBAR
+with st.sidebar:
+    st.header("⚙️ Settings")
     available_datasets = services['dataset_manager'].list_datasets()
     if available_datasets:
-        selected_dataset = st.selectbox("Select Dataset", available_datasets)
-
-        if st.button("📂 Load Dataset", use_container_width=True):
+        selected_dataset = st.selectbox("Dataset", available_datasets)
+        if st.button("📂 Load", use_container_width=True):
             try:
                 dataset = services['dataset_manager'].load_dataset(selected_dataset)
                 st.session_state.dataset = dataset
-                st.success(f"✅ Loaded {selected_dataset}")
+                st.session_state.loaded_dataset_name = selected_dataset # Track source name
+                if 'current_prediction' in st.session_state: del st.session_state.current_prediction
                 st.rerun()
             except Exception as e:
-                st.error(f"Failed to load: {e}")
-    else:
-        st.warning("No datasets found. Create data/datasets/{name}/ folders first.")
-        st.stop()
+                st.error(f"Error: {e}")
 
-    # Show dataset info if loaded
+    st.divider()
     if 'dataset' in st.session_state:
-        dataset = st.session_state.dataset
+        # Default to loaded name, or empty if new
+        source_name = st.session_state.get('loaded_dataset_name', "")
+        new_name = st.text_input("Filename", value=source_name)
 
-        # Editable Projects
-        st.markdown("**Projects**")
-        projects_text = '\n'.join([f"{p.id};{p.name}" for p in dataset.projects])
-        edited_projects = st.text_area(
-            "Projects (Format: ID;Name)",
-            value=projects_text,
-            help="Edit format: 1;Kitchen Renovation, 2;Bathroom Upgrade"
-        )
-
-        # Editable Inbox Tasks
-        st.markdown("**Inbox Tasks**")
-        inbox_text = '\n'.join(dataset.inbox_tasks)
-        edited_inbox = st.text_area(
-            "inbox_editor",
-            value=inbox_text,
-            height=350,
-            label_visibility="collapsed"
-        )
-
-        # Update dataset in session state when text changes
-        if edited_projects != projects_text or edited_inbox != inbox_text:
-            new_projects = []
-            
-            if edited_projects != projects_text:
-                # Create lookup by position/order to preserve data when names change
-                original_projects_list = dataset.projects
-                project_lines = [line.strip() for line in edited_projects.strip().split('\n') if line.strip()]
-                
-                for line in project_lines:
-                    if ';' in line:
-                        parts = line.split(';', 1)
-                        project_id = int(parts[0].strip())
-                        project_name = parts[1].strip()
-                        
-                        # Find original by ID (not position or name)
-                        original = next((p for p in dataset.projects if p.id == project_id), None)
-                        if original:
-                            # Preserve all data, update name only
-                            new_projects.append(Project(
-                                id=project_id,
-                                name=project_name,
-                                status=original.status,
-                                tags=original.tags,
-                                tasks=original.tasks
-                            ))
-                    else:
-                        project_name = line.strip()
-                        new_projects.append(Project(
-                            id=len(new_projects) + 1,
-                            name=project_name,
-                            status="ongoing",
-                            tags=[],
-                            tasks=[]
-                        ))
-            else:
-                new_projects = dataset.projects
-            
-            # Parse inbox tasks
-            new_inbox = [line.strip() for line in edited_inbox.split('\n') if line.strip()]
-            
-            # Update dataset
-            dataset.projects = new_projects
-            dataset.inbox_tasks = new_inbox
-            st.session_state.dataset = dataset
-        
-        # Save dataset option
-        st.markdown("---")
-        col_save1, col_save2 = st.columns([2, 1])
-        
-        with col_save1:
-            new_dataset_name = st.text_input(
-                "Dataset name", 
-                value=selected_dataset,
-                placeholder="my_custom_dataset"
+        if st.button("💾 Save", type="primary", use_container_width=True):
+            # UPDATED: Pass source_name to projector
+            req = services['projector'].from_ui_state(
+                st.session_state.dataset,
+                new_name,
+                source_name
             )
-        
-        with col_save2:
-            if st.button("💾 Save as Dataset", use_container_width=True):
-                # Use new command pattern
-                save_request = services['projector'].from_ui_state(
-                    dataset, new_dataset_name.strip()
-                )
-                
-                try:
-                    result = services['save_command'].execute(save_request, dataset)
-                    if result.success:
-                        st.success(result.message)
-                        st.rerun()
-                    else:
-                        st.error(f"Save failed: {result.message}")
-                except Exception as e:
-                    st.error(f"Save failed: {str(e)}")
+            services['save_command'].execute(req, st.session_state.dataset)
+            st.toast("Saved!", icon="💾")
 
-with col2:
-    if 'dataset' in st.session_state:
-        dataset = st.session_state.dataset
-        
-        prompt_variant = st.selectbox("Strategy", ["basic", "diy_renovation"])
-        st.info("💡 Uses your current dataset with prompt template")
+# 2. MAIN SCREEN
+if 'dataset' not in st.session_state:
+    st.info("👈 Load dataset in sidebar.")
+    st.stop()
 
-        # Classify button
-        if st.button("🚀 Classify Tasks", type="primary", use_container_width=True):
-            if not dataset.inbox_tasks:
-                st.error("No inbox tasks to classify")
-            else:
-                with st.spinner("🤖 AI is thinking..."):
-                    try:
-                        request = ClassificationRequest(
-                            dataset=dataset,
-                            prompt_variant=prompt_variant
-                        )
-                        response = services['classifier'].classify(request)
-                        st.session_state.response = response
-                        st.success(f"✅ Classified {len(response.results)} tasks")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Classification failed: {e}")
-        
-        # Show current prompt preview
-        builder = PromptBuilder()
-        request = ClassificationRequest(dataset=dataset, prompt_variant=prompt_variant)
-        current_prompt = builder.build_prompt(request)
-        
-        with st.expander("👁️ Current Prompt Preview", expanded=True):
-            st.code(current_prompt.strip(), language="text")
-            st.caption(f"Strategy: {prompt_variant} | Characters: {len(current_prompt)}")
-    else:
-        st.info("👆 Load a dataset first to see classification options")
+dataset = st.session_state.dataset
 
-# Debug section at bottom
-if 'response' in st.session_state:
-    st.subheader("🔍 Request & Response Analysis")
-    response = st.session_state.response
-    
-    tab1, tab2 = st.tabs(["📤 Request", "📥 Raw Response"])
-    
-    with tab1:
-        st.markdown("**Sent to AI:**")
-        st.code(response.prompt_used, language="text")
-        st.caption(f"Characters: {len(response.prompt_used)}")
-    
-    with tab2:
-        st.markdown("**Raw AI Response:**")
-        st.code(response.raw_response, language="text")
-        st.caption(f"Characters: {len(response.raw_response)}")
+# Header
+if dataset.inbox_tasks:
+    total = len(dataset.inbox_tasks) + sum(len(p.tasks) for p in dataset.projects)
+    done = sum(len(p.tasks) for p in dataset.projects)
+    c1, c2 = st.columns([1, 4])
+    c1.markdown(f"**Inbox: {len(dataset.inbox_tasks)}**")
+    c2.progress(done / total if total > 0 else 0)
+else:
+    st.progress(1.0)
+
+# Main Logic
+if not dataset.inbox_tasks:
+    st.success("🎉 Inbox Zero!")
+else:
+    current_task_text = dataset.inbox_tasks[0]
+
+    # AI Prediction
+    if 'current_prediction' not in st.session_state or st.session_state.current_task_ref != current_task_text:
+        with st.spinner("..."):
+            # --- REFACTORED: Use DTO and Service ---
+            request_dto = SingleTaskClassificationRequest(
+                task_text=current_task_text,
+                available_projects=[p.name for p in dataset.projects]
+            )
+
+            # Call Service
+            response_obj = services['classifier'].classify_single(request_dto)
+
+            # Store the ClassificationResponse object directly
+            st.session_state.current_prediction = response_obj
+            st.session_state.current_task_ref = current_task_text
+
+    # Get the ClassificationResult (first item)
+    response_obj = st.session_state.current_prediction
+    result = response_obj.results[0]
+
+    # --- THE CARD ---
+    with st.container(border=True):
+        # 1. Task Name
+        st.markdown(f"#### {current_task_text}")
+
+        # 2. AI Hint
+        if result.suggested_project != "Unmatched":
+            st.markdown(f"<div class='ai-hint'>💡 {result.reasoning}</div>", unsafe_allow_html=True)
+
+            # 3. Project Name (Destination)
+            st.markdown(f"<div class='dest-project'>➡️ {result.suggested_project}</div>",
+                        unsafe_allow_html=True)
+
+            # 4. Add Button
+            b_col1, b_col2 = st.columns([1, 3])
+            if b_col1.button("Add", type="primary"):
+                move_task_to_project(dataset, current_task_text, result.suggested_project, result.extracted_tags)
+                st.rerun()
+        else:
+            st.warning("❓ Unsure where to put this.")
+            st.caption(f"Reasoning/Error: {result.reasoning}")
+
+    # --- MANUAL SELECTION ---
+    project_options = [p.name for p in dataset.projects if p.name != result.suggested_project]
+    selected_project = st.pills("Manual", project_options, selection_mode="single", label_visibility="collapsed")
+
+    if selected_project:
+        move_task_to_project(dataset, current_task_text, selected_project)
+        st.rerun()
+
+    st.markdown("---")
+
+    # --- CREATE NEW ---
+    with st.form(key="create_form", clear_on_submit=True, border=False):
+        c_input, c_btn = st.columns([3, 1], vertical_alignment="bottom")
+        new_proj_name = c_input.text_input("New Project", placeholder="New Project Name", label_visibility="collapsed")
+        if c_btn.form_submit_button("Create"):
+            if new_proj_name:
+                create_project_and_move(dataset, current_task_text, new_proj_name)
+                st.rerun()
+
+    # --- SKIP ---
+    if st.button("⏭️ Skip", use_container_width=True):
+        task = dataset.inbox_tasks.pop(0)
+        dataset.inbox_tasks.append(task)
+        del st.session_state.current_prediction
+        st.rerun()
+
+    # --- DEBUG SECTION ---
+    st.markdown("---")
+    with st.expander("🛠️ Debug Info"):
+        st.markdown("**Prompt:**")
+        st.text(response_obj.prompt_used) # Access via Object
+        st.markdown("**Response:**")
+        st.code(response_obj.raw_response, language='json') # Access via Object
