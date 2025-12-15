@@ -18,3 +18,19 @@ dev = [
     "pytest-cov>=7.0.0",
     "pytest-watch>=4.2.0",
 ]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = [
+    "--cov=services",
+    "--cov=models", 
+    "--cov=pages",
+    "--cov-report=html:htmlcov",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+    "--cov-config=.coveragerc"
+]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

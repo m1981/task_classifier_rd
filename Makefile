@@ -22,13 +22,31 @@ install: ## Install dependencies via uv
 run: ## Run the Streamlit application
 	uv run streamlit run app.py
 
+.PHONY: test-html
+test-html: ## Run tests with HTML coverage report
+	uv run pytest --cov=services --cov=models --cov=pages --cov-report=html --cov-report=term
+	@echo "$(GREEN)Coverage report generated in htmlcov/index.html$(RESET)"
+
+.PHONY: coverage
+coverage: ## Generate coverage report and open in browser
+	uv run pytest --cov=services --cov=models --cov=pages --cov-report=html
+	@if command -v open >/dev/null 2>&1; then \
+		open htmlcov/index.html; \
+	elif command -v xdg-open >/dev/null 2>&1; then \
+		xdg-open htmlcov/index.html; \
+	else \
+		echo "$(YELLOW)Open htmlcov/index.html in your browser$(RESET)"; \
+	fi
+
 .PHONY: test
 test: ## Run tests with coverage
-	uv run pytest --cov=services --cov=models
+	uv run pytest --cov=services --cov=models --cov=pages --cov-report=term-missing
 
 .PHONY: clean
 clean: ## Remove cache and virtual environment
 	rm -rf .venv
 	rm -rf .pytest_cache
 	rm -rf __pycache__
+	rm -rf htmlcov
+	rm -rf .coverage
 	find . -type d -name "__pycache__" -exec rm -rf {} +
