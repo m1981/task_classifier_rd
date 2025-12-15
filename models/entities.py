@@ -38,12 +38,14 @@ class ReferenceItem:
 
 @dataclass
 class Task:
-    id: TaskID
-    name: str
+    name: str  # Mandatory field first
+
+    # Optional fields follow
+    id: TaskID = field(default_factory=lambda: str(uuid.uuid4()))
     is_completed: bool = False
-    tags: List[str] = field(default_factory=list) # Standardized to 'tags'
+    tags: List[str] = field(default_factory=list)
     deadline: Optional[date] = None
-    duration: str = "unknown" # Kept for backward compatibility
+    duration: str = "unknown"
     notes: str = ""
 
 @dataclass

@@ -2,7 +2,19 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List
 import yaml
-from models import DatasetContent, Project, Task
+from enum import Enum
+
+# Import all entities to ensure we can instantiate them
+from models.entities import (
+    DatasetContent,
+    Project,
+    Task,
+    ProjectResource,
+    ReferenceItem,
+    ResourceType,
+    ProjectStatus,
+    Goal
+)
 
 class DatasetLoader(ABC):
     @abstractmethod
@@ -21,19 +33,75 @@ class YamlDatasetLoader(DatasetLoader):
         
         projects = self._parse_projects(data.get('projects', {}))
         inbox_tasks = data.get('inbox_tasks', [])
-        
-        return DatasetContent(projects=projects, inbox_tasks=inbox_tasks)
+        goals = self._parse_goals(data.get('goals', []))
+
+        return DatasetContent(
+            projects=projects,
+            inbox_tasks=inbox_tasks,
+            goals=goals
+        )
     
+    def _parse_goals(self, goals_data: List[dict]) -> List[Goal]:
+        goals = []
+        for g in goals_data:
+            goals.append(Goal(
+                id=g.get('id'),
+                name=g.get('name'),
+                description=g.get('description', ''),
+                status=g.get('status', 'active')
+            ))
+        return goals
+
     def _parse_projects(self, projects_data: dict) -> List[Project]:
         projects = []
         for project_data in projects_data.values():
+            # Handle Status: Convert string back to Enum if possible, else default
+            status_str = project_data.get('status', 'active')
+            try:
+                status_enum = ProjectStatus(status_str)
+            except ValueError:
+                # Fallback for legacy data like "ongoing"
+                status_enum = ProjectStatus.ACTIVE
+
+            # Parse Tasks
             tasks = self._parse_tasks(project_data.get('tasks', []))
+
+            # Parse Resources (Shopping/Prep)
+            resources = []
+            for r in project_data.get('resources', []):
+                # Handle ResourceType Enum
+                try:
+                    r_type = ResourceType(r.get('type', 'to_buy'))
+                except ValueError:
+                    r_type = ResourceType.TO_BUY
+
+                resources.append(ProjectResource(
+                    id=r.get('id'),
+                    name=r.get('name'),
+                    link=r.get('link'),
+                    type=r_type,
+                    is_acquired=r.get('is_acquired', False),
+                    store=r.get('store', 'General')
+                ))
+
+            # Parse Reference Items
+            refs = []
+            for ref in project_data.get('reference_items', []):
+                refs.append(ReferenceItem(
+                    id=ref.get('id'),
+                    name=ref.get('name'),
+                    description=ref.get('description', '')
+                ))
+
             projects.append(Project(
                 id=project_data['id'],
                 name=project_data['name'],
-                status=project_data.get('status', 'ongoing'),
+                status=status_enum,
+                goal_id=project_data.get('goal_id'),
                 tags=project_data.get('tags', []),
-                tasks=tasks
+                tasks=tasks,
+                resources=resources,
+                reference_items=refs
             ))
         return projects
     
@@ -41,11 +109,12 @@ class YamlDatasetLoader(DatasetLoader):
         tasks = []
         for task_data in tasks_data:
             tasks.append(Task(
-                id=task_data['id'],
+                id=str(task_data['id']),
                 name=task_data['name'],
                 duration=task_data.get('duration', 'unknown'),
                 tags=task_data.get('tags', []),
-                notes=task_data.get('notes', '')
+                notes=task_data.get('notes', ''),
+                is_completed=task_data.get('is_completed', False)
             ))
         return tasks
 
@@ -81,6 +150,7 @@ class YamlDatasetSaver(DatasetSaver):
 
         # Create the full data structure with consistent ordering
         yaml_data = {
+            'goals': self._format_goals(content.goals),
             'projects': self._format_projects(content.projects),
             'inbox_tasks': sorted(content.inbox_tasks)  # Sort inbox tasks
         }
@@ -97,6 +167,16 @@ class YamlDatasetSaver(DatasetSaver):
                 sort_keys=True  # Sort keys at top level
             )
 
+    def _format_goals(self, goals: List[Goal]) -> List[dict]:
+        return [
+            {
+                'id': g.id,
+                'name': g.name,
+                'description': g.description,
+                'status': g.status
+            } for g in goals
+        ]
+
     def _format_projects(self, projects: List[Project]) -> dict:
         """Format projects with consistent ordering"""
         projects_data = {}
@@ -107,12 +187,38 @@ class YamlDatasetSaver(DatasetSaver):
         for project in sorted_projects:
             # Use consistent key generation
             key = project.name.lower().replace(' ', '_').replace('/', '_')
+
+            # FIX: Convert Enum to string value
+            status_val = project.status.value if isinstance(project.status, Enum) else project.status
+
             projects_data[key] = {
                 'id': project.id,
                 'name': project.name,
-                'status': project.status,
-                'tags': sorted(project.tags),  # Sort tags for consistency
-                'tasks': self._format_tasks(project.tasks)
+                'status': status_val, # <--- FIXED HERE
+                'goal_id': project.goal_id,
+                'tags': sorted(project.tags),
+                'tasks': self._format_tasks(project.tasks),
+
+                # NEW: Save Resources
+                'resources': [
+                    {
+                        'id': r.id,
+                        'name': r.name,
+                        'type': r.type.value if isinstance(r.type, Enum) else r.type, # Handle Enum
+                        'store': r.store,
+                        'is_acquired': r.is_acquired,
+                        'link': r.link
+                    } for r in project.resources
+                ],
+
+                # NEW: Save References
+                'reference_items': [
+                    {
+                        'id': r.id,
+                        'name': r.name,
+                        'description': r.description
+                    } for r in project.reference_items
+                ]
             }
         return projects_data
 
@@ -126,8 +232,9 @@ class YamlDatasetSaver(DatasetSaver):
                 'id': task.id,
                 'name': task.name,
                 'duration': task.duration,
-                'tags': sorted(task.tags),  # Sort tags for consistency
-                'notes': task.notes
+                'tags': sorted(task.tags),
+                'notes': task.notes,
+                'is_completed': task.is_completed
             }
             for task in sorted_tasks
         ]

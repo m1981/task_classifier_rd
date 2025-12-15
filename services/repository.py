@@ -47,8 +47,11 @@ class TriageService(InboxManager):
     def move_inbox_item_to_project(self, item_text: str, project_id: int, tags: List[str]) -> None:
         project = self.repo.find_project(project_id)
         if project:
-            new_id = max([t.id for t in project.tasks], default=0) + 1
-            new_task = Task(id=new_id, name=item_text, tags=tags)
+            # OLD: new_id = max([t.id for t in project.tasks], default=0) + 1
+
+            # NEW: Let the dataclass generate the UUID automatically
+            new_task = Task(name=item_text, tags=tags)
+
             project.tasks.append(new_task)
 
             if item_text in self.repo.data.inbox_tasks:

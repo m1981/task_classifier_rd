@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
 from pydantic import BaseModel, Field
+import uuid
 
 # --- CONFIGURATION ---
 @dataclass(frozen=True)
@@ -14,8 +15,8 @@ class SystemConfig:
 # --- DOMAIN ENTITIES (Internal Use) ---
 @dataclass
 class Task:
-    id: int
-    name: str
+    id: TaskID = field(default_factory=lambda: str(uuid.uuid4()))
+    name: str = ""
     duration: str = "unknown"
     tags: List[str] = field(default_factory=list)
     notes: str = ""

@@ -1,3 +1,4 @@
+goals: []
 inbox_tasks:
 - Caulk around bathtub
 - Fix leaky bathroom sink
@@ -18,7 +19,8 @@ projects:
     - renovation
     tasks:
     - duration: 45min
-      id: 16
+      id: 858417ff-b951-48ed-ac45-ba920cdceb16
+      is_completed: false
       name: Install bathroom faucet
       notes: ''
       tags:
@@ -35,7 +37,8 @@ projects:
     - renovation
     tasks:
     - duration: 2h
-      id: 15
+      id: 8237a013-1925-4419-b927-a76257dab965
+      is_completed: false
       name: Create wall shelf
       notes: ''
       tags:
@@ -44,7 +47,8 @@ projects:
       - need-tools
       - physical
     - duration: 4h
-      id: 17
+      id: fb3cf6f8-3bfc-49c0-8706-c567936df7ee
+      is_completed: false
       name: Paint bedroom walls
       notes: ''
       tags:
@@ -52,7 +56,8 @@ projects:
       - need-tools
       - painting
       - physical
-  kitchen_renovation2:
+  kitchen_renovation:
+    goal_id: null
     id: 1
     name: Kitchen Renovation
     status: ongoing
@@ -62,7 +67,8 @@ projects:
     - renovation
     tasks:
     - duration: 1h
-      id: 13
+      id: 14545545-5a62-4f51-a317-cecafcf83f48
+      is_completed: false
       name: Mount electrical socket
       notes: ''
       tags:
@@ -70,7 +76,8 @@ projects:
       - need-tools
       - physical
     - duration: 6h
-      id: 19
+      id: 3a058a3b-3c24-4ac0-ab4a-0613febb7b66
+      is_completed: false
       name: Tile kitchen backsplash
       notes: ''
       tags:
