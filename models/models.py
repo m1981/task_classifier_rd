@@ -32,7 +32,10 @@ class Project:
 class DatasetContent:
     projects: List[Project]
     inbox_tasks: List[str]
-
+    suggested_project: str = Field(...)
+    confidence: float = Field(...)
+    reasoning: str = Field(...)
+    extracted_tags: List[str] = Field(...)
 # --- AI MODELS (External/Validation Use) ---
 
 # This MUST be a Pydantic BaseModel to work with Anthropic Structured Outputs
@@ -64,6 +67,12 @@ class ClassificationResult(BaseModel):
     task: str = Field(
         default="",
         description="The original task text (internal use only)"
+    )
+
+    # --- NEW FIELD ---
+    suggested_new_project_name: Optional[str] = Field(
+        default=None,
+        description="If the task does not fit ANY available project, suggest a short, concise name for a NEW project here."
     )
 
 # --- SERVICE OBJECTS ---

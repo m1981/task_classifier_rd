@@ -1,6 +1,45 @@
 import streamlit as st
 import anthropic
 from typing import List
+import functools
+import time
+import sys
+
+
+# --- DEBUG LOGGING UTILITY ---
+def debug_log(func):
+    """Decorator to print function calls, args, and execution time to stdout."""
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # Format arguments for display
+        arg_str = ", ".join([repr(a) for a in args])
+        kwarg_str = ", ".join([f"{k}={v!r}" for k, v in kwargs.items()])
+        all_args = ", ".join(filter(None, [arg_str, kwarg_str]))
+
+        # Truncate long strings for readability
+        if len(all_args) > 100:
+            all_args = all_args[:97] + "..."
+
+        print(f"➡️  CALL: {func.__name__}({all_args})")
+        start_time = time.time()
+
+        try:
+            result = func(*args, **kwargs)
+            elapsed = (time.time() - start_time) * 1000
+
+            # Format result
+            res_str = repr(result)
+            if len(res_str) > 100:
+                res_str = res_str[:97] + "..."
+
+            print(f"✅  RETURN: {func.__name__} in {elapsed:.2f}ms -> {res_str}")
+            return result
+        except Exception as e:
+            print(f"❌  ERROR in {func.__name__}: {str(e)}")
+            raise e
+
+    return wrapper
 
 # --- Import Infrastructure & Domain ---
 from services import DatasetManager, PromptBuilder, TaskClassifier
@@ -8,12 +47,18 @@ from services.repository import YamlRepository, TriageService, PlanningService, 
 from models.dtos import SingleTaskClassificationRequest
 from models.entities import ResourceType, ProjectStatus
 
+# --- DEBUG LOGGER ---
+def log_action(action: str, details: str):
+    print(f"\n[ACTION] {action}")
+    print(f"   └── {details}")
+
+def log_state(label: str, data):
+    print(f"[STATE] {label}: {data}")
+
 # --- Import Views ---
-# We assume pages/shopping_view.py exists as created in previous steps
 try:
     from pages.shopping_view import render_shopping_view
 except ImportError:
-    # Fallback if file structure isn't perfect yet
     def render_shopping_view(service):
         st.error("Shopping view module not found. Please ensure pages/shopping_view.py exists.")
 
@@ -74,17 +119,20 @@ with st.sidebar:
 
     # Dataset Loader
     available_datasets = dataset_manager.list_datasets()
-    selected_dataset = st.selectbox(
-        "Select Dataset",
-        available_datasets,
-        index=available_datasets.index(
-            st.session_state.dataset_name) if st.session_state.dataset_name in available_datasets else 0
-    )
+    # Handle case where no datasets exist
+    index = 0
+    if st.session_state.dataset_name in available_datasets:
+        index = available_datasets.index(st.session_state.dataset_name)
+
+    selected_dataset = st.selectbox("Select Dataset", available_datasets, index=index)
 
     if st.button("📂 Load Dataset", use_container_width=True):
+        log_action("LOAD DATASET", selected_dataset)
         st.session_state.dataset_name = selected_dataset
         # Clear AI cache on load
         if 'current_prediction' in st.session_state: del st.session_state.current_prediction
+        # Force reload of repo on explicit load button click
+        if 'repo' in st.session_state: del st.session_state.repo
         st.rerun()
 
     st.divider()
@@ -95,10 +143,16 @@ if not st.session_state.dataset_name:
     st.stop()
 
 # Initialize Repository & Services
-# We re-initialize these on every run to ensure we have the latest state from memory/disk
-# The YamlRepository handles the actual data holding
 try:
-    repo = YamlRepository(dataset_manager, st.session_state.dataset_name)
+    # Check if we need to load the repo from disk (First run OR dataset changed)
+    if 'repo' not in st.session_state or st.session_state.repo.name != st.session_state.dataset_name:
+        log_action("DISK I/O", f"Loading {st.session_state.dataset_name} from file...")
+        st.session_state.repo = YamlRepository(dataset_manager, st.session_state.dataset_name)
+
+    # Use the persistent repository object
+    repo = st.session_state.repo
+
+    # Services are stateless wrappers, so we can re-init them passing the persistent repo
     triage_service = TriageService(repo)
     planning_service = PlanningService(repo)
     execution_service = ExecutionService(repo)
@@ -122,11 +176,15 @@ if mode == "📥 Triage":
         new_task = c1.text_input("Capture thought...", placeholder="e.g., Buy milk")
         if c2.form_submit_button("Capture"):
             if new_task:
+                log_action("CAPTURE", new_task)
                 triage_service.add_to_inbox(new_task)
                 st.rerun()
 
     # 2. Process Inbox
     inbox_items = triage_service.get_inbox_items()
+
+    # DEBUG LOG: Print current inbox state
+    log_state("Current Inbox", inbox_items)
 
     if not inbox_items:
         st.success("🎉 Inbox Zero! You are all caught up.")
@@ -138,11 +196,10 @@ if mode == "📥 Triage":
 
         current_task_text = inbox_items[0]
 
-        # AI Prediction Logic
-        if 'current_prediction' not in st.session_state or st.session_state.get(
-                'current_task_ref') != current_task_text:
+        # AI Prediction
+        if 'current_prediction' not in st.session_state or st.session_state.get('current_task_ref') != current_task_text:
+            log_action("AI PREDICTION START", current_task_text)
             with st.spinner("🤖 AI is analyzing..."):
-                # Get project names for AI context
                 project_names = [p.name for p in repo.data.projects]
 
                 req = SingleTaskClassificationRequest(
@@ -152,63 +209,99 @@ if mode == "📥 Triage":
                 response = classifier.classify_single(req)
                 st.session_state.current_prediction = response
                 st.session_state.current_task_ref = current_task_text
+                log_action("AI PREDICTION DONE", f"Suggested: {response.results[0].suggested_project}")
 
-        result = st.session_state.current_prediction.results[0]
+        # Get Result
+        response_obj = st.session_state.current_prediction
+        result = response_obj.results[0]
 
-        # The Card
+        # --- THE CARD ---
         with st.container(border=True):
             st.markdown(f"#### {current_task_text}")
 
             if result.suggested_project != "Unmatched":
                 st.markdown(f"<div class='ai-hint'>💡 {result.reasoning}</div>", unsafe_allow_html=True)
                 st.markdown(f"<div class='dest-project'>➡️ {result.suggested_project}</div>", unsafe_allow_html=True)
+                if result.extracted_tags: st.caption(f"Tags: {', '.join(result.extracted_tags)}")
 
-                # Tags display
                 if result.extracted_tags:
                     st.caption(f"Tags: {', '.join(result.extracted_tags)}")
 
                 # Action Buttons
                 col_add, col_skip = st.columns([1, 4])
 
-                # Find project ID for the suggestion
                 target_proj = next((p for p in repo.data.projects if p.name == result.suggested_project), None)
 
                 if col_add.button("Add", type="primary", use_container_width=True):
                     if target_proj:
-                        triage_service.move_inbox_item_to_project(
-                            current_task_text,
-                            target_proj.id,
-                            result.extracted_tags
-                        )
+                        log_action("ADD TASK", f"{current_task_text} -> {target_proj.name}")
+                        triage_service.move_inbox_item_to_project(current_task_text, target_proj.id, result.extracted_tags)
                         st.rerun()
             else:
-                st.warning("❓ AI couldn't find a good match.")
+                st.warning("❓ Unsure where to put this.")
+                st.caption(f"Reasoning: {result.reasoning}")
 
-        # Manual Override
+        # --- MANUAL SELECTION (PILLS) ---
+        # Filter out the suggested project from options to avoid redundancy
+        project_options = [p.name for p in repo.data.projects if p.name != result.suggested_project]
+
+        # Use Pills for manual selection
+        selected_project = st.pills("Manual Assignment", project_options, selection_mode="single")
+
+        if selected_project:
+            log_action("MANUAL MOVE", f"{current_task_text} -> {selected_project}")
+            target_id = next(p.id for p in repo.data.projects if p.name == selected_project)
+            triage_service.move_inbox_item_to_project(current_task_text, target_id, [])
+            st.rerun()
+
         st.markdown("---")
-        st.caption("Manual Assignment")
 
-        # Existing Projects
-        project_options = {p.name: p.id for p in repo.data.projects}
-        selected_proj_name = st.selectbox("Move to...", ["Select..."] + list(project_options.keys()),
-                                          label_visibility="collapsed")
+        # --- CREATE NEW PROJECT ---
+        # Logic: Expand if Unmatched, or if AI suggested a new name
+        should_expand = (result.suggested_project == "Unmatched")
 
-        if selected_proj_name != "Select...":
-            triage_service.move_inbox_item_to_project(current_task_text, project_options[selected_proj_name], [])
-            st.rerun()
+        # Logic: Pre-fill with AI suggestion if available
+        default_new_name = ""
+        if hasattr(result, 'suggested_new_project_name') and result.suggested_new_project_name:
+            default_new_name = result.suggested_new_project_name
 
-        # Create New Project
-        with st.expander("Or Create New Project"):
-            new_proj_name = st.text_input("New Project Name")
-            if st.button("Create & Move"):
-                triage_service.create_project_from_inbox(current_task_text, new_proj_name)
-                st.rerun()
+        with st.expander("➕ Create New Project", expanded=should_expand):
+            with st.form(key="create_form", clear_on_submit=True, border=False):
+                c_input, c_btn = st.columns([3, 1], vertical_alignment="bottom")
+                new_proj_name = c_input.text_input(
+                    "New Project Name",
+                    value=default_new_name,
+                    placeholder="e.g., Bedroom Paint"
+                )
+                if c_btn.form_submit_button("Create & Move"):
+                    if new_proj_name:
+                        log_action("CREATE PROJECT", new_proj_name)
+                        triage_service.create_project_from_inbox(current_task_text, new_proj_name)
+                        st.rerun()
 
-        # Skip
+        # --- SKIP ---
         if st.button("⏭️ Skip for now", use_container_width=True):
+            log_action("SKIP CLICKED", current_task_text)
+
+            # 1. Call Service
             triage_service.skip_inbox_item(current_task_text)
-            del st.session_state.current_prediction
+
+            # 2. Verify Change in Memory
+            log_state("Inbox After Skip (Memory)", repo.data.inbox_tasks)
+
+            # 3. Clear Session State
+            if 'current_prediction' in st.session_state:
+                del st.session_state.current_prediction
+            if 'current_task_ref' in st.session_state:
+                del st.session_state.current_task_ref
+
             st.rerun()
+
+        # --- DEBUG SECTION ---
+        st.markdown("---")
+        with st.expander("🛠️ Debug Info"):
+            st.text(f"Prompt: {response_obj.prompt_used}")
+            st.code(response_obj.raw_response, language='json')
 
 # --- VIEW 2: PLANNING (Organize & Review) ---
 elif mode == "🎯 Planning":
@@ -229,14 +322,12 @@ elif mode == "🎯 Planning":
     orphaned_projects = planning_service.get_orphaned_projects()
 
 
-    # Helper to render project details
     def render_project_details(project):
         st.markdown(f"**{project.name}**")
 
-        tab_res, tab_ref = st.tabs(["📦 Resources (Shop/Prep)", "📚 Reference"])
+        tab_res, tab_ref = st.tabs(["📦 Resources", "📚 Reference"])
 
         with tab_res:
-            # Add Resource Form
             c1, c2, c3, c4 = st.columns([3, 2, 2, 1])
             res_name = c1.text_input("Item", key=f"rn_{project.id}", label_visibility="collapsed",
                                      placeholder="Item name")
@@ -250,7 +341,6 @@ elif mode == "🎯 Planning":
                 planning_service.add_resource(project.id, res_name, r_enum, res_store)
                 st.rerun()
 
-            # List Resources
             if project.resources:
                 for r in project.resources:
                     icon = "🛒" if r.type == ResourceType.TO_BUY else "🧤"
@@ -259,31 +349,25 @@ elif mode == "🎯 Planning":
                 st.caption("No resources needed yet.")
 
         with tab_ref:
-            # Add Reference Form
             c1, c2 = st.columns([5, 1])
             ref_name = c1.text_input("Ref Note", key=f"refn_{project.id}", label_visibility="collapsed")
             if c2.button("➕", key=f"add_ref_{project.id}"):
                 planning_service.add_reference_item(project.id, ref_name, "")
                 st.rerun()
-
             for ref in project.reference_items:
                 st.text(f"📄 {ref.name}")
 
 
-    # Render Goals
     for goal in goals:
         with st.expander(f"🏆 {goal.name}", expanded=True):
             st.caption(goal.description)
             projects = planning_service.get_projects_for_goal(goal.id)
-
             if not projects:
                 st.info("No projects linked to this goal.")
-
             for proj in projects:
                 with st.container(border=True):
                     render_project_details(proj)
 
-    # Render Orphans
     if orphaned_projects:
         with st.expander("📂 Projects without Goals", expanded=False):
             for proj in orphaned_projects:
@@ -294,7 +378,6 @@ elif mode == "🎯 Planning":
 elif mode == "✅ Execution":
     st.title("✅ Next Actions")
 
-    # Context Filter
     all_tags = set()
     for p in repo.data.projects:
         for t in p.tasks:
@@ -302,25 +385,35 @@ elif mode == "✅ Execution":
 
     selected_tag = st.pills("Context", list(all_tags), selection_mode="single")
 
-    # Get Tasks
     tasks = execution_service.get_next_actions(context_filter=selected_tag)
 
     if not tasks:
         st.info("No active tasks found for this context.")
 
-    # Group by Project for context
-    # (Alternatively, could be a flat list, but grouping helps context)
     for task in tasks:
-        # Find parent project name (inefficient lookup but fine for prototype)
         parent_proj = next((p for p in repo.data.projects if task in p.tasks), None)
         proj_name = parent_proj.name if parent_proj else "Unknown"
 
         col1, col2 = st.columns([0.5, 10])
-
-        # Completion Checkbox
         is_done = col1.checkbox("Done", value=False, key=f"exec_{task.id}", label_visibility="collapsed")
 
         if is_done:
             execution_service.complete_task(parent_proj.id, task.id)
             st.toast(f"Completed: {task.name}")
             st.rerun()
+
+        col2.markdown(f"**{task.name}** <span style='color:gray; font-size:0.8em'>({proj_name})</span>",
+                      unsafe_allow_html=True)
+        if task.tags:
+            col2.caption(f"🏷️ {', '.join(task.tags)}")
+
+# --- VIEW 4: SHOPPING (Cross-Cutting) ---
+elif mode == "🛒 Shopping":
+    render_shopping_view(execution_service)
+
+# --- GLOBAL FOOTER ---
+st.sidebar.divider()
+if st.sidebar.button("💾 Save All Changes", type="primary"):
+    log_action("SAVE", "Writing to disk...")
+    repo.save()
+    st.toast("Dataset saved successfully!", icon="💾")

@@ -84,22 +84,18 @@ class PromptBuilder:
         }
 
     def build_single_task_prompt(self, request: SingleTaskClassificationRequest) -> str:
-        """
-        Builds a prompt for a single task.
-        Note: We don't need to describe the JSON format here anymore.
-        """
         project_list = ", ".join([f'"{p}"' for p in request.available_projects])
         tags_str = ", ".join(self.config.DEFAULT_TAGS)
 
         return f"""
         You are a task organization assistant.
-
         Task to classify: "{request.task_text}"
-
         Available Projects: [{project_list}]
         Allowed Tags: [{tags_str}]
 
-        Analyze the task and determine the best project, confidence score, and tags.
+        Analyze the task. 
+        1. If it fits an existing project, set 'suggested_project' to that name.
+        2. If it does NOT fit, set 'suggested_project' to "Unmatched" and provide a 'suggested_new_project_name'.
         """
 
     def build_prompt(self, request: ClassificationRequest) -> str:
