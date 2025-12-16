@@ -1,7 +1,8 @@
-# views/shopping_view.py
+import streamlit as st
+from services.repository import ExecutionService
 
 def render_shopping_view(service: ExecutionService):
-    st.header("🛒 Shopping Run")
+    st.title("🛒 Shopping Run")
 
     # Get the pivoted data
     shopping_data = service.get_aggregated_shopping_list()
@@ -18,7 +19,6 @@ def render_shopping_view(service: ExecutionService):
                 col1, col2 = st.columns([4, 1])
 
                 # The Checkbox
-                # We use a composite key so Streamlit doesn't get confused
                 is_checked = col1.checkbox(
                     f"{resource.name} ({project_name})",
                     value=resource.is_acquired,
