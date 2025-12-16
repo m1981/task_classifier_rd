@@ -7,15 +7,17 @@ from views.common import log_action, log_state
 def render_triage_view(triage_service: TriageService, classifier: TaskClassifier, repo: YamlRepository):
     st.title("📥 Inbox Triage")
 
-    # 1. Quick Capture
-    with st.form("quick_capture", clear_on_submit=True):
-        c1, c2 = st.columns([4, 1])
-        new_task = c1.text_input("Capture thought...", placeholder="e.g., Buy milk")
-        if c2.form_submit_button("Capture"):
-            if new_task:
-                log_action("CAPTURE", new_task)
-                triage_service.add_to_inbox(new_task)
-                st.rerun()
+    # 1. Quick Capture (Collapsed by default)
+    with st.expander("⚡ Quick Capture", expanded=False):
+        # Added border=False here
+        with st.form("quick_capture", clear_on_submit=True, border=False):
+            c1, c2 = st.columns([4, 1])
+            new_task = c1.text_input("Capture thought...", placeholder="e.g., Buy milk")
+            if c2.form_submit_button("Capture"):
+                if new_task:
+                    log_action("CAPTURE", new_task)
+                    triage_service.add_to_inbox(new_task)
+                    st.rerun()
 
     # 2. Process Inbox
     inbox_items = triage_service.get_inbox_items()
@@ -59,19 +61,35 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
             st.markdown(f"<div class='dest-project'>➡️ {result.suggested_project}</div>", unsafe_allow_html=True)
             if result.extracted_tags:
                 st.caption(f"Tags: {', '.join(result.extracted_tags)}")
-
-            # Action Buttons
-            col_add, col_skip = st.columns([1, 4])
-            target_proj = next((p for p in repo.data.projects if p.name == result.suggested_project), None)
-
-            if col_add.button("Add", type="primary", use_container_width=True):
-                if target_proj:
-                    log_action("ADD TASK", f"{current_task_text} -> {target_proj.name}")
-                    triage_service.move_inbox_item_to_project(current_task_text, target_proj.id, result.extracted_tags)
-                    st.rerun()
         else:
             st.warning("❓ Unsure where to put this.")
             st.caption(f"Reasoning: {result.reasoning}")
+
+        # --- ACTION BUTTONS (Add & Skip Side-by-Side) ---
+        col_add, col_skip = st.columns([1, 1])
+
+        # Button 1: ADD (Only if matched)
+        with col_add:
+            if result.suggested_project != "Unmatched":
+                target_proj = next((p for p in repo.data.projects if p.name == result.suggested_project), None)
+                if st.button("Add", type="primary", use_container_width=True):
+                    if target_proj:
+                        log_action("ADD TASK", f"{current_task_text} -> {target_proj.name}")
+                        triage_service.move_inbox_item_to_project(current_task_text, target_proj.id, result.extracted_tags)
+                        st.rerun()
+            else:
+                # Placeholder to keep alignment if needed, or leave empty
+                st.empty()
+
+        # Button 2: SKIP (Always available)
+        with col_skip:
+            if st.button("⏭️ Skip", use_container_width=True):
+                log_action("SKIP CLICKED", current_task_text)
+                triage_service.skip_inbox_item(current_task_text)
+                # Clear Session State
+                if 'current_prediction' in st.session_state: del st.session_state.current_prediction
+                if 'current_task_ref' in st.session_state: del st.session_state.current_task_ref
+                st.rerun()
 
     # --- MANUAL SELECTION (PILLS) ---
     project_options = [p.name for p in repo.data.projects if p.name != result.suggested_project]
@@ -82,8 +100,6 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
         target_id = next(p.id for p in repo.data.projects if p.name == selected_project)
         triage_service.move_inbox_item_to_project(current_task_text, target_id, [])
         st.rerun()
-
-    st.markdown("---")
 
     # --- CREATE NEW PROJECT ---
     should_expand = (result.suggested_project == "Unmatched")
@@ -100,15 +116,6 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
                     log_action("CREATE PROJECT", new_proj_name)
                     triage_service.create_project_from_inbox(current_task_text, new_proj_name)
                     st.rerun()
-
-    # --- SKIP ---
-    if st.button("⏭️ Skip for now", use_container_width=True):
-        log_action("SKIP CLICKED", current_task_text)
-        triage_service.skip_inbox_item(current_task_text)
-        # Clear Session State
-        if 'current_prediction' in st.session_state: del st.session_state.current_prediction
-        if 'current_task_ref' in st.session_state: del st.session_state.current_task_ref
-        st.rerun()
 
     # --- DEBUG SECTION ---
     st.markdown("---")
