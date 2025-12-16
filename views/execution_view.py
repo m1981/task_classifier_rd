@@ -1,7 +1,7 @@
 import streamlit as st
-from services.repository import ExecutionService, YamlRepository
+from services.repository import ExecutionService
 
-def render_execution_view(execution_service: ExecutionService, repo: YamlRepository):
+def render_execution_view(execution_service: ExecutionService, repo):
     st.title("✅ Next Actions")
 
     all_tags = set()

@@ -3,7 +3,7 @@ import anthropic
 
 # --- Import Infrastructure & Domain ---
 from services import DatasetManager, PromptBuilder, TaskClassifier
-from services.repository import YamlRepository, TriageService, PlanningService, ExecutionService
+from services.repository import TriageService, PlanningService, ExecutionService
 
 # --- Import Views ---
 from views.common import inject_custom_css, log_action
@@ -71,10 +71,17 @@ if not st.session_state.dataset_name:
 
 # Initialize Repository & Services
 try:
-    # Check if we need to load the repo from disk (First run OR dataset changed)
+    # Check if we need to load the repo
     if 'repo' not in st.session_state or st.session_state.repo.name != st.session_state.dataset_name:
-        log_action("DISK I/O", f"Loading {st.session_state.dataset_name} from file...")
-        st.session_state.repo = YamlRepository(dataset_manager, st.session_state.dataset_name)
+        log_action("DB CONNECT", f"Connecting to {st.session_state.dataset_name}...")
+
+        # Get path from manager
+        db_path = dataset_manager.load_dataset(st.session_state.dataset_name)
+
+        # Initialize SQL Repository
+        from services.repository import SqliteRepository
+
+        st.session_state.repo = SqliteRepository(db_path)
 
     # Use the persistent repository object
     repo = st.session_state.repo

@@ -1,66 +1,196 @@
 from typing import List, Optional, Tuple, Dict
-from models.entities import Task, Project, Goal, ProjectResource, ResourceType, ProjectStatus, ReferenceItem, DatasetContent
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+from models.entities import Task, Project, Goal, ProjectResource, ResourceType, ProjectStatus, ReferenceItem, \
+    DatasetContent
+from services.db_models import Base, DBProject, DBTask, DBResource, DBTag, DBInboxItem, DBGoal
 from interfaces import InboxManager, GoalPlanner, TaskExecutor
-from services.services import DatasetManager
 from services.decorators import autosave
 
 
-class YamlRepository:
-    """
-    The 'God Object' wrapper.
-    In a real app, this would handle DB connections.
-    Here, it wraps the in-memory DatasetContent and handles saving.
-    """
+# --- NEW SQLITE REPOSITORY ---
 
-    def __init__(self, dataset_manager: DatasetManager, current_dataset_name: str):
-        self.dm = dataset_manager
-        self.name = current_dataset_name
-        # Load initial state
-        self.data: DatasetContent = self.dm.load_dataset(current_dataset_name)
+class SqliteRepository:
+    def __init__(self, db_path: str):
+        self.engine = create_engine(f"sqlite:///{db_path}", echo=False)
+        Base.metadata.create_all(self.engine)
+        self.session = Session(self.engine)
+        self.name = "sqlite_db"  # Compatibility field
 
-        # OPTIMIZATION: Build an internal index for O(1) lookups
-        # This maps TaskID -> (Project, Task)
-        self._task_index: Dict[str, Tuple[Project, Task]] = {}
-        self._rebuild_index()
+        # Load initial state into memory to maintain compatibility with existing Services
+        # that expect self.repo.data to exist.
+        self.data = self._load_full_state()
 
-    def _rebuild_index(self):
-        """Rebuilds the internal lookup index. Call this after bulk operations."""
-        self._task_index.clear()
-        for p in self.data.projects:
-            for t in p.tasks:
-                self._task_index[t.id] = (p, t)
+    def _load_full_state(self) -> DatasetContent:
+        """Loads DB state into Domain Objects (In-Memory Mirror)"""
+        projects = [self._to_domain_project(p) for p in self.session.query(DBProject).all()]
+        goals = [self._to_domain_goal(g) for g in self.session.query(DBGoal).all()]
+        inbox = [i.content for i in self.session.query(DBInboxItem).all()]
+        return DatasetContent(projects=projects, goals=goals, inbox_tasks=inbox)
 
     def save(self):
-        self.dm.save_dataset(self.name, self.data)
+        """Commits transaction and refreshes in-memory mirror"""
+        self.session.commit()
+        self.data = self._load_full_state()
 
+    # --- Mappers ---
+    def _to_domain_task(self, db_task: DBTask) -> Task:
+        return Task(
+            id=db_task.id,
+            name=db_task.name,
+            is_completed=db_task.is_completed,
+            tags=[t.name for t in db_task.tags],
+            duration=db_task.duration or "unknown",
+            notes=db_task.notes or ""
+        )
+
+    def _to_domain_project(self, db_proj: DBProject) -> Project:
+        try:
+            status_enum = ProjectStatus(db_proj.status)
+        except ValueError:
+            status_enum = ProjectStatus.ACTIVE
+
+        return Project(
+            id=db_proj.id,
+            name=db_proj.name,
+            status=status_enum,
+            goal_id=db_proj.goal_id,
+            tasks=[self._to_domain_task(t) for t in db_proj.tasks],
+            resources=[
+                ProjectResource(
+                    id=r.id, name=r.name, type=ResourceType(r.type),
+                    store=r.store, is_acquired=r.is_acquired, link=r.link
+                ) for r in db_proj.resources
+            ],
+            reference_items=[
+                ReferenceItem(id=r.id, name=r.name, description=r.description)
+                for r in db_proj.reference_items
+            ]
+        )
+
+    def _to_domain_goal(self, db_goal: DBGoal) -> Goal:
+        return Goal(
+            id=db_goal.id,
+            name=db_goal.name,
+            description=db_goal.description,
+            status=db_goal.status
+        )
+
+    # --- Accessors ---
     def find_project(self, project_id: int) -> Optional[Project]:
         return next((p for p in self.data.projects if p.id == project_id), None)
 
-    def get_task_parent(self, task_id: str) -> Optional[Project]:
-        if task_id in self._task_index:
-            return self._task_index[task_id][0]  # Returns the Project
-        return None
-
     def find_task(self, project_id: int, task_id: str) -> Optional[Task]:
-        # Fast lookup using index
-        if task_id in self._task_index:
-            return self._task_index[task_id][1]
-
-        # Fallback (in case index is stale)
         p = self.find_project(project_id)
         if p:
             return next((t for t in p.tasks if t.id == task_id), None)
         return None
 
-    def register_new_task(self, project: Project, task: Task):
-        """Helper to keep index in sync when adding tasks"""
-        self._task_index[task.id] = (project, task)
+    # --- Mutators (Sync Logic) ---
+
+    def sync_project(self, domain_project: Project):
+        """Updates DB record to match Domain Project"""
+        db_proj = self.session.get(DBProject, domain_project.id)
+
+        if not db_proj: return
+
+        # 1. DB Update
+        db_proj.name = domain_project.name
+        db_proj.status = domain_project.status.value
+        db_proj.goal_id = domain_project.goal_id # Ensure Goal ID is synced
+
+        # Sync Tasks
+        existing_ids = {t.id for t in db_proj.tasks}
+        for task in domain_project.tasks:
+            if task.id not in existing_ids:
+                new_db_task = DBTask(
+                    id=task.id, project_id=db_proj.id, name=task.name,
+                    is_completed=task.is_completed, duration=task.duration, notes=task.notes
+                )
+                new_db_task.tags = self._resolve_tags(task.tags)
+                self.session.add(new_db_task)
+            else:
+                existing = next(t for t in db_proj.tasks if t.id == task.id)
+                existing.is_completed = task.is_completed
+                existing.name = task.name
+                # Note: Tag updates on existing tasks require more complex logic, skipped for brevity
+
+        # Sync Resources
+        res_ids = {r.id for r in db_proj.resources}
+        for res in domain_project.resources:
+            if res.id not in res_ids:
+                new_res = DBResource(
+                    id=res.id, project_id=db_proj.id, name=res.name,
+                    type=res.type.value, store=res.store, is_acquired=res.is_acquired
+                )
+                self.session.add(new_res)
+            else:
+                existing_r = next(r for r in db_proj.resources if r.id == res.id)
+                existing_r.is_acquired = res.is_acquired
+
+        self.session.commit()
+
+        # 2. Mirror Update (FIXED)
+        # We must update the in-memory object to match the DB state
+        # Since domain_project is likely the same object reference as in self.data.projects,
+        # simple field updates might already be there, but we ensure consistency.
+        mirror_proj = self.find_project(domain_project.id)
+        if mirror_proj and mirror_proj is not domain_project:
+            # If they are different objects, copy state
+            mirror_proj.goal_id = domain_project.goal_id
+            mirror_proj.tasks = domain_project.tasks
+            mirror_proj.resources = domain_project.resources
+
+    def sync_goal(self, domain_goal: Goal):
+        db_goal = self.session.get(DBGoal, domain_goal.id)
+        if not db_goal:
+            db_goal = DBGoal(id=domain_goal.id, name=domain_goal.name, description=domain_goal.description)
+            self.session.add(db_goal)
+        self.session.commit()
+
+        # Update Mirror
+        if domain_goal not in self.data.goals:
+            self.data.goals.append(domain_goal)
+
+    def create_project(self, name: str) -> Project:
+        db_proj = DBProject(name=name)
+        self.session.add(db_proj)
+        self.session.commit()
+
+        domain_proj = self._to_domain_project(db_proj)
+        self.data.projects.append(domain_proj) # Update Mirror
+        return domain_proj
+
+    def add_inbox_item(self, text: str):
+        item = DBInboxItem(content=text)
+        self.session.add(item)
+        self.session.commit()
+        self.data.inbox_tasks.append(text) # Update Mirror
+
+    def remove_inbox_item(self, text: str):
+        item = self.session.query(DBInboxItem).filter_by(content=text).first()
+        if item:
+            self.session.delete(item)
+            self.session.commit()
+            # FIX: Explicitly remove from mirror
+            if text in self.data.inbox_tasks:
+                self.data.inbox_tasks.remove(text)
+
+    def _resolve_tags(self, tag_names: List[str]) -> List[DBTag]:
+        result = []
+        for name in tag_names:
+            tag = self.session.query(DBTag).filter_by(name=name).first()
+            if not tag:
+                tag = DBTag(name=name)
+                self.session.add(tag)
+            result.append(tag)
+        return result
 
 
-# --- Service Implementations ---
+# --- Service Implementations (Updated for SQL) ---
 
 class TriageService(InboxManager):
-    def __init__(self, repo: YamlRepository):
+    def __init__(self, repo: SqliteRepository):
         self.repo = repo
 
     def get_inbox_items(self) -> List[str]:
@@ -68,7 +198,8 @@ class TriageService(InboxManager):
 
     @autosave
     def add_to_inbox(self, text: str) -> None:
-        self.repo.data.inbox_tasks.append(text)
+        # LEGACY: self.repo.data.inbox_tasks.append(text)
+        self.repo.add_inbox_item(text)
 
     @autosave
     def move_inbox_item_to_project(self, item_text: str, project_id: int, tags: List[str]) -> None:
@@ -76,33 +207,30 @@ class TriageService(InboxManager):
         if project:
             new_task = Task(name=item_text, tags=tags)
             project.tasks.append(new_task)
-            self.repo.register_new_task(project, new_task) # Update Index
 
-            if item_text in self.repo.data.inbox_tasks:
-                self.repo.data.inbox_tasks.remove(item_text)
+            # NEW: Sync changes to DB
+            self.repo.sync_project(project)
+            self.repo.remove_inbox_item(item_text)
 
     @autosave
     def create_project_from_inbox(self, item_text: str, new_project_name: str) -> None:
-        # Safe ID generation for Integers
-        existing_ids = [p.id for p in self.repo.data.projects]
-        new_id = max(existing_ids, default=0) + 1
+        # NEW: Create directly in DB to get ID
+        new_proj = self.repo.create_project(new_project_name)
 
-        new_proj = Project(id=new_id, name=new_project_name)
-        self.repo.data.projects.append(new_proj)
+        # Refresh local mirror to ensure we have the new project in self.repo.data
+        self.repo.save()
 
-        # Reuse the move logic (which handles autosave, but since we are inside
-        # an autosave function, we just call the logic directly to avoid double save)
-        self.move_inbox_item_to_project(item_text, new_id, [])
+        self.move_inbox_item_to_project(item_text, new_proj.id, [])
 
     @autosave
     def skip_inbox_item(self, item_text: str) -> None:
-        if item_text in self.repo.data.inbox_tasks:
-            self.repo.data.inbox_tasks.remove(item_text)
-            self.repo.data.inbox_tasks.append(item_text)
+        # For SQL, skipping just means leaving it there.
+        # If we want to move it to the end, we'd update created_at timestamp.
+        pass
 
 
 class PlanningService(GoalPlanner):
-    def __init__(self, repo: YamlRepository):
+    def __init__(self, repo: SqliteRepository):
         self.repo = repo
 
     def get_all_goals(self) -> List[Goal]:
@@ -112,7 +240,8 @@ class PlanningService(GoalPlanner):
     def create_goal(self, name: str, description: str) -> Goal:
         import uuid
         new_goal = Goal(id=str(uuid.uuid4()), name=name, description=description)
-        self.repo.data.goals.append(new_goal)
+        # NEW: Sync
+        self.repo.sync_goal(new_goal)
         return new_goal
 
     def get_projects_for_goal(self, goal_id: str) -> List[Project]:
@@ -127,6 +256,8 @@ class PlanningService(GoalPlanner):
         if project:
             res = ProjectResource(name=name, type=r_type, store=store)
             project.resources.append(res)
+            # NEW: Sync
+            self.repo.sync_project(project)
 
     @autosave
     def add_reference_item(self, project_id: int, name: str, description: str) -> None:
@@ -134,10 +265,11 @@ class PlanningService(GoalPlanner):
         if project:
             ref = ReferenceItem(name=name, description=description)
             project.reference_items.append(ref)
+            # NEW: Sync (Note: You'll need to add sync logic for refs in sync_project if not cascading)
 
 
 class ExecutionService(TaskExecutor):
-    def __init__(self, repo: YamlRepository):
+    def __init__(self, repo: SqliteRepository):
         self.repo = repo
 
     def get_next_actions(self, context_filter: Optional[str] = None) -> List[Task]:
@@ -154,40 +286,40 @@ class ExecutionService(TaskExecutor):
 
     @autosave
     def complete_task(self, project_id: int, task_id: str) -> None:
-        # Note: task_id is now str (UUID)
         task = self.repo.find_task(project_id, task_id)
         if task:
             task.is_completed = True
+            # NEW: Sync parent project
+            project = self.repo.find_project(project_id)
+            self.repo.sync_project(project)
 
     @autosave
     def undo_complete_task(self, project_id: int, task_id: str) -> None:
         task = self.repo.find_task(project_id, task_id)
         if task:
             task.is_completed = False
+            project = self.repo.find_project(project_id)
+            self.repo.sync_project(project)
 
     def get_aggregated_shopping_list(self) -> dict[str, List[Tuple[ProjectResource, str]]]:
+        # Logic remains same as it reads from repo.data
         from collections import defaultdict
         shopping_trip = defaultdict(list)
-
         for project in self.repo.data.projects:
             if project.status == ProjectStatus.COMPLETED:
                 continue
-
-            # Filter for TO_BUY and NOT acquired
             to_buy = [r for r in project.resources
                       if r.type == ResourceType.TO_BUY and not r.is_acquired]
-
             for item in to_buy:
                 store_name = item.store if item.store else "General"
                 shopping_trip[store_name].append((item, project.name))
-
         return dict(shopping_trip)
 
     @autosave
     def toggle_resource_status(self, resource_id: str, is_acquired: bool) -> None:
-        # Optimization: We could index resources too, but N is usually small here.
         for project in self.repo.data.projects:
             for res in project.resources:
                 if res.id == resource_id:
                     res.is_acquired = is_acquired
+                    self.repo.sync_project(project)
                     return

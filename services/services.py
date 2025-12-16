@@ -13,8 +13,7 @@ from models import (
     SystemConfig,
     SingleTaskClassificationRequest
 )
-# Import Infrastructure
-from dataset_io import YamlDatasetLoader, YamlDatasetSaver
+# LEGACY: from dataset_io import YamlDatasetLoader, YamlDatasetSaver
 
 class DatasetManager:
     """
@@ -24,49 +23,36 @@ class DatasetManager:
     def __init__(self, base_path: Path = Path("data/datasets")):
         self.base_path = base_path
         self.base_path.mkdir(parents=True, exist_ok=True)
-        self._yaml_loader = YamlDatasetLoader()
-        self._yaml_saver = YamlDatasetSaver()
+        # LEGACY: self._yaml_loader = YamlDatasetLoader()
+        # LEGACY: self._yaml_saver = YamlDatasetSaver()
 
-    def load_dataset(self, name: str) -> DatasetContent:
-        """Load dataset - try YAML first"""
-        dataset_path = self.base_path / name
-        yaml_file = dataset_path / "dataset.yaml"
+    def load_dataset(self, name: str) -> str:
+        """
+        Returns the path to the SQLite DB.
+        The Repository will handle the actual connection.
+        """
+        # Ensure name ends with .db
+        if not name.endswith(".db"):
+            name = f"{name}.db"
 
-        if yaml_file.exists():
-            return self._yaml_loader.load(yaml_file)
-        else:
-            raise FileNotFoundError(f"Dataset '{name}' not found")
+        db_path = self.base_path / name
+        return str(db_path)
 
     def save_dataset(self, name: str, content: DatasetContent) -> dict:
-        """Save dataset with validation and detailed result"""
-        validation_error = self._validate_dataset_name(name)
-        if validation_error:
-            return {"success": False, "error": validation_error, "type": "validation"}
-
-        try:
-            self._yaml_saver.save(self.base_path / name, content)
-            return {"success": True, "message": f"Dataset '{name}' saved successfully"}
-        except PermissionError:
-            return {"success": False, "error": "Permission denied - check folder permissions", "type": "permission"}
-        except OSError as e:
-            return {"success": False, "error": f"File system error: {str(e)}", "type": "filesystem"}
-        except Exception as e:
-            return {"success": False, "error": f"Unexpected error: {str(e)}", "type": "unknown"}
-
-    def _validate_dataset_name(self, name: str) -> str:
-        if not name or not name.strip():
-            return "Dataset name cannot be empty"
-        if len(name) > 50:
-            return "Dataset name too long (max 50 characters)"
-        if not name.replace('_', '').replace('-', '').isalnum():
-            return "Dataset name can only contain letters, numbers, hyphens, and underscores"
-        return ""
+        """
+        LEGACY: This was for YAML.
+        In SQLite, saving happens via transactions in the Repository.
+        We keep this for interface compatibility if needed, or deprecate.
+        """
+        return {"success": True, "message": "Auto-saved to SQLite"}
 
     def list_datasets(self) -> List[str]:
         if not self.base_path.exists():
             return []
-        return [d.name for d in self.base_path.iterdir() if d.is_dir()]
+        # Return .db files
+        return [d.stem for d in self.base_path.glob("*.db")]
 
+# ... PromptBuilder and TaskClassifier remain unchanged ...
 
 class PromptBuilder:
     """

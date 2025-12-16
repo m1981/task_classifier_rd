@@ -8,6 +8,7 @@ dependencies = [
     "anthropic>=0.75.0",
     "dotenv>=0.9.9",
     "pyyaml>=6.0.3",
+    "sqlalchemy>=2.0.45",
     "streamlit>=1.52.1",
     "todoist-api-python>=3.1.0",
 ]
@@ -30,6 +31,7 @@ addopts = [
     "--cov-report=xml",
     "--cov-config=.coveragerc"
 ]
+pythonpath = "."
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]

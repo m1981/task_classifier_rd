@@ -1,10 +1,10 @@
 import streamlit as st
-from services.repository import TriageService, YamlRepository
+from services.repository import TriageService
 from services import TaskClassifier
 from models.dtos import SingleTaskClassificationRequest
 from views.common import log_action, log_state
 
-def render_triage_view(triage_service: TriageService, classifier: TaskClassifier, repo: YamlRepository):
+def render_triage_view(triage_service: TriageService, classifier: TaskClassifier, repo):
     st.title("📥 Inbox Triage")
 
     # 1. Quick Capture (Collapsed by default)
