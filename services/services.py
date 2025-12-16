@@ -68,18 +68,29 @@ class PromptBuilder:
         }
 
     def build_single_task_prompt(self, request: SingleTaskClassificationRequest) -> str:
-        project_list = ", ".join([f'"{p}"' for p in request.available_projects])
+        # FIX 1: Handle Empty List
+        if not request.available_projects:
+            project_section = "None"
+        else:
+            # FIX 2: Sanitize Quotes (Replace double quotes with single quotes)
+            # This prevents prompt injection/syntax breaking
+            sanitized_projects = [p.replace('"', "'") for p in request.available_projects]
+
+            # Format as a clean list
+            joined_projects = ", ".join([f'"{p}"' for p in sanitized_projects])
+            project_section = f"[{joined_projects}]"
+
         tags_str = ", ".join(self.config.DEFAULT_TAGS)
 
         return f"""
         You are a task organization assistant.
         Task to classify: "{request.task_text}"
-        Available Projects: [{project_list}]
+        Available Projects: {project_section}
         Allowed Tags: [{tags_str}]
 
         Analyze the task. 
         1. If it fits an existing project, set 'suggested_project' to that name.
-        2. If it does NOT fit, set 'suggested_project' to "Unmatched" and provide a 'suggested_new_project_name'.
+        2. If it does NOT fit (or if Available Projects is None), set 'suggested_project' to "Unmatched" and provide a 'suggested_new_project_name'.
         """
 
     def build_prompt(self, request: ClassificationRequest) -> str:
