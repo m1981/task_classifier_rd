@@ -1,6 +1,5 @@
-# services/repository.py
-from typing import List, Optional, Tuple
-from models.entities import Task, Project, Goal, ProjectResource, ResourceType, ProjectStatus, ReferenceItem
+from typing import List, Optional, Tuple, Dict
+from models.entities import Task, Project, Goal, ProjectResource, ResourceType, ProjectStatus, ReferenceItem, DatasetContent
 from interfaces import InboxManager, GoalPlanner, TaskExecutor
 from services.services import DatasetManager
 from services.decorators import autosave
@@ -19,17 +18,43 @@ class YamlRepository:
         # Load initial state
         self.data: DatasetContent = self.dm.load_dataset(current_dataset_name)
 
+        # OPTIMIZATION: Build an internal index for O(1) lookups
+        # This maps TaskID -> (Project, Task)
+        self._task_index: Dict[str, Tuple[Project, Task]] = {}
+        self._rebuild_index()
+
+    def _rebuild_index(self):
+        """Rebuilds the internal lookup index. Call this after bulk operations."""
+        self._task_index.clear()
+        for p in self.data.projects:
+            for t in p.tasks:
+                self._task_index[t.id] = (p, t)
+
     def save(self):
         self.dm.save_dataset(self.name, self.data)
 
     def find_project(self, project_id: int) -> Optional[Project]:
         return next((p for p in self.data.projects if p.id == project_id), None)
 
-    def find_task(self, project_id: int, task_id: int) -> Optional[Task]:
+    def get_task_parent(self, task_id: str) -> Optional[Project]:
+        if task_id in self._task_index:
+            return self._task_index[task_id][0]  # Returns the Project
+        return None
+
+    def find_task(self, project_id: int, task_id: str) -> Optional[Task]:
+        # Fast lookup using index
+        if task_id in self._task_index:
+            return self._task_index[task_id][1]
+
+        # Fallback (in case index is stale)
         p = self.find_project(project_id)
         if p:
             return next((t for t in p.tasks if t.id == task_id), None)
         return None
+
+    def register_new_task(self, project: Project, task: Task):
+        """Helper to keep index in sync when adding tasks"""
+        self._task_index[task.id] = (project, task)
 
 
 # --- Service Implementations ---
@@ -51,17 +76,22 @@ class TriageService(InboxManager):
         if project:
             new_task = Task(name=item_text, tags=tags)
             project.tasks.append(new_task)
+            self.repo.register_new_task(project, new_task) # Update Index
+
             if item_text in self.repo.data.inbox_tasks:
                 self.repo.data.inbox_tasks.remove(item_text)
 
     @autosave
     def create_project_from_inbox(self, item_text: str, new_project_name: str) -> None:
-        new_id = max([p.id for p in self.repo.data.projects], default=0) + 1
+        # Safe ID generation for Integers
+        existing_ids = [p.id for p in self.repo.data.projects]
+        new_id = max(existing_ids, default=0) + 1
+
         new_proj = Project(id=new_id, name=new_project_name)
         self.repo.data.projects.append(new_proj)
-        # We call another autosave method here.
-        # To avoid double saving, you might want to call the internal logic,
-        # but for a simple app, double saving is acceptable safety.
+
+        # Reuse the move logic (which handles autosave, but since we are inside
+        # an autosave function, we just call the logic directly to avoid double save)
         self.move_inbox_item_to_project(item_text, new_id, [])
 
     @autosave
@@ -123,13 +153,14 @@ class ExecutionService(TaskExecutor):
         return all_tasks
 
     @autosave
-    def complete_task(self, project_id: int, task_id: int) -> None:
+    def complete_task(self, project_id: int, task_id: str) -> None:
+        # Note: task_id is now str (UUID)
         task = self.repo.find_task(project_id, task_id)
         if task:
             task.is_completed = True
 
     @autosave
-    def undo_complete_task(self, project_id: int, task_id: int) -> None:
+    def undo_complete_task(self, project_id: int, task_id: str) -> None:
         task = self.repo.find_task(project_id, task_id)
         if task:
             task.is_completed = False
@@ -154,7 +185,7 @@ class ExecutionService(TaskExecutor):
 
     @autosave
     def toggle_resource_status(self, resource_id: str, is_acquired: bool) -> None:
-        # This is inefficient (O(N^2)) but fine for local YAML datasets
+        # Optimization: We could index resources too, but N is usually small here.
         for project in self.repo.data.projects:
             for res in project.resources:
                 if res.id == resource_id:

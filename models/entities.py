@@ -16,15 +16,15 @@ class SystemConfig:
 # --- TYPE ALIASES ---
 GoalID = NewType("GoalID", str)
 ProjectID = NewType("ProjectID", int)
-TaskID = NewType("TaskID", int)
+TaskID = NewType("TaskID", str)
 
 # --- ENUMS ---
-class ProjectStatus(Enum):
+class ProjectStatus(str, Enum):
     ACTIVE = "active"
     ON_HOLD = "on_hold"
     COMPLETED = "completed"
 
-class ResourceType(Enum):
+class ResourceType(str, Enum):
     TO_BUY = "to_buy"
     TO_GATHER = "to_gather"
 
@@ -48,7 +48,7 @@ class ReferenceItem:
 
 @dataclass
 class Task:
-    name: str  # Mandatory field first
+    name: str
     id: TaskID = field(default_factory=lambda: str(uuid.uuid4()))
     is_completed: bool = False
     tags: List[str] = field(default_factory=list)

@@ -9,22 +9,30 @@ def render_execution_view(execution_service: ExecutionService, repo: YamlReposit
         for t in p.tasks:
             all_tags.update(t.tags)
 
-    selected_tag = st.pills("Context", list(all_tags), selection_mode="single")
+    # Handle case where no tags exist
+    options = list(all_tags)
+    selected_tag = None
+    if options:
+        selected_tag = st.pills("Context", options, selection_mode="single")
 
     tasks = execution_service.get_next_actions(context_filter=selected_tag)
 
     if not tasks:
         st.info("No active tasks found for this context.")
+        return
 
     for task in tasks:
-        parent_proj = next((p for p in repo.data.projects if task in p.tasks), None)
+        parent_proj = repo.get_task_parent(task.id)
         proj_name = parent_proj.name if parent_proj else "Unknown"
+        proj_id = parent_proj.id if parent_proj else 0
 
         col1, col2 = st.columns([0.5, 10])
+
+        # Checkbox
         is_done = col1.checkbox("Done", value=False, key=f"exec_{task.id}", label_visibility="collapsed")
 
         if is_done:
-            execution_service.complete_task(parent_proj.id, task.id)
+            execution_service.complete_task(proj_id, task.id)
             st.toast(f"Completed: {task.name}")
             st.rerun()
 
