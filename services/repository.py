@@ -1,6 +1,6 @@
 # services/repository.py
 from typing import List, Optional, Tuple
-from models.entities import Task, Project, Goal, DatasetContent, ProjectResource, ResourceType, ProjectStatus
+from models.entities import Task, Project, Goal, DatasetContent, ProjectResource, ResourceType, ProjectStatus, ReferenceItem
 from interfaces import InboxManager, GoalPlanner, TaskExecutor
 from services.services import DatasetManager
 

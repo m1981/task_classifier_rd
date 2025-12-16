@@ -1,13 +1,38 @@
-from .models import DatasetContent, Project, Task, ClassificationRequest, ClassificationResult, ClassificationResponse
-from .dtos import SaveDatasetRequest, SaveDatasetResponse
+# models/__init__.py
+
+# Import from the NEW locations
+from .entities import (
+    DatasetContent,
+    Project,
+    Task,
+    Goal,
+    ProjectResource,
+    ReferenceItem,
+    SystemConfig,
+    ResourceType,
+    ProjectStatus
+)
+from .ai_schemas import (
+    ClassificationResult,
+    ClassificationResponse,
+    ClassificationRequest
+)
+from .dtos import SaveDatasetRequest, SaveDatasetResponse, SingleTaskClassificationRequest
 
 __all__ = [
     'DatasetContent', 
     'Project', 
     'Task', 
-    'ClassificationRequest', 
+    'Goal',
+    'ProjectResource',
+    'ReferenceItem',
+    'SystemConfig',
+    'ResourceType',
+    'ProjectStatus',
+    'ClassificationRequest',
     'ClassificationResult', 
     'ClassificationResponse',
     'SaveDatasetRequest', 
-    'SaveDatasetResponse'
+    'SaveDatasetResponse',
+    SingleTaskClassificationRequest
 ]

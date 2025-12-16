@@ -9,14 +9,12 @@ from models import (
     Project,
     ClassificationResult,
     ClassificationRequest,
-    ClassificationResponse
+    ClassificationResponse,
+    SystemConfig,
+    SingleTaskClassificationRequest
 )
-from models.models import SystemConfig
-from models.dtos import SingleTaskClassificationRequest
-
 # Import Infrastructure
 from dataset_io import YamlDatasetLoader, YamlDatasetSaver
-
 
 class DatasetManager:
     """

@@ -4,12 +4,21 @@ from enum import Enum
 from datetime import date
 import uuid
 
-# Type Aliases for clarity
+# --- CONFIGURATION (Moved from models.py) ---
+@dataclass(frozen=True)
+class SystemConfig:
+    """Central configuration for domain logic"""
+    DEFAULT_TAGS: List[str] = field(default_factory=lambda: [
+        "physical", "digital",
+        "out", "need-material", "need-tools", "buy"
+    ])
+
+# --- TYPE ALIASES ---
 GoalID = NewType("GoalID", str)
 ProjectID = NewType("ProjectID", int)
 TaskID = NewType("TaskID", int)
 
-
+# --- ENUMS ---
 class ProjectStatus(Enum):
     ACTIVE = "active"
     ON_HOLD = "on_hold"
@@ -19,6 +28,8 @@ class ResourceType(Enum):
     TO_BUY = "to_buy"
     TO_GATHER = "to_gather"
 
+# --- DOMAIN ENTITIES ---
+
 @dataclass
 class ProjectResource:
     """Replaces ShoppingItem to handle both Shopping and Prep"""
@@ -27,7 +38,7 @@ class ProjectResource:
     link: Optional[str] = None
     type: ResourceType = ResourceType.TO_BUY
     is_acquired: bool = False
-    store: str = "General"  # Added for the Shopping View
+    store: str = "General"
 
 @dataclass
 class ReferenceItem:
@@ -35,12 +46,9 @@ class ReferenceItem:
     name: str = ""
     description: str = ""
 
-
 @dataclass
 class Task:
     name: str  # Mandatory field first
-
-    # Optional fields follow
     id: TaskID = field(default_factory=lambda: str(uuid.uuid4()))
     is_completed: bool = False
     tags: List[str] = field(default_factory=list)
@@ -55,11 +63,9 @@ class Project:
     description: str = ""
     goal_id: Optional[GoalID] = None
     status: ProjectStatus = ProjectStatus.ACTIVE
-    tags: List[str] = field(default_factory=list) # Kept for backward compatibility
-
-    # Composition (SRP: Project holds its own data)
+    tags: List[str] = field(default_factory=list)
     tasks: List[Task] = field(default_factory=list)
-    resources: List[ProjectResource] = field(default_factory=list) # Replaces shopping_list
+    resources: List[ProjectResource] = field(default_factory=list)
     reference_items: List[ReferenceItem] = field(default_factory=list)
 
 

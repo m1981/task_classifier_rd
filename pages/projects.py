@@ -229,6 +229,83 @@ def organize_projects_hierarchy(projects):
     return organized
 
 
+def fetch_project_tasks(api, project_id):
+    """Fetch tasks for a specific project"""
+    try:
+        tasks_raw = api.get_tasks(project_id=project_id)
+        all_tasks = list(tasks_raw)
+        
+        # Flatten nested task lists if needed
+        flattened_tasks = []
+        for item in all_tasks:
+            if isinstance(item, list):
+                flattened_tasks.extend(item)
+            else:
+                flattened_tasks.append(item)
+        
+        # Convert to our format
+        project_tasks = []
+        for task in flattened_tasks:
+            project_tasks.append({
+                'id': task.id,
+                'content': task.content,
+                'is_completed': task.is_completed,
+                'due': task.due.date if task.due and hasattr(task.due, 'date') else None,
+                'priority': task.priority,
+                'parent_id': getattr(task, 'parent_id', None),
+                'child_order': getattr(task, 'child_order', 0)
+            })
+        
+        # Organize with hierarchy
+        return organize_tasks_hierarchy(project_tasks)
+        
+    except Exception as e:
+        st.error(f"Error fetching tasks for project {project_id}: {e}")
+        return []
+
+
+def render_ascii_projects_with_tasks(api, projects):
+    """Render all projects with tasks in ASCII format"""
+    st.subheader("📋 Projects & Tasks (ASCII View)")
+    
+    # Create text area for ASCII output
+    ascii_output = []
+    
+    organized_projects = organize_projects_hierarchy(projects)
+    
+    for project in organized_projects:
+        # Project line with tree structure
+        project_line = f"{project.get('tree_prefix', '')}{project['name']}"
+        ascii_output.append(project_line)
+        
+        # Fetch tasks for this project
+        with st.spinner(f"Loading tasks for {project['name']}..."):
+            tasks = fetch_project_tasks(api, project['id'])
+        
+        # Add tasks with 4-space indentation
+        for task in tasks:
+            task_prefix = "    " + ("✓ " if task.get('is_completed') else "• ")
+            task_line = f"{project.get('tree_prefix', '')}{task_prefix}{task['content']}"
+            
+            # Add due date if present
+            if task.get('due'):
+                task_line += f" (due: {task['due']})"
+            
+            ascii_output.append(task_line)
+        
+        # Add empty line between projects
+        ascii_output.append("")
+    
+    # Display in code block for proper formatting
+    ascii_text = "\n".join(ascii_output)
+    st.code(ascii_text, language="text")
+    
+    # Add copy button functionality
+    if st.button("📋 Copy to Clipboard"):
+        st.code(ascii_text)
+        st.success("ASCII format ready to copy!")
+
+
 def main():
     st.set_page_config(
         page_title="Projects - TaskFlow",
@@ -301,69 +378,81 @@ def main():
     # Display projects
     st.subheader(f"Total Projects: {len(projects)}")
 
-    # Create columns for better layout
-    col1, col2 = st.columns([3, 1])
+    # Add view toggle
+    view_mode = st.radio(
+        "View Mode:",
+        ["Tree View", "ASCII with Tasks"],
+        horizontal=True
+    )
 
-    with col1:
-        for project in organized_projects:
-            # Project icon based on type
-            if project['is_inbox_project']:
-                icon = "📥"
-            elif project['is_favorite']:
-                icon = "⭐"
-            else:
-                icon = "📁"
+    if view_mode == "Tree View":
+        # Create columns for better layout
+        col1, col2 = st.columns([3, 1])
 
-            # Color indicator
-            color_indicator = f"🟢" if project['color'] == 'green' else \
-                f"🔵" if project['color'] == 'blue' else \
-                    f"🔴" if project['color'] == 'red' else \
-                        f"🟡" if project['color'] == 'yellow' else \
-                            f"🟣" if project['color'] == 'purple' else \
-                                f"🟠" if project['color'] == 'orange' else "⚪"
+        with col1:
+            for project in organized_projects:
+                # Project icon based on type
+                if project['is_inbox_project']:
+                    icon = "📥"
+                elif project['is_favorite']:
+                    icon = "⭐"
+                else:
+                    icon = "📁"
 
-            # Display project with proper tree structure
-            # FIX STARTS HERE
-            tree_prefix = project.get('tree_prefix', '')
+                # Color indicator
+                color_indicator = f"🟢" if project['color'] == 'green' else \
+                    f"🔵" if project['color'] == 'blue' else \
+                        f"🔴" if project['color'] == 'red' else \
+                            f"🟡" if project['color'] == 'yellow' else \
+                                f"🟣" if project['color'] == 'purple' else \
+                                    f"🟠" if project['color'] == 'orange' else "⚪"
 
-            # Only apply markdown code styling (backticks) if there is a prefix
-            # Otherwise, leave it empty to avoid the double backtick artifact
-            if tree_prefix:
-                formatted_prefix = f"`{tree_prefix}`"
-            else:
-                formatted_prefix = ""
+                # Display project with proper tree structure
+                tree_prefix = project.get('tree_prefix', '')
 
-            st.markdown(f"{formatted_prefix}{icon} **{project['name']}** {color_indicator}")
+                if tree_prefix:
+                    formatted_prefix = f"`{tree_prefix}`"
+                else:
+                    formatted_prefix = ""
 
-    with col2:
-        st.subheader("📥 Inbox Tasks")
+                st.markdown(f"{formatted_prefix}{icon} **{project['name']}** {color_indicator}")
 
-        # Fetch and display inbox tasks
+        with col2:
+            st.subheader("📥 Inbox Tasks")
+
+            # Fetch and display inbox tasks
+            try:
+                api = TodoistAPI(api_key)
+                with st.spinner("Loading inbox tasks..."):
+                    inbox_tasks = fetch_inbox_tasks(api)
+
+                if inbox_tasks:
+                    for task in inbox_tasks:
+                        # Priority indicator
+                        priority_icon = "🔴" if task['priority'] == 4 else \
+                            "🟡" if task['priority'] == 3 else \
+                                "🔵" if task['priority'] == 2 else ""
+
+                        # Due date indicator
+                        due_text = f" 📅 {task['due']}" if task['due'] else ""
+
+                        # Labels
+                        labels_text = f" 🏷️ {', '.join(task['labels'])}" if task['labels'] else ""
+
+                        # Display task
+                        st.markdown(f"{priority_icon} {task['content']}{due_text}{labels_text}")
+                else:
+                    st.info("No inbox tasks found")
+
+            except Exception as e:
+                st.error(f"Error loading inbox tasks: {e}")
+
+    else:  # ASCII with Tasks view
         try:
             api = TodoistAPI(api_key)
-            with st.spinner("Loading inbox tasks..."):
-                inbox_tasks = fetch_inbox_tasks(api)
-
-            if inbox_tasks:
-                for task in inbox_tasks:
-                    # Priority indicator
-                    priority_icon = "🔴" if task['priority'] == 4 else \
-                        "🟡" if task['priority'] == 3 else \
-                            "🔵" if task['priority'] == 2 else ""
-
-                    # Due date indicator
-                    due_text = f" 📅 {task['due']}" if task['due'] else ""
-
-                    # Labels
-                    labels_text = f" 🏷️ {', '.join(task['labels'])}" if task['labels'] else ""
-
-                    # Display task
-                    st.markdown(f"{priority_icon} {task['content']}{due_text}{labels_text}")
-            else:
-                st.info("No inbox tasks found")
-
+            render_ascii_projects_with_tasks(api, organized_projects)
         except Exception as e:
-            st.error(f"Error loading inbox tasks: {e}")
+            st.error(f"Error loading ASCII view: {e}")
 
 
 if __name__ == "__main__":
