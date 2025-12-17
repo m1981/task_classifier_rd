@@ -6,7 +6,7 @@ from models.entities import Task, Project, Goal, ProjectResource, ResourceType, 
 from services.db_models import Base, DBProject, DBTask, DBResource, DBTag, DBInboxItem, DBGoal
 from interfaces import InboxManager, GoalPlanner, TaskExecutor
 from services.decorators import autosave
-
+import uuid # Import UUID
 
 # --- NEW SQLITE REPOSITORY ---
 
@@ -89,54 +89,94 @@ class SqliteRepository:
     # --- Mutators (Sync Logic) ---
 
     def sync_project(self, domain_project: Project):
-        """Updates DB record to match Domain Project"""
+        """
+        Updates the DB record to match the Domain Project.
+        Handles Upsert (Create/Update) and Orphan Removal (Delete).
+        """
         db_proj = self.session.get(DBProject, domain_project.id)
 
-        if not db_proj: return
+        # 1. Handle Project Creation (Upsert)
+        if not db_proj:
+            db_proj = DBProject(
+                id=domain_project.id,
+                name=domain_project.name,
+                status=domain_project.status.value,
+                goal_id=domain_project.goal_id
+            )
+            self.session.add(db_proj)
+        else:
+            db_proj.name = domain_project.name
+            db_proj.status = domain_project.status.value
+            db_proj.goal_id = domain_project.goal_id
 
-        # 1. DB Update
-        db_proj.name = domain_project.name
-        db_proj.status = domain_project.status.value
-        db_proj.goal_id = domain_project.goal_id # Ensure Goal ID is synced
+        # 2. Sync Tasks (The "Diff" Logic)
 
-        # Sync Tasks
-        existing_ids = {t.id for t in db_proj.tasks}
+        # A. Identify & Delete Orphans (DB has it, Domain doesn't)
+        domain_task_ids = {t.id for t in domain_project.tasks}
+        tasks_to_delete = [t for t in db_proj.tasks if t.id not in domain_task_ids]
+        for t in tasks_to_delete:
+            self.session.delete(t)
+
+        # B. Add or Update
+        # We map existing DB tasks by ID for O(1) lookup
+        db_task_map = {t.id: t for t in db_proj.tasks}
+
         for task in domain_project.tasks:
-            if task.id not in existing_ids:
+            existing = db_task_map.get(task.id)
+
+            if not existing:
+                # CREATE
                 new_db_task = DBTask(
-                    id=task.id, project_id=db_proj.id, name=task.name,
-                    is_completed=task.is_completed, duration=task.duration, notes=task.notes
+                    id=task.id,
+                    project_id=db_proj.id,
+                    name=task.name,
+                    is_completed=task.is_completed,
+                    duration=task.duration,
+                    notes=task.notes
                 )
                 new_db_task.tags = self._resolve_tags(task.tags)
                 self.session.add(new_db_task)
             else:
-                existing = next(t for t in db_proj.tasks if t.id == task.id)
-                existing.is_completed = task.is_completed
+                # UPDATE (Fixes test_sync_project_updates_existing_fields)
                 existing.name = task.name
-                # Note: Tag updates on existing tasks require more complex logic, skipped for brevity
+                existing.is_completed = task.is_completed
+                existing.duration = task.duration
+                existing.notes = task.notes
+                # Note: Tag updates would go here in a full implementation
 
-        # Sync Resources
-        res_ids = {r.id for r in db_proj.resources}
+        # 3. Sync Resources (Same Logic)
+
+        # A. Delete Orphans
+        domain_res_ids = {r.id for r in domain_project.resources}
+        res_to_delete = [r for r in db_proj.resources if r.id not in domain_res_ids]
+        for r in res_to_delete:
+            self.session.delete(r)
+
+        # B. Add or Update
+        db_res_map = {r.id: r for r in db_proj.resources}
+
         for res in domain_project.resources:
-            if res.id not in res_ids:
+            existing_r = db_res_map.get(res.id)
+
+            if not existing_r:
                 new_res = DBResource(
                     id=res.id, project_id=db_proj.id, name=res.name,
-                    type=res.type.value, store=res.store, is_acquired=res.is_acquired
+                    type=res.type.value, store=res.store, is_acquired=res.is_acquired,
+                    link=res.link
                 )
                 self.session.add(new_res)
             else:
-                existing_r = next(r for r in db_proj.resources if r.id == res.id)
+                existing_r.name = res.name
+                existing_r.type = res.type.value
+                existing_r.store = res.store
                 existing_r.is_acquired = res.is_acquired
+                existing_r.link = res.link
 
         self.session.commit()
 
-        # 2. Mirror Update (FIXED)
-        # We must update the in-memory object to match the DB state
-        # Since domain_project is likely the same object reference as in self.data.projects,
-        # simple field updates might already be there, but we ensure consistency.
+        # 4. Update In-Memory Mirror
         mirror_proj = self.find_project(domain_project.id)
         if mirror_proj and mirror_proj is not domain_project:
-            # If they are different objects, copy state
             mirror_proj.goal_id = domain_project.goal_id
             mirror_proj.tasks = domain_project.tasks
             mirror_proj.resources = domain_project.resources
@@ -160,6 +200,13 @@ class SqliteRepository:
         domain_proj = self._to_domain_project(db_proj)
         self.data.projects.append(domain_proj) # Update Mirror
         return domain_proj
+
+    # --- ADDED THIS METHOD TO FIX THE TEST ---
+    def create_goal(self, name: str, description: str) -> Goal:
+        """Helper method for creating goals directly in the repository."""
+        new_goal = Goal(id=str(uuid.uuid4()), name=name, description=description)
+        self.sync_goal(new_goal)
+        return new_goal
 
     def add_inbox_item(self, text: str):
         item = DBInboxItem(content=text)
@@ -238,9 +285,12 @@ class PlanningService(GoalPlanner):
 
     @autosave
     def create_goal(self, name: str, description: str) -> Goal:
-        import uuid
+        # Use the repo's helper method if available, or manual sync
+        if hasattr(self.repo, 'create_goal'):
+             return self.repo.create_goal(name, description)
+
+        # Fallback logic
         new_goal = Goal(id=str(uuid.uuid4()), name=name, description=description)
-        # NEW: Sync
         self.repo.sync_goal(new_goal)
         return new_goal
 

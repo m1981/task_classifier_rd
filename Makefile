@@ -22,25 +22,22 @@ install: ## Install dependencies via uv
 run: ## Run the Streamlit application
 	uv run streamlit run app.py
 
+.PHONY: mut
+mut: ## Run mutation tests
+	uv run mutmut run
+
+.PHONY: exp
+exp: ## Export mutants to markdown
+	uv run mutmut export-diffs --status survived
+
 .PHONY: test-html
 test-html: ## Run tests with HTML coverage report
 	uv run pytest --cov=services --cov=models --cov=pages --cov-report=html --cov-report=term
 	@echo "$(GREEN)Coverage report generated in htmlcov/index.html$(RESET)"
 
-.PHONY: coverage
-coverage: ## Generate coverage report and open in browser
-	uv run pytest --cov=services --cov=models --cov=pages --cov-report=html
-	@if command -v open >/dev/null 2>&1; then \
-		open htmlcov/index.html; \
-	elif command -v xdg-open >/dev/null 2>&1; then \
-		xdg-open htmlcov/index.html; \
-	else \
-		echo "$(YELLOW)Open htmlcov/index.html in your browser$(RESET)"; \
-	fi
-
 .PHONY: test
 test: ## Run tests with coverage
-	uv run pytest --cov=services --cov=models --cov=pages --cov-report=term-missing
+	uv run pytest
 
 .PHONY: clean
 clean: ## Remove cache and virtual environment
