@@ -26,14 +26,12 @@ dev = [
 filterwarnings = [
     "ignore::ResourceWarning"
 ]
-
 minversion = "6.0"
+# CHANGED: Removed --cov flags from here.
+# Mutmut runs pytest repeatedly; running coverage every time is slow and breaks the trampoline.
 addopts = [
-    "--cov=services",
-    "--cov-report=html:htmlcov",
-    "--cov-report=term-missing",
-    "--cov-report=xml",
-    "--cov-config=.coveragerc"
+    "-ra",
+    "-q"
 ]
 pythonpath = "."
 testpaths = ["tests"]
@@ -43,7 +41,32 @@ python_functions = ["test_*"]
 
 
 [tool.mutmut]
-paths_to_mutate = ["models/", "services/", "interfaces.py"]
+paths_to_mutate = ["services/"]
 tests_dir = ["tests/"]
-pytest_add_cli_args = ["-x", "-q", "-p", "no:cov", "--override-ini=addopts="]
-debug=true
+
+# File Management - include all necessary files
+also_copy = [
+    "conftest.py",
+    ".env",
+    "models/",
+    "services",
+    "interfaces.py"
+]
+
+# Exclusions
+do_not_mutate = [
+    "**/migrations/*",
+    "**/__pycache__/*",
+    "tests/*"
+]
+
+
+# Performance
+max_stack_depth = 8
+
+pytest_flags = ["-x", "-q"]
+mutate_only_covered_lines = false
+
+# Debugging (set to false once working)
+debug = true
+backup = false

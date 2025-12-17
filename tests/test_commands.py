@@ -42,7 +42,6 @@ def test_save_dataset_validation_failure(command, sample_content):
     Expected: Returns failure response immediately, does NOT call save.
     """
     # Arrange
-    # Create a request that we know will fail validation (empty name)
     invalid_request = SaveDatasetRequest(
         name="",
         source_dataset="old_name",
@@ -58,7 +57,6 @@ def test_save_dataset_validation_failure(command, sample_content):
     assert response.error_type == "validation"
     assert "cannot be empty" in response.message
 
-    # Critical: Ensure we didn't try to save to disk
     command.dataset_manager.save_dataset.assert_not_called()
 
 
@@ -75,7 +73,6 @@ def test_save_dataset_success(command, mock_dataset_manager, sample_content):
         inbox_tasks=[]
     )
 
-    # Mock the manager to return a success dict
     mock_dataset_manager.save_dataset.return_value = {
         "success": True,
         "message": "Saved OK"
@@ -89,8 +86,10 @@ def test_save_dataset_success(command, mock_dataset_manager, sample_content):
     assert response.dataset_name == "new_dataset"
     assert response.message == "Saved OK"
 
-    # Verify dependencies were called
-    command.projector.project_for_save.assert_called_once()
+    # [KILLS MUTANT 13]
+    # We must verify strictly that 'valid_request' was passed, not None.
+    command.projector.project_for_save.assert_called_once_with(sample_content, valid_request)
+
     mock_dataset_manager.save_dataset.assert_called_once_with("new_dataset", sample_content)
 
 
@@ -107,7 +106,6 @@ def test_save_dataset_infrastructure_failure(command, mock_dataset_manager, samp
         inbox_tasks=[]
     )
 
-    # Mock the manager to return a failure dict
     mock_dataset_manager.save_dataset.return_value = {
         "success": False,
         "error": "Permission denied",
@@ -121,3 +119,33 @@ def test_save_dataset_infrastructure_failure(command, mock_dataset_manager, samp
     assert response.success is False
     assert response.error_type == "permission"
     assert response.message == "Permission denied"
+
+
+def test_save_dataset_missing_error_message(command, mock_dataset_manager, sample_content):
+    """
+    Scenario: Infrastructure fails but returns a dict without 'message' or 'error' keys.
+    Expected: The command should fall back to an empty string, not None or "XXXX".
+    [KILLS MUTANTS 38, 40, 43]
+    """
+    # Arrange
+    valid_request = SaveDatasetRequest(
+        name="silent_fail",
+        source_dataset="old",
+        projects=[],
+        inbox_tasks=[]
+    )
+
+    # Return a result with NO message and NO error key
+    mock_dataset_manager.save_dataset.return_value = {
+        "success": False,
+        "type": "unknown"
+    }
+
+    # Act
+    response = command.execute(valid_request, sample_content)
+
+    # Assert
+    # If the code was mutated to default to None, this fails.
+    # If the code was mutated to default to "XXXX", this fails.
+    assert response.message == ""
+    assert response.success is False

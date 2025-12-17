@@ -24,11 +24,11 @@ run: ## Run the Streamlit application
 
 .PHONY: mut
 mut: ## Run mutation tests
-	uv run mutmut run
+	rm -rf mutants && uv run mutmut run --paths-to-mutate=services/repository.py
 
 .PHONY: exp
 exp: ## Export mutants to markdown
-	uv run mutmut export-diffs --status survived
+	uv run mutmut export-diffs --module services.repository
 
 .PHONY: test-html
 test-html: ## Run tests with HTML coverage report
@@ -47,3 +47,13 @@ clean: ## Remove cache and virtual environment
 	rm -rf htmlcov
 	rm -rf .coverage
 	find . -type d -name "__pycache__" -exec rm -rf {} +
+
+# uv run mutmut run --paths-to-mutate=services/repository.py --tests-dir=tests/
+
+# uv run mutmut run --paths-to-mutate=services/repository.py --tests-dir=tests/test_repository_tdd.py
+
+# uv run mutmut export-diffs --module services.repository
+
+
+
+# /Users/michal/PycharmProjects/task_classifier_rd/.venv/lib/python3.14/site-packages/mutmut/__init__.py
