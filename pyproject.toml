@@ -65,7 +65,7 @@ do_not_mutate = [
 max_stack_depth = 8
 
 pytest_flags = ["-x", "-q"]
-mutate_only_covered_lines = false
+mutate_only_covered_lines = true
 
 # Debugging (set to false once working)
 debug = true
