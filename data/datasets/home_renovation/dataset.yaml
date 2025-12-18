@@ -1,12 +1,4 @@
-goals:
-- description: 'I live a great life
-
-    Here is where I care about myself physically and emotionally.
-
-    I spend time with friends and kids and enjoy my file.'
-  id: c8b15379-7be1-42ff-b569-79044a089559
-  name: I live a great  life
-  status: active
+goals: []
 inbox_tasks:
 - Caulk around bathtub
 - Fix leaky bathroom sink
@@ -18,30 +10,9 @@ inbox_tasks:
 - Replace broken light switch
 projects:
   bathroom_upgrade:
-    goal_id: null
     id: 2
     name: Bathroom Upgrade
-    reference_items: []
-    resources:
-    - id: f9bbec5e-f2a1-493a-85f3-f15ed47daeac
-      is_acquired: true
-      link: null
-      name: wewe
-      store: ''
-      type: to_buy
-    - id: a7b73d59-3369-4c62-ba25-5e407e738b44
-      is_acquired: true
-      link: null
-      name: wewe12123
-      store: ''
-      type: to_buy
-    - id: 6529dd42-3e10-47fd-b289-3adb72045c69
-      is_acquired: true
-      link: null
-      name: yuyuyu
-      store: Brico
-      type: to_buy
-    status: active
+    status: ongoing
     tags:
     - bathroom
     - physical
@@ -57,24 +28,9 @@ projects:
       - physical
       - plumbing
   bedroom_makeover:
-    goal_id: null
     id: 3
     name: Bedroom Makeover
-    reference_items: []
-    resources:
-    - id: 91a52479-c42e-4131-9288-10e0d58c722d
-      is_acquired: false
-      link: null
-      name: dfsdfs
-      store: ''
-      type: to_gather
-    - id: 83343db2-02dc-49cf-a016-bfb47cd0f617
-      is_acquired: false
-      link: null
-      name: vcbcvb
-      store: ''
-      type: to_gather
-    status: active
+    status: ongoing
     tags:
     - bedroom
     - physical
@@ -104,9 +60,7 @@ projects:
     goal_id: null
     id: 1
     name: Kitchen Renovation
-    reference_items: []
-    resources: []
-    status: active
+    status: ongoing
     tags:
     - kitchen
     - physical

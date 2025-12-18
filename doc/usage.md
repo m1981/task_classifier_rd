@@ -1,9 +1,26 @@
+## UI Layout & Navigation
+
+### 1. The Sidebar (System Control)
+The sidebar persists across all modes and handles the "Meta" application state.
+
+*   **Dataset Selector:** A Dropdown menu listing files found in `./data/*.yaml`.
+    *   *Options:* `home_renovation.yaml`, `coding_projects.yaml`, `test_edge_cases.yaml`.
+*   **Status Indicator:**
+    *   🟢 Saved
+    *   🔴 Unsaved Changes (Dirty)
+*   **Global Actions:**
+    *   [Save Changes] (Enabled only when Dirty)
+    *   [Reload/Revert] (Reloads from disk, discarding changes)
+
+### 2. Main Content Area
+Changes based on the selected Mode (Inbox / Planning / Engage).
+
 ```mermaid
 graph RL
     %% Nodes
     User((User))
     YAML[("📂 dataset.yaml\n(Hard Drive)")]
-    App["🖥️ Streamlit App\n(Session State / RAM)"]
+    App["🖥️ Streamlit App\n(Session State)"]
     AI["🤖 Anthropic API\n(Claude Haiku)"]
     
     %% Flow
@@ -11,12 +28,14 @@ graph RL
     App -- "2. Show Current Task" --> User
     
     subgraph "The Triage Loop"
-        App -- "3. Send Single Task + Projects" --> AI
-        AI -- "4. Return Structured Object" --> App
-        User -- "5. Click Add/Skip/Create" --> App
+        App -- "3. Send Task + Project List" --> AI
+        AI -- "4. Return ClassificationResult\n(Type: Task/Shop/Ref)" --> App
+        User -- "5. Add, Skip, Edit, Create project" --> App
     end
     
-    App -- "6. Save Progress" --> YAML
+    App -- "6. Mutate Session State\n(Mark Dirty)" --> App
+    User -- "7. Click Save" --> App
+    App -- "8. Write to Disk" --> YAML
 
     %% Styling
     style YAML fill:#f9f,stroke:#333,stroke-width:2px
@@ -29,53 +48,64 @@ graph RL
 classDiagram
     class App_UI {
         +st.session_state
-        +move_task_to_project()
-        +create_project_and_move()
-    }
-
-    class DatasetManager {
-        +load_dataset()
-        +save_dataset()
+        +is_dirty : bool
+        +render_inbox()
+        +handle_confirm_click()
     }
 
     class TaskClassifier {
-        +classify_single(request)
+        +classify_single(text, project_list) ClassificationResult
     }
 
-    class PromptBuilder {
-        +build_single_task_prompt(request)
+    class ClassificationResult {
+        +Enum type (Task|Shop|Ref|NewProj)
+        +str target_project
+        +str refined_text
+        +str reasoning
     }
 
-    class SaveDatasetCommand {
-        +execute(request, dataset)
-    }
-
-    class Models {
-        <<DataClass>>
-        +Project
-        +Task
-        +DatasetContent
-        +ClassificationResult
-    }
-
-    class DTOs {
-        <<DataClass>>
-        +SingleTaskClassificationRequest
-        +SaveDatasetRequest
+    class DatasetManager {
+        +load()
+        +save()
     }
 
     %% Relationships
-    App_UI --> DatasetManager : Uses to Load
-    App_UI --> SaveDatasetCommand : Uses to Save
-    App_UI --> TaskClassifier : Calls for AI
-    
-    TaskClassifier --> PromptBuilder : Uses
-    TaskClassifier ..> DTOs : Consumes Request
-    TaskClassifier ..> Models : Returns Result
-    
-    SaveDatasetCommand --> DatasetManager : Persists
+    App_UI --> TaskClassifier : Calls
+    TaskClassifier ..> ClassificationResult : Returns
+    App_UI --> DatasetManager : Persists
 ```
 
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant UI as app.py
+    participant TC as TaskClassifier
+    participant AI as Claude (API)
+    participant DM as DatasetManager
+
+    %% 1. Analysis
+    User->>UI: Opens Inbox Item: "Buy white paint"
+    UI->>TC: classify("Buy white paint", ["Home Reno", "Work"])
+    TC->>AI: Prompt (JSON Schema)
+    AI-->>TC: {type: "SHOPPING", project: "Home Reno"}
+    TC-->>UI: ClassificationResult
+    UI->>User: Display Card: "Add to Home Reno / Shopping?"
+
+    %% 2. Mutation (Memory Only)
+    User->>UI: Click "Confirm"
+    UI->>UI: Projects["Home Reno"].shopping.append("White paint")
+    UI->>UI: Inbox.remove("Buy white paint")
+    UI->>UI: session_state.is_dirty = True
+    UI->>UI: st.rerun()
+
+    %% 3. Persistence (Explicit)
+    User->>UI: Click "Save Changes (1)"
+    UI->>DM: save(session_state.data)
+    DM->>Disk: Write YAML
+    UI->>UI: session_state.is_dirty = False
+    UI->>User: Toast "Saved!"
+```
 
 ```mermaid
 

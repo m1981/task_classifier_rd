@@ -1,53 +1,45 @@
-# User Scenario: Task Batching for Efficiency
+File: `./doc/user_scenarios.md`
+```markdown
+# User Scenario: Mixed Inbox Triage
 
-## Scenario: Cross-Project Task Batching
+## Scenario: Clearing a Weekend Brain Dump
 
 ### User Context:
-David manages multiple renovation projects across his home and his son's new condo. He has dozens of tasks scattered throughout different project categories in his system. Many small painting touch-ups and carpentry fixes are distributed across various rooms and properties.
+David has spent the weekend thinking about his "Kitchen Renovation" project and his "Personal Website" project. He has dumped 5 random thoughts into his Inbox via his phone.
 
-### Pain Point:
-David realizes he's being inefficient by setting up, cleaning, and storing the same tools repeatedly when he works on similar tasks on different days for different projects.
+### The Inbox Content:
+1. "Call plumber about sink"
+2. "Need 2x4 lumber"
+3. "https://inspiration.com/modern-kitchens"
+4. "Update CSS for homepage"
+5. "Buy milk"
 
-### Using the Task Classifier AI:
+### The Triage Process (F-01):
 
-1. **Cross-Project Discovery**
-   David selects "Find Similar Tasks" and chooses "Painting" as the task type. The AI immediately identifies 14 painting-related tasks scattered across:
-   - Master bedroom touch-ups (Home)
-   - Kitchen cabinet repainting (Home)
-   - Baseboard touch-ups in three rooms (Home)
-   - Front door repainting (Home)
-   - Bathroom ceiling spot repair (Son's Condo)
-   - Accent wall completion (Son's Condo)
+1.  **Item 1: "Call plumber about sink"**
+    *   **AI Analysis:** Detects action verb "Call". Matches context to existing project "Kitchen Renovation".
+    *   **Suggestion:** Type: **Task** | Project: **Kitchen Renovation**.
+    *   **User Action:** Clicks [Confirm]. Item moves to Task list.
 
-2. **Material & Tool Analysis**
-   The AI analyzes these tasks and generates:
-   - A consolidated list of required paints (noting which colors are needed for which tasks)
-   - Complete tool requirements (brushes, rollers, drop cloths, painter's tape, etc.)
-   - Estimated total time to complete all painting tasks (4.5 hours)
-   - Suggested sequence based on dry time and location
+2.  **Item 2: "Need 2x4 lumber"**
+    *   **AI Analysis:** Detects material/purchase intent. Matches context to "Kitchen Renovation".
+    *   **Suggestion:** Type: **Shopping Item** | Project: **Kitchen Renovation**.
+    *   **User Action:** Clicks [Confirm]. Item moves to Shopping list.
 
-3. **Batch Creation**
-   David selects "Create Batch" and the app:
-   - Creates a new "Painting Batch - Weekend of May 15" container
-   - Groups all selected tasks while maintaining their connections to original projects
-   - Generates a shopping list for missing supplies
-   - Suggests an efficient order of operations (starting with ceilings, then walls, then trim)
+3.  **Item 3: "https://inspiration.com/..."**
+    *   **AI Analysis:** Detects URL. Matches context to "Kitchen Renovation".
+    *   **Suggestion:** Type: **Reference** | Project: **Kitchen Renovation**.
+    *   **User Action:** Clicks [Confirm]. Item moves to Reference list.
 
-4. **Similar Process for Carpentry**
-   David repeats the process for carpentry tasks, discovering:
-   - 8 carpentry-related tasks across both properties
-   - Common tools needed for all tasks
-   - Materials required, organized by task
-   - Estimated time (3 hours)
+4.  **Item 4: "Update CSS for homepage"**
+    *   **AI Analysis:** Matches context to "Personal Website".
+    *   **Suggestion:** Type: **Task** | Project: **Personal Website**.
+    *   **User Action:** Clicks [Confirm].
 
-5. **Schedule Optimization**
-   The app suggests:
-   - Doing all painting tasks on Saturday (allowing for dry time between coats)
-   - Scheduling carpentry tasks for Sunday
-   - A reminder to prepare all surfaces the evening before
+5.  **Item 5: "Buy milk"**
+    *   **AI Analysis:** Detects shopping. No relevant project found.
+    *   **Suggestion:** Type: **Task** | Project: **Groceries** (New Project?).
+    *   **User Action:** David realizes this is just a quick errand. He clicks [Edit] and assigns it to a generic "Errands" project manually.
 
-6. **Completion Tracking**
-   As David completes each task in the batch:
-   - The original projects are automatically updated
-   - Progress is tracked across both properties
-   - The system learns which tasks are commonly batched together for future suggestions
+### Result:
+Inbox is empty. The "Kitchen Renovation" project now has 1 new task, 1 new shopping item, and 1 new reference link, all sorted correctly without David navigating into the project folders.

@@ -13,7 +13,8 @@ from models import (
     SystemConfig,
     SingleTaskClassificationRequest
 )
-# LEGACY: from dataset_io import YamlDatasetLoader, YamlDatasetSaver
+# Import Infrastructure
+from dataset_io import YamlDatasetLoader, YamlDatasetSaver
 
 class DatasetManager:
     """
@@ -23,36 +24,49 @@ class DatasetManager:
     def __init__(self, base_path: Path = Path("data/datasets")):
         self.base_path = base_path
         self.base_path.mkdir(parents=True, exist_ok=True)
-        # LEGACY: self._yaml_loader = YamlDatasetLoader()
-        # LEGACY: self._yaml_saver = YamlDatasetSaver()
+        self._yaml_loader = YamlDatasetLoader()
+        self._yaml_saver = YamlDatasetSaver()
 
-    def load_dataset(self, name: str) -> str:
-        """
-        Returns the path to the SQLite DB.
-        The Repository will handle the actual connection.
-        """
-        # Ensure name ends with .db
-        if not name.endswith(".db"):
-            name = f"{name}.db"
+    def load_dataset(self, name: str) -> DatasetContent:
+        """Load dataset - try YAML first"""
+        dataset_path = self.base_path / name
+        yaml_file = dataset_path / "dataset.yaml"
 
-        db_path = self.base_path / name
-        return str(db_path)
+        if yaml_file.exists():
+            return self._yaml_loader.load(yaml_file)
+        else:
+            raise FileNotFoundError(f"Dataset '{name}' not found")
 
     def save_dataset(self, name: str, content: DatasetContent) -> dict:
-        """
-        LEGACY: This was for YAML.
-        In SQLite, saving happens via transactions in the Repository.
-        We keep this for interface compatibility if needed, or deprecate.
-        """
-        return {"success": True, "message": "Auto-saved to SQLite"}
+        """Save dataset with validation and detailed result"""
+        validation_error = self._validate_dataset_name(name)
+        if validation_error:
+            return {"success": False, "error": validation_error, "type": "validation"}
+
+        try:
+            self._yaml_saver.save(self.base_path / name, content)
+            return {"success": True, "message": f"Dataset '{name}' saved successfully"}
+        except PermissionError:
+            return {"success": False, "error": "Permission denied - check folder permissions", "type": "permission"}
+        except OSError as e:
+            return {"success": False, "error": f"File system error: {str(e)}", "type": "filesystem"}
+        except Exception as e:
+            return {"success": False, "error": f"Unexpected error: {str(e)}", "type": "unknown"}
+
+    def _validate_dataset_name(self, name: str) -> str:
+        if not name or not name.strip():
+            return "Dataset name cannot be empty"
+        if len(name) > 50:
+            return "Dataset name too long (max 50 characters)"
+        if not name.replace('_', '').replace('-', '').isalnum():
+            return "Dataset name can only contain letters, numbers, hyphens, and underscores"
+        return ""
 
     def list_datasets(self) -> List[str]:
         if not self.base_path.exists():
             return []
-        # Return .db files
-        return [d.stem for d in self.base_path.glob("*.db")]
+        return [d.name for d in self.base_path.iterdir() if d.is_dir()]
 
-# ... PromptBuilder and TaskClassifier remain unchanged ...
 
 class PromptBuilder:
     """
@@ -68,29 +82,18 @@ class PromptBuilder:
         }
 
     def build_single_task_prompt(self, request: SingleTaskClassificationRequest) -> str:
-        # FIX 1: Handle Empty List
-        if not request.available_projects:
-            project_section = "None"
-        else:
-            # FIX 2: Sanitize Quotes (Replace double quotes with single quotes)
-            # This prevents prompt injection/syntax breaking
-            sanitized_projects = [p.replace('"', "'") for p in request.available_projects]
-
-            # Format as a clean list
-            joined_projects = ", ".join([f'"{p}"' for p in sanitized_projects])
-            project_section = f"[{joined_projects}]"
-
+        project_list = ", ".join([f'"{p}"' for p in request.available_projects])
         tags_str = ", ".join(self.config.DEFAULT_TAGS)
 
         return f"""
         You are a task organization assistant.
         Task to classify: "{request.task_text}"
-        Available Projects: {project_section}
+        Available Projects: [{project_list}]
         Allowed Tags: [{tags_str}]
 
         Analyze the task. 
         1. If it fits an existing project, set 'suggested_project' to that name.
-        2. If it does NOT fit (or if Available Projects is None), set 'suggested_project' to "Unmatched" and provide a 'suggested_new_project_name'.
+        2. If it does NOT fit, set 'suggested_project' to "Unmatched" and provide a 'suggested_new_project_name'.
         """
 
     def build_prompt(self, request: ClassificationRequest) -> str:
