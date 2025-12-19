@@ -1,51 +1,62 @@
-# Data Model
+# Data Model: The Unified Stream
 
-## 1. Domain Entities (Persistence Layer)
+## Core Philosophy
+We utilize a **Polymorphic Data Structure**. A Project does not contain separate lists for Tasks, Shopping, and References. Instead, it contains a single chronological stream of `ProjectItem` objects, distinguished by a `kind` discriminator.
 
-### Goal
+## 1. The Abstract Base
+### ProjectItem (Abstract)
 *   `id`: UUID
-*   `name`: String (e.g., "Healthy Lifestyle")
-*   `status`: Enum [Active, Someday]
+*   `kind`: Enum ["task", "resource", "reference"] (The Discriminator)
+*   `name`: String
+*   `created_at`: DateTime
+
+## 2. Concrete Entities (The "Bricks")
+
+### TaskItem (extends ProjectItem)
+*   `kind`: "task"
+*   `is_completed`: Boolean
+*   `tags`: List[String]
+*   `duration`: String (Optional)
+
+### ResourceItem (extends ProjectItem)
+*   `kind`: "resource"
+*   `is_acquired`: Boolean
+*   `store`: String (Default: "General")
+*   `cost_estimate`: Float (Optional)
+
+### ReferenceItem (extends ProjectItem)
+*   `kind`: "reference"
+*   `url`: String (Optional)
+*   `content`: Text
+
+## 3. The Containers
 
 ### Project
 *   `id`: Integer
-*   `goal_id`: UUID (Foreign Key, Optional)
 *   `name`: String
 *   `status`: Enum [Active, OnHold, Completed]
+*   `goal_id`: UUID (Optional)
+*   **`items`: List[Union[TaskItem, ResourceItem, ReferenceItem]]**  <-- The Unified Stream
 
-### Task (Actionable)
-*   `id`: Integer
-*   `project_id`: Integer
-*   `name`: String
-*   `tags`: List[String] (Contexts)
-*   `is_completed`: Boolean
-
-### ShoppingItem (Material)
+### Goal
 *   `id`: UUID
-*   `project_id`: Integer
 *   `name`: String
-*   `is_purchased`: Boolean
+*   `description`: String
+*   `status`: Enum [Active, Someday]
 
-### ReferenceItem (Information)
-*   `id`: UUID
-*   `project_id`: Integer
-*   `name`: String
-*   `content`: Text (URL or Note)
+### DatasetContent (Root Aggregate)
+*   `goals`: List[Goal]
+*   `projects`: List[Project]
+*   `inbox_tasks`: List[String] (Raw text, pre-classification)
 
-## 2. AI Data Transfer Objects (DTOs)
-
-These models define the contract between the App and the LLM.
+## 4. AI & Ephemeral Models
 
 ### ClassificationType (Enum)
-*   `NEW_PROJECT`: The input implies a complex outcome requiring a new project.
-*   `TASK`: An actionable step for an existing project.
-*   `SHOPPING`: An item to purchase for an existing project.
-*   `REFERENCE`: Information to store for an existing project.
-*   `TRASH`: Non-actionable nonsense.
+*   `TASK`, `SHOPPING`, `REFERENCE`, `NEW_PROJECT`, `TRASH`
 
-### ClassificationResult (Pydantic Model)
-*   `classification_type`: ClassificationType
-*   `suggested_project_name`: String (Existing project name OR New project name)
-*   `confidence`: Float (0.0 - 1.0)
-*   `reasoning`: String (Why the AI chose this)
-*   `refined_text`: String (Cleaned up version of the user input, e.g., removing "I need to buy...")
+### DraftItem (The "Proposal")
+*   `source_text`: String
+*   `suggested_kind`: ClassificationType
+*   `suggested_project_id`: Integer (or None)
+*   `reasoning`: String
+*   `entity_payload`: Dict (The data ready to be cast into a Concrete Entity)

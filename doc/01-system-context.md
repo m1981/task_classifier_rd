@@ -1,23 +1,31 @@
 # System Context: AI-Powered GTD
 
-## Core Philosophy
-We follow the 5-step GTD method, augmented by AI to reduce the cognitive load of "Clarifying" and "Organizing."
+## Architecture: Model-View-Service (MVS)
+We follow a **Unidirectional Data Flow** tailored for Streamlit's rerun cycle.
 
-## System Architecture
-*   **Runtime:** Python 3.10+
-*   **Interface:** Streamlit
-*   **Persistence:** Local File System (YAML)
+### 1. The View Layer (Ephemeral)
+*   **Responsibility:** Renders the UI based *strictly* on the current Session State.
+*   **Constraint:** Views are idempotent. They do not hold logic.
+*   **Polymorphism:** Views use a `render_item(item)` strategy to draw the correct card (Checkbox vs. Shopping Row) based on the item's `kind`.
 
-## Data Organization (The "Multi-Tenant" Local Approach)
-The application does not use a single database. Instead, it operates on **Dataset Fixtures**.
-*   **Directory:** `./data/`
-*   **Behavior:** The app loads *one* YAML file into memory at a time.
-*   **Use Case:** This allows the user to keep "Work" and "Personal" completely separate, or allows developers to load "Test Fixtures" to validate AI behavior.
+### 2. The Service Layer (Stable)
+*   **Responsibility:** Handles business logic, AI communication, and State mutation.
+*   **Components:**
+    *   `TriageService`: Manages the Inbox and AI Classification.
+    *   `PlanningService`: Manages Goals and Project structures.
+    *   **Proposal Engine:** Converts AI JSON responses into `DraftItem` objects.
 
-## The 3 Modes of Operation
-1.  **Inbox Mode (Capture & Clarify):** Rapid entry and AI-assisted sorting.
-2.  **Planning Mode (Organize & Review):** Aligning Projects with Goals and managing support lists.
-3.  **Action Mode (Engage):** A filtered view of what to do *now*.
+### 3. The State Layer (The Bridge)
+*   **Responsibility:** Holds the data between reruns.
+*   **Key Flags:**
+    *   `st.session_state.data`: The loaded `DatasetContent`.
+    *   `st.session_state.is_dirty`: Boolean flag indicating unsaved changes.
+    *   `st.session_state.current_proposal`: The active AI suggestion waiting for user confirmation.
+
+## Data Persistence
+*   **Format:** YAML.
+*   **Strategy:** Explicit Save. The user must click "Save" to flush the `is_dirty` state to disk.
+
 
 ```mermaid
 graph TD
