@@ -1,75 +1,79 @@
 import pytest
 from unittest.mock import MagicMock
-from services.repository import TriageService, YamlRepository
-from models.entities import DatasetContent, Project, Task
+from services.repository import TriageService, YamlRepository, DraftItem
+from models.entities import Project, TaskItem, ResourceItem
+from models.ai_schemas import ClassificationResult, ClassificationType
 
 
-# --- Fixtures ---
 @pytest.fixture
 def mock_repo():
     repo = MagicMock(spec=YamlRepository)
-    # Setup in-memory data structure
-    repo.data = DatasetContent(
-        projects=[
-            Project(id=1, name="Kitchen", tasks=[])
-        ],
-        inbox_tasks=["Buy Milk", "Fix Door"],
-        goals=[]
-    )
-    # Mock find_project to return the project from our list
-    repo.find_project.side_effect = lambda pid: next((p for p in repo.data.projects if p.id == pid), None)
+    repo.data.inbox_tasks = ["Buy milk"]
+    repo.data.projects = [Project(id=1, name="Kitchen")]
+
+    # Mock find methods
+    repo.find_project.return_value = repo.data.projects[0]
+    repo.find_project_by_name.return_value = repo.data.projects[0]
+
     return repo
 
 
-@pytest.fixture
-def triage_service(mock_repo):
-    return TriageService(mock_repo)
+def test_draft_to_entity_conversion():
+    """Test that DraftItem creates the correct concrete entity"""
+    # 1. Shopping Draft
+    res_result = ClassificationResult(
+        classification_type=ClassificationType.SHOPPING,
+        suggested_project="Kitchen",
+        confidence=0.9,
+        reasoning="It's milk",
+        refined_text="Milk"
+    )
+    draft_res = DraftItem(source_text="Buy milk", classification=res_result)
+    entity_res = draft_res.to_entity()
+
+    assert isinstance(entity_res, ResourceItem)
+    assert entity_res.name == "Milk"
+    assert entity_res.kind == "resource"
+
+    # 2. Task Draft
+    task_result = ClassificationResult(
+        classification_type=ClassificationType.TASK,
+        suggested_project="Kitchen",
+        confidence=0.9,
+        reasoning="Action",
+        refined_text="Call Bob"
+    )
+    draft_task = DraftItem(source_text="Call Bob", classification=task_result)
+    entity_task = draft_task.to_entity()
+
+    assert isinstance(entity_task, TaskItem)
+    assert entity_task.name == "Call Bob"
+    assert entity_task.kind == "task"
 
 
-# --- Tests ---
+def test_triage_apply_draft(mock_repo):
+    """Test applying a draft commits it to the project"""
+    service = TriageService(mock_repo)
 
-def test_get_inbox_items(triage_service, mock_repo):
-    items = triage_service.get_inbox_items()
-    assert len(items) == 2
-    assert "Buy Milk" in items
+    # Setup Draft
+    result = ClassificationResult(
+        classification_type=ClassificationType.TASK,
+        suggested_project="Kitchen",
+        confidence=1.0,
+        reasoning="Test",
+        refined_text="Fix sink"
+    )
+    draft = DraftItem(source_text="Fix sink", classification=result)
 
+    # Execute
+    service.apply_draft(draft)
 
-def test_add_to_inbox(triage_service, mock_repo):
-    triage_service.add_to_inbox("New Idea")
-    assert "New Idea" in mock_repo.data.inbox_tasks
-    mock_repo.save.assert_called_once()
-
-
-def test_move_inbox_item_to_project(triage_service, mock_repo):
-    # Arrange
-    task_text = "Buy Milk"
-    project_id = 1
-    tags = ["errand"]
-
-    # Act
-    triage_service.move_inbox_item_to_project(task_text, project_id, tags)
-
-    # Assert
-    # 1. Check it was removed from inbox
-    assert task_text not in mock_repo.data.inbox_tasks
-
-    # 2. Check it was added to project
+    # Verify
     project = mock_repo.data.projects[0]
-    assert len(project.tasks) == 1
-    assert project.tasks[0].name == task_text
-    assert project.tasks[0].tags == ["errand"]
+    assert len(project.items) == 1
+    assert isinstance(project.items[0], TaskItem)
+    assert project.items[0].name == "Fix sink"
 
-    # 3. Check save was called
-    mock_repo.save.assert_called()
-
-
-def test_skip_inbox_item(triage_service, mock_repo):
-    # Arrange: Inbox is ["Buy Milk", "Fix Door"]
-    first_item = "Buy Milk"
-
-    # Act
-    triage_service.skip_inbox_item(first_item)
-
-    # Assert: "Buy Milk" should now be at the end
-    assert mock_repo.data.inbox_tasks[-1] == first_item
-    assert len(mock_repo.data.inbox_tasks) == 2
+    # Verify Repo calls
+    mock_repo.register_item.assert_called_once()
+    mock_repo.mark_dirty.assert_called()

@@ -4,12 +4,9 @@
 from .entities import (
     DatasetContent,
     Project,
-    Task,
+    TaskItem,
     Goal,
-    ProjectResource,
     ReferenceItem,
-    SystemConfig,
-    ResourceType,
     ProjectStatus
 )
 from .ai_schemas import (

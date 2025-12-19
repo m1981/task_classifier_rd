@@ -1,22 +1,9 @@
-from dataclasses import dataclass, field
-from typing import List, Optional, NewType
+from typing import List, Optional, Union, Literal, Annotated
+from pydantic import BaseModel, Field
 from enum import Enum
-from datetime import date
 import uuid
+from datetime import datetime
 
-# --- CONFIGURATION (Moved from models.py) ---
-@dataclass(frozen=True)
-class SystemConfig:
-    """Central configuration for domain logic"""
-    DEFAULT_TAGS: List[str] = field(default_factory=lambda: [
-        "physical", "digital",
-        "out", "need-material", "need-tools", "buy"
-    ])
-
-# --- TYPE ALIASES ---
-GoalID = NewType("GoalID", str)
-ProjectID = NewType("ProjectID", int)
-TaskID = NewType("TaskID", str)
 
 # --- ENUMS ---
 class ProjectStatus(str, Enum):
@@ -24,61 +11,70 @@ class ProjectStatus(str, Enum):
     ON_HOLD = "on_hold"
     COMPLETED = "completed"
 
-class ResourceType(str, Enum):
-    TO_BUY = "to_buy"
-    TO_GATHER = "to_gather"
 
-# --- DOMAIN ENTITIES ---
+class GoalStatus(str, Enum):
+    ACTIVE = "active"
+    SOMEDAY = "someday"
 
-@dataclass
-class ProjectResource:
-    """Replaces ShoppingItem to handle both Shopping and Prep"""
-    id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    name: str = ""
-    link: Optional[str] = None
-    type: ResourceType = ResourceType.TO_BUY
-    is_acquired: bool = False
-    store: str = "General"
 
-@dataclass
-class ReferenceItem:
-    id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    name: str = ""
-    description: str = ""
+# --- ABSTRACT BASE & CONCRETE ITEMS ---
 
-@dataclass
-class Task:
+class ProjectItem(BaseModel):
+    """The Abstract Base Class for all things inside a project"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
-    id: TaskID = field(default_factory=lambda: str(uuid.uuid4()))
+    created_at: datetime = Field(default_factory=datetime.now)
+    # The discriminator field must be defined in subclasses
+
+
+class TaskItem(ProjectItem):
+    kind: Literal["task"] = "task"
     is_completed: bool = False
-    tags: List[str] = field(default_factory=list)
-    deadline: Optional[date] = None
+    tags: List[str] = Field(default_factory=list)
     duration: str = "unknown"
     notes: str = ""
 
-@dataclass
-class Project:
-    id: ProjectID
+
+class ResourceItem(ProjectItem):
+    kind: Literal["resource"] = "resource"
+    is_acquired: bool = False
+    store: str = "General"
+    link: Optional[str] = None
+
+
+class ReferenceItem(ProjectItem):
+    kind: Literal["reference"] = "reference"
+    content: str = ""  # URL or Note text
+
+# --- DEFINING THE POLYMORPHIC TYPE ---
+# This tells Pydantic: "When you see this Union, look at the 'kind' field to decide which class to use."
+ProjectItemUnion = Annotated[
+    Union[TaskItem, ResourceItem, ReferenceItem],
+    Field(discriminator='kind')
+]
+
+# --- CONTAINERS ---
+
+class Project(BaseModel):
+    id: int
     name: str
     description: str = ""
-    goal_id: Optional[GoalID] = None
     status: ProjectStatus = ProjectStatus.ACTIVE
-    tags: List[str] = field(default_factory=list)
-    tasks: List[Task] = field(default_factory=list)
-    resources: List[ProjectResource] = field(default_factory=list)
-    reference_items: List[ReferenceItem] = field(default_factory=list)
+    goal_id: Optional[str] = None
+    tags: List[str] = Field(default_factory=list)
 
+    # THE UNIFIED STREAM
+    # We use the Annotated Union here inside the List
+    items: List[ProjectItemUnion] = Field(default_factory=list)
 
-@dataclass
-class Goal:
-    id: GoalID
+class Goal(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     description: str = ""
-    status: str = "active"
+    status: GoalStatus = GoalStatus.ACTIVE
 
-@dataclass
-class DatasetContent:
-    """The Root Aggregate"""
-    projects: List[Project] = field(default_factory=list)
-    inbox_tasks: List[str] = field(default_factory=list)
-    goals: List[Goal] = field(default_factory=list)
+
+class DatasetContent(BaseModel):
+    goals: List[Goal] = Field(default_factory=list)
+    projects: List[Project] = Field(default_factory=list)
+    inbox_tasks: List[str] = Field(default_factory=list)

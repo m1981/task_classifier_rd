@@ -1,193 +1,232 @@
-from typing import List, Optional, Tuple, Dict
-from models.entities import Task, Project, Goal, ProjectResource, ResourceType, ProjectStatus, ReferenceItem, DatasetContent
-from interfaces import InboxManager, GoalPlanner, TaskExecutor
+from typing import List, Optional, Tuple, Dict, Union
+from dataclasses import dataclass
+import uuid
+
+# Import the NEW Polymorphic Entities
+from models.entities import (
+    DatasetContent, Project, Goal,
+    TaskItem, ResourceItem, ReferenceItem, ProjectItem,
+    ProjectStatus, ResourceType
+)
+from models.ai_schemas import ClassificationResult, ClassificationType
 from services.services import DatasetManager
-from services.decorators import autosave
 
 
+# --- THE PROPOSAL OBJECT (Buffer) ---
+@dataclass
+class DraftItem:
+    """
+    Represents an item that has been proposed by AI but not yet
+    committed to the database.
+    """
+    source_text: str
+    classification: ClassificationResult
+
+    def to_entity(self) -> ProjectItem:
+        """Factory method to convert the draft into a concrete Entity"""
+        kind = self.classification.classification_type
+        name = self.classification.refined_text or self.source_text
+        tags = self.classification.extracted_tags
+
+        # Extract duration (default to 'unknown' if missing)
+        duration = self.classification.estimated_duration or "unknown"
+
+        if kind == ClassificationType.SHOPPING:
+            return ResourceItem(name=name, store="General")
+
+        elif kind == ClassificationType.REFERENCE:
+            return ReferenceItem(name=name, content=self.source_text)
+
+        else:
+            # Map duration here
+            return TaskItem(
+                name=name,
+                tags=tags,
+                duration=duration  # <--- MAPPED
+            )
+
+
+# --- REPOSITORY ---
 class YamlRepository:
-    """
-    The 'God Object' wrapper.
-    In a real app, this would handle DB connections.
-    Here, it wraps the in-memory DatasetContent and handles saving.
-    """
-
     def __init__(self, dataset_manager: DatasetManager, current_dataset_name: str):
         self.dm = dataset_manager
         self.name = current_dataset_name
-        # Load initial state
         self.data: DatasetContent = self.dm.load_dataset(current_dataset_name)
 
-        # OPTIMIZATION: Build an internal index for O(1) lookups
-        # This maps TaskID -> (Project, Task)
-        self._task_index: Dict[str, Tuple[Project, Task]] = {}
+        # STATE MANAGEMENT
+        self._is_dirty = False
+
+        # INDEXING (Updated for Polymorphism)
+        # Maps ItemID -> (Project, Item)
+        self._item_index: Dict[str, Tuple[Project, ProjectItem]] = {}
         self._rebuild_index()
 
-    def _rebuild_index(self):
-        """Rebuilds the internal lookup index. Call this after bulk operations."""
-        self._task_index.clear()
-        for p in self.data.projects:
-            for t in p.tasks:
-                self._task_index[t.id] = (p, t)
+    @property
+    def is_dirty(self) -> bool:
+        return self._is_dirty
+
+    def mark_dirty(self):
+        self._is_dirty = True
 
     def save(self):
-        self.dm.save_dataset(self.name, self.data)
+        """Explicit Save"""
+        if self._is_dirty:
+            self.dm.save_dataset(self.name, self.data)
+            self._is_dirty = False
+
+    def _rebuild_index(self):
+        self._item_index.clear()
+        for p in self.data.projects:
+            for item in p.items:
+                self._item_index[item.id] = (p, item)
 
     def find_project(self, project_id: int) -> Optional[Project]:
         return next((p for p in self.data.projects if p.id == project_id), None)
 
-    def get_task_parent(self, task_id: str) -> Optional[Project]:
-        if task_id in self._task_index:
-            return self._task_index[task_id][0]  # Returns the Project
+    def find_project_by_name(self, name: str) -> Optional[Project]:
+        return next((p for p in self.data.projects if p.name == name), None)
+
+    def find_item(self, item_id: str) -> Optional[ProjectItem]:
+        if item_id in self._item_index:
+            return self._item_index[item_id][1]
         return None
 
-    def find_task(self, project_id: int, task_id: str) -> Optional[Task]:
-        # Fast lookup using index
-        if task_id in self._task_index:
-            return self._task_index[task_id][1]
-
-        # Fallback (in case index is stale)
-        p = self.find_project(project_id)
-        if p:
-            return next((t for t in p.tasks if t.id == task_id), None)
-        return None
-
-    def register_new_task(self, project: Project, task: Task):
-        """Helper to keep index in sync when adding tasks"""
-        self._task_index[task.id] = (project, task)
+    def register_item(self, project: Project, item: ProjectItem):
+        """Update index and dirty flag"""
+        self._item_index[item.id] = (project, item)
+        self.mark_dirty()
 
 
-# --- Service Implementations ---
+# --- SERVICES ---
 
-class TriageService(InboxManager):
+class TriageService:
     def __init__(self, repo: YamlRepository):
         self.repo = repo
 
     def get_inbox_items(self) -> List[str]:
         return self.repo.data.inbox_tasks
 
-    @autosave
     def add_to_inbox(self, text: str) -> None:
         self.repo.data.inbox_tasks.append(text)
+        self.repo.mark_dirty()
 
-    @autosave
-    def move_inbox_item_to_project(self, item_text: str, project_id: int, tags: List[str]) -> None:
-        project = self.repo.find_project(project_id)
-        if project:
-            new_task = Task(name=item_text, tags=tags)
-            project.tasks.append(new_task)
-            self.repo.register_new_task(project, new_task) # Update Index
+    def create_draft(self, text: str, classification: ClassificationResult) -> DraftItem:
+        """Pure function: Creates a proposal object"""
+        return DraftItem(source_text=text, classification=classification)
 
-            if item_text in self.repo.data.inbox_tasks:
-                self.repo.data.inbox_tasks.remove(item_text)
+    def apply_draft(self, draft: DraftItem, override_project_id: Optional[int] = None) -> None:
+        """
+        Commits a Draft to the database.
+        """
+        # 1. Determine Project
+        project = None
+        if override_project_id:
+            project = self.repo.find_project(override_project_id)
+        elif draft.classification.suggested_project != "Unmatched":
+            project = self.repo.find_project_by_name(draft.classification.suggested_project)
 
-    @autosave
-    def create_project_from_inbox(self, item_text: str, new_project_name: str) -> None:
-        # Safe ID generation for Integers
+        if not project:
+            raise ValueError("Target project not found")
+
+        # 2. Create Entity (Polymorphic)
+        new_item = draft.to_entity()
+
+        # 3. Add to Unified Stream
+        project.items.append(new_item)
+        self.repo.register_item(project, new_item)
+
+        # 4. Remove from Inbox
+        if draft.source_text in self.repo.data.inbox_tasks:
+            self.repo.data.inbox_tasks.remove(draft.source_text)
+            self.repo.mark_dirty()
+
+    def create_project_from_draft(self, draft: DraftItem, new_project_name: str) -> None:
+        # 1. Create Project
         existing_ids = [p.id for p in self.repo.data.projects]
         new_id = max(existing_ids, default=0) + 1
-
         new_proj = Project(id=new_id, name=new_project_name)
         self.repo.data.projects.append(new_proj)
 
-        # Reuse the move logic (which handles autosave, but since we are inside
-        # an autosave function, we just call the logic directly to avoid double save)
-        self.move_inbox_item_to_project(item_text, new_id, [])
+        # 2. Apply Draft to new project
+        self.apply_draft(draft, override_project_id=new_id)
 
-    @autosave
     def skip_inbox_item(self, item_text: str) -> None:
+        # Rotate to end
         if item_text in self.repo.data.inbox_tasks:
             self.repo.data.inbox_tasks.remove(item_text)
             self.repo.data.inbox_tasks.append(item_text)
+            self.repo.mark_dirty()
 
 
-class PlanningService(GoalPlanner):
+class PlanningService:
     def __init__(self, repo: YamlRepository):
         self.repo = repo
 
     def get_all_goals(self) -> List[Goal]:
         return self.repo.data.goals
 
-    @autosave
     def create_goal(self, name: str, description: str) -> Goal:
-        import uuid
-        new_goal = Goal(id=str(uuid.uuid4()), name=name, description=description)
+        new_goal = Goal(name=name, description=description)
         self.repo.data.goals.append(new_goal)
+        self.repo.mark_dirty()
         return new_goal
 
-    def get_projects_for_goal(self, goal_id: str) -> List[Project]:
-        return [p for p in self.repo.data.projects if p.goal_id == goal_id]
-
-    def get_orphaned_projects(self) -> List[Project]:
-        return [p for p in self.repo.data.projects if not p.goal_id]
-
-    @autosave
-    def add_resource(self, project_id: int, name: str, r_type: ResourceType, store: str = "General") -> None:
+    def add_manual_item(self, project_id: int, kind: str, name: str, **kwargs) -> None:
+        """Manual entry bypassing AI"""
         project = self.repo.find_project(project_id)
-        if project:
-            res = ProjectResource(name=name, type=r_type, store=store)
-            project.resources.append(res)
+        if not project: return
 
-    @autosave
-    def add_reference_item(self, project_id: int, name: str, description: str) -> None:
-        project = self.repo.find_project(project_id)
-        if project:
-            ref = ReferenceItem(name=name, description=description)
-            project.reference_items.append(ref)
+        item = None
+        if kind == "task":
+            item = TaskItem(name=name, tags=kwargs.get('tags', []))
+        elif kind == "resource":
+            item = ResourceItem(name=name, store=kwargs.get('store', 'General'))
+        elif kind == "reference":
+            item = ReferenceItem(name=name, content=kwargs.get('content', ''))
+
+        if item:
+            project.items.append(item)
+            self.repo.register_item(project, item)
 
 
-class ExecutionService(TaskExecutor):
+class ExecutionService:
     def __init__(self, repo: YamlRepository):
         self.repo = repo
 
-    def get_next_actions(self, context_filter: Optional[str] = None) -> List[Task]:
-        all_tasks = []
-        for project in self.repo.data.projects:
-            if project.status != ProjectStatus.ACTIVE:
-                continue
-            for task in project.tasks:
-                if not task.is_completed:
-                    if context_filter and context_filter not in task.tags:
+    def get_next_actions(self, context_filter: Optional[str] = None) -> List[TaskItem]:
+        """Filter the unified stream for Tasks only"""
+        actions = []
+        for p in self.repo.data.projects:
+            if p.status != ProjectStatus.ACTIVE: continue
+
+            # Iterate Unified Stream
+            for item in p.items:
+                # Check Type
+                if isinstance(item, TaskItem) and not item.is_completed:
+                    if context_filter and context_filter not in item.tags:
                         continue
-                    all_tasks.append(task)
-        return all_tasks
+                    actions.append(item)
+        return actions
 
-    @autosave
-    def complete_task(self, project_id: int, task_id: str) -> None:
-        # Note: task_id is now str (UUID)
-        task = self.repo.find_task(project_id, task_id)
-        if task:
-            task.is_completed = True
+    def complete_item(self, item_id: str) -> None:
+        item = self.repo.find_item(item_id)
+        # Polymorphic completion
+        if isinstance(item, TaskItem):
+            item.is_completed = True
+            self.repo.mark_dirty()
+        elif isinstance(item, ResourceItem):
+            item.is_acquired = True
+            self.repo.mark_dirty()
 
-    @autosave
-    def undo_complete_task(self, project_id: int, task_id: str) -> None:
-        task = self.repo.find_task(project_id, task_id)
-        if task:
-            task.is_completed = False
-
-    def get_aggregated_shopping_list(self) -> dict[str, List[Tuple[ProjectResource, str]]]:
+    def get_shopping_list(self) -> Dict[str, List[Tuple[ResourceItem, str]]]:
         from collections import defaultdict
-        shopping_trip = defaultdict(list)
+        shopping = defaultdict(list)
 
-        for project in self.repo.data.projects:
-            if project.status == ProjectStatus.COMPLETED:
-                continue
+        for p in self.repo.data.projects:
+            if p.status == ProjectStatus.COMPLETED: continue
 
-            # Filter for TO_BUY and NOT acquired
-            to_buy = [r for r in project.resources
-                      if r.type == ResourceType.TO_BUY and not r.is_acquired]
+            for item in p.items:
+                if isinstance(item, ResourceItem) and not item.is_acquired:
+                    shopping[item.store].append((item, p.name))
 
-            for item in to_buy:
-                store_name = item.store if item.store else "General"
-                shopping_trip[store_name].append((item, project.name))
-
-        return dict(shopping_trip)
-
-    @autosave
-    def toggle_resource_status(self, resource_id: str, is_acquired: bool) -> None:
-        # Optimization: We could index resources too, but N is usually small here.
-        for project in self.repo.data.projects:
-            for res in project.resources:
-                if res.id == resource_id:
-                    res.is_acquired = is_acquired
-                    return
+        return dict(shopping)
