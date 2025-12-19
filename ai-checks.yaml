@@ -1,0 +1,30 @@
+definitions:
+  # Reusable context definitions
+  # The 'cmd' is what the tool executes.
+  # The 'tag' is how it wraps the output for the AI.
+  
+  - id: git_diff
+    tag: git_changes
+    cmd: "git diff  --cached --name-only"
+
+  - id: file_tree
+    tag: project_structure
+    cmd: "tree . -L 2 -I 'node_modules|.git'"
+
+  - id: security_policy
+    tag: security_guidelines
+    cmd: "cat ./docs/SECURITY.md"
+
+  - id: db_schema
+    tag: database_schema
+    # This demonstrates OCP: The tool doesn't know SQL, 
+    # but it can run a script that does.
+    cmd: "./scripts/dump_schema.sh" 
+
+checks:
+  - id: security-audit
+    model: gpt-4o
+    system_prompt: "Analyze for security flaws."
+    context:
+      - git_diff        # References definition above
+      - security_policy # References definition above
