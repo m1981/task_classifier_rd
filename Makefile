@@ -26,9 +26,13 @@ run: ## Run the Streamlit application
 mut: ## Run mutation tests
 	rm -rf mutants && uv run mutmut run --paths-to-mutate=services/repository.py
 
+.PHONY: mut-ai
+mut-ai: ## Mutate aireview tool
+	rm -rf mutants && uv run mutmut run --paths-to-mutate=src/aireview/core.py --tests-dir=tests/test_aireview.py
+
 .PHONY: exp
 exp: ## Export mutants to markdown
-	uv run mutmut export-diffs --module services.repository
+	uv run mutmut export-diffs --status survived
 
 .PHONY: test-html
 test-html: ## Run tests with HTML coverage report
