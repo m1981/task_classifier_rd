@@ -1,30 +1,31 @@
 definitions:
-  # Reusable context definitions
-  # The 'cmd' is what the tool executes.
-  # The 'tag' is how it wraps the output for the AI.
-  
   - id: git_diff
     tag: git_changes
-    cmd: "git diff  --cached --name-only"
+    cmd: "git diff --cached"
 
-  - id: file_tree
-    tag: project_structure
-    cmd: "tree . -L 2 -I 'node_modules|.git'"
+  - id: my_diff_context
+    tag: changes
+    cmd: "internal:push_diff"
 
-  - id: security_policy
-    tag: security_guidelines
-    cmd: "cat ./docs/SECURITY.md"
+prompts:
+  - id: security_auditor
+    text: |
+      You are a Senior Security Engineer. 
+      Review the code for OWASP Top 10 vulnerabilities.
+      Focus on SQL Injection, XSS, and hardcoded secrets.
 
-  - id: db_schema
-    tag: database_schema
-    # This demonstrates OCP: The tool doesn't know SQL, 
-    # but it can run a script that does.
-    cmd: "./scripts/dump_schema.sh" 
+  - id: python_style_guide
+    text: "You are a Python expert. Ensure PEP8 compliance and type hinting."
 
 checks:
-  - id: security-audit
+  - id: security-check
     model: gpt-4o
-    system_prompt: "Analyze for security flaws."
-    context:
-      - git_diff        # References definition above
-      - security_policy # References definition above
+    prompt_id: security_auditor
+    context: [my_diff_context]
+    # Feature: Override default limit for security checks
+    max_chars: 32000
+
+#  - id: style-check
+#    model: gpt-3.5-turbo
+#    prompt_id: python_style_guide
+#    context: [git_diff]
