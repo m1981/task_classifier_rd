@@ -16,6 +16,72 @@ Here are the refined Use Case Specifications.
 
 ---
 
+## UC-01: Clarify Inbox Item
+
+**Primary Actor:** User
+**Scope:** Task Classifier RD (Triage Mode)
+**Level:** User Goal (Sea Level)
+
+**Stakeholders and Interests:**
+*   **User:** Wants to process raw thoughts into actionable tasks within specific projects.
+
+**Preconditions:**
+1.  The System has loaded a valid Dataset.
+2.  The Inbox contains at least one raw text item.
+3.  The AI Service is available.
+
+**Success Guarantee:**
+*   The raw item is removed from the Inbox.
+*   The item is appended to the target Project's task list.
+*   The System state is updated (and persisted via auto-save or dirty flag).
+
+**Trigger:** User navigates to the "Inbox Triage" view.
+
+**MAIN SUCCESS SCENARIO:**
+1.  The System displays the oldest raw item from the Inbox (e.g., "Buy milk").
+2.  The System (AI) analyzes the text and presents a **Triage Card** containing:
+    *   **Reasoning:** Why the AI chose the project.
+    *   **Suggested Project:** The best match (e.g., "Groceries").
+    *   **Tags:** Extracted context tags (e.g., "errand").
+3.  The User clicks the **"Add"** button (Primary Action).
+4.  The System moves the item from the Inbox to the target Project's task list.
+5.  The System refreshes the view to show the next item (Loop to Step 1).
+
+**EXTENSIONS:**
+
+*   **1a. Inbox is Empty:**
+    1.  The System displays a "Inbox Zero" success message with balloons.
+    2.  The Use Case ends.
+
+*   **1b. Quick Capture (Interrupt):**
+    1.  The User expands the "Quick Capture" section.
+    2.  The User types a new thought and clicks "Capture".
+    3.  The System adds the item to the end of the Inbox queue.
+    4.  The System resumes the Triage flow (Step 1).
+
+*   **2a. AI cannot find a matching project ("Unmatched"):**
+    1.  The System displays "Unsure where to put this" and hides the "Add" button.
+    2.  The System expands the "Create New Project" form (See Extension 4a) OR the User uses Manual Assignment (See Extension 3a).
+
+*   **3a. Manual Assignment (Override):**
+    1.  The User disagrees with the AI suggestion.
+    2.  The User selects a different project from the **"Manual Assignment"** pills (chips).
+    3.  The System immediately moves the item to the selected project.
+    4.  Resume at Step 5.
+
+*   **3b. User Skips the Item:**
+    1.  The User clicks the **"Skip"** button.
+    2.  The System moves the current item to the end of the Inbox queue.
+    3.  The System clears the current AI prediction cache.
+    4.  Resume at Step 5 (showing the next item).
+
+*   **4a. Create New Project:**
+    1.  The User (or AI) determines no existing project fits.
+    2.  The User enters a name in the **"New Project Name"** field.
+    3.  The User clicks "Create & Move".
+    4.  The System creates the new Project.
+    5.  The System moves the inbox item to this new Project.
+    6.  Resume at Step 5.
 
 ---
 
@@ -74,26 +140,19 @@ Here are the refined Use Case Specifications.
 **Preconditions:**
 1.  Projects contain active Task items.
 
-**Success Guarantee:**
-*   Completed items are marked as done in the domain model.
-*   The System marks the session state as "Dirty."
-
-**Trigger:** User navigates to the "Execution" view.
-
-**MAIN SUCCESS SCENARIO:**
+**MAIN SUCCESS SCENARIO (Standard Filter):**
 1.  The User selects a Context Filter (e.g., "@home").
-2.  The System displays a flat list of **Task Items** matching the filter (hiding Resources and References).
+2.  The System displays a flat list of **Task Items** matching the filter.
 3.  The User marks a Task as complete.
 4.  The System updates the Task's status to "Completed."
-5.  The System removes the Task from the active view (or visually strikes it out).
+5.  The System removes the Task from the active view.
 
-**EXTENSIONS:**
-*   **1a. No Context selected:**
-    1.  The System displays all active Task Items from all active Projects.
-
-*   **3a. User marks a task by mistake:**
-    1.  The User unchecks the completed item.
-    2.  The System reverts the status to "Active."
+**VARIATIONS:**
+*   **1a. Smart Context (AI Filter):**
+    1.  The User types a natural language query (e.g., "I have 30 mins and low energy").
+    2.  The System (AI) analyzes active tasks against the constraints.
+    3.  The System returns a filtered list of the best-matching tasks.
+    4.  The User proceeds to work on these tasks (Resume at Step 3).
 
 ---
 

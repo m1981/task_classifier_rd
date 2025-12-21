@@ -1,41 +1,76 @@
 import streamlit as st
 from services.repository import ExecutionService, YamlRepository
+from services.analytics_service import AnalyticsService
 
-def render_execution_view(execution_service: ExecutionService, repo: YamlRepository):
+
+def render_execution_view(execution_service: ExecutionService, analytics_service: AnalyticsService,
+                          repo: YamlRepository):
     st.title("✅ Next Actions")
 
-    all_tags = set()
-    for p in repo.data.projects:
-        for t in p.tasks:
-            all_tags.update(t.tags)
+    # --- 1. SMART CONTEXT (AI Filter) ---
+    with st.expander("🤖 Smart Context (Ask AI)", expanded=False):
+        with st.form("smart_filter"):
+            col1, col2 = st.columns([4, 1])
+            query = col1.text_input("What's your context?", placeholder="e.g., 'I have 30 mins and low energy'")
+            if col2.form_submit_button("Filter"):
+                if query:
+                    with st.spinner("AI is finding tasks..."):
+                        results = analytics_service.smart_filter_tasks(query)
+                        st.session_state.smart_results = results
+                        st.session_state.smart_query = query
+                        st.rerun()
 
-    # Handle case where no tags exist
-    options = list(all_tags)
-    selected_tag = None
-    if options:
-        selected_tag = st.pills("Context", options, selection_mode="single")
+    # --- 2. DETERMINE SOURCE (AI vs Standard) ---
+    tasks = []
+    is_filtered_view = False
 
-    tasks = execution_service.get_next_actions(context_filter=selected_tag)
+    # Check if we have active AI results
+    if 'smart_results' in st.session_state and st.session_state.smart_results:
+        tasks = st.session_state.smart_results
+        is_filtered_view = True
+        st.info(f"🔍 Showing results for: **{st.session_state.smart_query}**")
+        if st.button("Clear Filter"):
+            del st.session_state.smart_results
+            del st.session_state.smart_query
+            st.rerun()
+    else:
+        # Standard Tag Filter
+        all_tags = set()
+        for p in repo.data.projects:
+            for item in p.items:
+                if hasattr(item, 'tags'):
+                    all_tags.update(item.tags)
 
+        selected_tag = None
+        if all_tags:
+            selected_tag = st.pills("Context", list(all_tags), selection_mode="single")
+
+        tasks = execution_service.get_next_actions(context_filter=selected_tag)
+
+    # --- 3. RENDER TASKS ---
     if not tasks:
-        st.info("No active tasks found for this context.")
+        st.info("No active tasks found.")
         return
 
     for task in tasks:
-        parent_proj = repo.get_task_parent(task.id)
-        proj_name = parent_proj.name if parent_proj else "Unknown"
-        proj_id = parent_proj.id if parent_proj else 0
+        # Find parent project name (inefficient but simple for MVP)
+        parent_name = "Unknown"
+        for p in repo.data.projects:
+            if task in p.items:
+                parent_name = p.name
+                break
 
         col1, col2 = st.columns([0.5, 10])
 
-        # Checkbox
-        is_done = col1.checkbox("Done", value=False, key=f"exec_{task.id}", label_visibility="collapsed")
-
+        is_done = col1.checkbox("", value=False, key=f"exec_{task.id}")
         if is_done:
-            execution_service.complete_task(proj_id, task.id)
+            execution_service.complete_item(task.id)
             st.toast(f"Completed: {task.name}")
+            # If in AI view, we might want to remove it from the cached list too
+            if is_filtered_view:
+                st.session_state.smart_results = [t for t in st.session_state.smart_results if t.id != task.id]
             st.rerun()
 
-        col2.markdown(f"**{task.name}** <span style='color:gray; font-size:0.8em'>({proj_name})</span>", unsafe_allow_html=True)
-        if task.tags:
-            col2.caption(f"🏷️ {', '.join(task.tags)}")
+        col2.markdown(f"**{task.name}** <span style='color:gray'>({parent_name})</span>", unsafe_allow_html=True)
+        if task.duration != "unknown":
+            col2.caption(f"⏱️ {task.duration}")

@@ -104,6 +104,23 @@ class PromptBuilder:
         # which is what the App uses.
         return self._build_dynamic_prompt(request)
 
+    def build_smart_filter_prompt(self, query: str, tasks_str: str) -> str:
+        return f"""
+        You are a productivity assistant helping a user select tasks.
+
+        USER QUERY: "{query}"
+
+        CANDIDATE TASKS:
+        {tasks_str}
+
+        INSTRUCTIONS:
+        1. Analyze the User Query for constraints (Time, Context, Energy, Tools).
+        2. Select tasks from the Candidate List that strictly fit these constraints.
+        3. Return the IDs of the matching tasks.
+        4. If the query implies a time limit (e.g. "I have 1 hour"), try to fill that time with the highest priority/best fitting tasks without exceeding it significantly.
+        5. Provide a brief reasoning.
+        """
+
     def _build_dynamic_prompt(self, request: ClassificationRequest) -> str:
         guidance = self._get_dynamic_guidance(request.prompt_variant)
         projects_list = self._format_projects(request.dataset.projects)

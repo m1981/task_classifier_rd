@@ -32,9 +32,10 @@ def get_infrastructure():
     prompt_builder = PromptBuilder()
     classifier = TaskClassifier(client, prompt_builder)
 
-    return dataset_manager, classifier
+    analytics_service = AnalyticsService(None, client, prompt_builder) # Repo is injected later
+    return dataset_manager, classifier, analytics_service
 
-dataset_manager, classifier = get_infrastructure()
+dataset_manager, classifier, analytics_service = get_infrastructure()
 
 # --- 2. Session State & Repository Management ---
 
@@ -78,7 +79,7 @@ try:
 
     # Use the persistent repository object
     repo = st.session_state.repo
-
+    analytics_service.repo = repo
     # Services are stateless wrappers, so we can re-init them passing the persistent repo
     triage_service = TriageService(repo)
     planning_service = PlanningService(repo)
@@ -101,7 +102,7 @@ elif mode == "🎯 Planning":
     render_planning_view(planning_service)
 
 elif mode == "✅ Execution":
-    render_execution_view(execution_service, repo)
+    render_execution_view(execution_service, analytics_service, repo)
 
 elif mode == "🛒 Shopping":
     render_shopping_view(execution_service)

@@ -7,7 +7,9 @@ from .entities import (
     TaskItem,
     Goal,
     ReferenceItem,
-    ProjectStatus
+    SystemConfig,
+    ProjectStatus,
+
 )
 from .ai_schemas import (
     ClassificationResult,

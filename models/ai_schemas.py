@@ -1,6 +1,7 @@
-from typing import List, Optional
+from typing import List, Optional, Any
 from pydantic import BaseModel, Field
 from enum import Enum
+from dataclasses import dataclass
 
 
 class ClassificationType(str, Enum):
@@ -43,4 +44,35 @@ class ClassificationResult(BaseModel):
     alternative_projects: List[str] = Field(
         default_factory=list,
         description="Up to 2 other projects that might be a close second match."
+    )
+
+# --- SERVICE OBJECTS (Dataclasses) ---
+# These were missing in the previous update
+
+@dataclass
+class ClassificationRequest:
+    """Batch request object (Legacy/Future use)"""
+    dataset: Any
+    prompt_variant: str = "basic"
+
+@dataclass
+class ClassificationResponse:
+    """Standardized response wrapper used by TaskClassifier"""
+    results: List[ClassificationResult]
+    prompt_used: str
+    raw_response: str
+
+class SmartFilterResult(BaseModel):
+    """
+    The AI's response to a 'Smart Context' query.
+    It returns the IDs of tasks that fit the user's constraints.
+    """
+    matching_task_ids: List[str] = Field(
+        description="The exact IDs of the tasks that fit the user's query constraints."
+    )
+    reasoning: str = Field(
+        description="A brief explanation of why these tasks were selected (e.g., 'These tasks are short and computer-based')."
+    )
+    estimated_total_time: str = Field(
+        description="A rough sum of the duration of selected tasks (e.g., '45 mins')."
     )

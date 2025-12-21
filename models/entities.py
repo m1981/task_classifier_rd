@@ -4,6 +4,13 @@ from enum import Enum
 import uuid
 from datetime import datetime
 
+# --- CONFIGURATION ---
+class SystemConfig:
+    """Central configuration for domain logic"""
+    DEFAULT_TAGS: List[str] = [
+        "physical", "digital",
+        "out", "need-material", "need-tools", "buy"
+    ]
 
 # --- ENUMS ---
 class ProjectStatus(str, Enum):
@@ -11,11 +18,14 @@ class ProjectStatus(str, Enum):
     ON_HOLD = "on_hold"
     COMPLETED = "completed"
 
-
 class GoalStatus(str, Enum):
     ACTIVE = "active"
     SOMEDAY = "someday"
 
+# --- RESTORED ENUM (Fixes ImportError) ---
+class ResourceType(str, Enum):
+    TO_BUY = "to_buy"
+    TO_GATHER = "to_gather"
 
 # --- ABSTRACT BASE & CONCRETE ITEMS ---
 
@@ -24,8 +34,6 @@ class ProjectItem(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     created_at: datetime = Field(default_factory=datetime.now)
-    # The discriminator field must be defined in subclasses
-
 
 class TaskItem(ProjectItem):
     kind: Literal["task"] = "task"
@@ -33,28 +41,26 @@ class TaskItem(ProjectItem):
     tags: List[str] = Field(default_factory=list)
     duration: str = "unknown"
     notes: str = ""
-
+    completed_at: Optional[datetime] = None # Added for Analytics
 
 class ResourceItem(ProjectItem):
     kind: Literal["resource"] = "resource"
+    type: ResourceType = ResourceType.TO_BUY # Restored field
     is_acquired: bool = False
     store: str = "General"
     link: Optional[str] = None
 
-
 class ReferenceItem(ProjectItem):
     kind: Literal["reference"] = "reference"
-    content: str = ""  # URL or Note text
+    content: str = ""
 
 # --- DEFINING THE POLYMORPHIC TYPE ---
-# This tells Pydantic: "When you see this Union, look at the 'kind' field to decide which class to use."
 ProjectItemUnion = Annotated[
     Union[TaskItem, ResourceItem, ReferenceItem],
     Field(discriminator='kind')
 ]
 
 # --- CONTAINERS ---
-
 class Project(BaseModel):
     id: int
     name: str
@@ -62,9 +68,6 @@ class Project(BaseModel):
     status: ProjectStatus = ProjectStatus.ACTIVE
     goal_id: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
-
-    # THE UNIFIED STREAM
-    # We use the Annotated Union here inside the List
     items: List[ProjectItemUnion] = Field(default_factory=list)
 
 class Goal(BaseModel):
@@ -72,7 +75,6 @@ class Goal(BaseModel):
     name: str
     description: str = ""
     status: GoalStatus = GoalStatus.ACTIVE
-
 
 class DatasetContent(BaseModel):
     goals: List[Goal] = Field(default_factory=list)
