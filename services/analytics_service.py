@@ -16,42 +16,56 @@ class AnalyticsService:
 
     def smart_filter_tasks(self, user_query: str) -> dict:
         """
-        Filters active tasks based on a natural language query.
-        Returns a dict with keys: 'tasks', 'prompt', 'raw_response'
+        Filters active tasks based on a natural language query,
+        providing GOAL context to the AI.
         """
         logger.info(f"🚀 Starting Smart Filter for query: '{user_query}'")
 
-        # 1. Gather Candidates
-        candidates = []
         if not self.repo:
-            logger.error("Repository is None! Cannot fetch tasks.")
             return {"tasks": [], "prompt": "Error: Repo not loaded", "raw_response": ""}
 
-        for p in self.repo.data.projects:
-            if p.status != ProjectStatus.ACTIVE: continue
-            for item in p.items:
-                if isinstance(item, TaskItem) and not item.is_completed:
-                    candidates.append(item)
+        # --- 1. BUILD HIERARCHY & CANDIDATE MAP ---
+        # We need a map to retrieve objects later: {task_id: TaskItem}
+        candidate_map = {}
 
-        logger.info(f"Found {len(candidates)} active candidate tasks across all projects.")
+        # We build a string that looks like a tree for the AI
+        hierarchy_lines = []
 
-        if not candidates:
-            logger.warning("No candidates found. Returning empty result.")
+        # A. Process Goals and their Projects
+        for goal in self.repo.data.goals:
+            hierarchy_lines.append(f"GOAL: {goal.name} (Status: {goal.status})")
+            if goal.description:
+                hierarchy_lines.append(f"   Description: {goal.description}")
+
+            # Find projects for this goal
+            goal_projects = [p for p in self.repo.data.projects if p.goal_id == goal.id and p.status == "active"]
+
+            if not goal_projects:
+                hierarchy_lines.append("   (No active projects)")
+
+            for proj in goal_projects:
+                self._append_project_tasks(proj, hierarchy_lines, candidate_map, indent="   ")
+
+            hierarchy_lines.append("")  # Spacer
+
+        # B. Process Orphaned Projects (Maintenance/Misc)
+        orphaned_projects = [p for p in self.repo.data.projects if not p.goal_id and p.status == "active"]
+        if orphaned_projects:
+            hierarchy_lines.append("NO GOAL (Maintenance/Misc):")
+            for proj in orphaned_projects:
+                self._append_project_tasks(proj, hierarchy_lines, candidate_map, indent="   ")
+
+        hierarchy_str = "\n".join(hierarchy_lines)
+
+        # If no tasks found at all
+        if not candidate_map:
             return {"tasks": [], "prompt": "No candidates found", "raw_response": ""}
 
-        # 2. Build Prompt Payload
-        task_list_str = "\n".join([
-            f"- ID: {t.id} | Name: {t.name} | Tags: {t.tags} | Duration: {t.duration}"
-            for t in candidates
-        ])
-
-        # 3. Build Prompt
-        prompt = self.prompt_builder.build_smart_filter_prompt(user_query, task_list_str)
-        logger.debug("Prompt constructed successfully.")
+        # --- 2. BUILD PROMPT ---
+        prompt = self.prompt_builder.build_smart_filter_prompt(user_query, hierarchy_str)
 
         try:
-            # 4. Call AI
-            logger.info("Sending request to Anthropic API...")
+            # --- 3. CALL AI ---
             response = self.client.beta.messages.parse(
                 model="claude-haiku-4-5",
                 max_tokens=1024,
@@ -61,16 +75,13 @@ class AnalyticsService:
             )
 
             result: SmartFilterResult = response.parsed_output
-            logger.info(f"AI Response received. Matching IDs: {len(result.matching_task_ids)}")
-            logger.debug(f"AI Reasoning: {result.reasoning}")
 
-            # 5. Re-hydrate Objects
-            matching_tasks = [
-                t for t in candidates
-                if t.id in result.matching_task_ids
-            ]
-
-            logger.info(f"✅ Returning {len(matching_tasks)} hydrated task objects.")
+            # --- 4. RE-HYDRATE ---
+            # Use the map to get the actual objects back
+            matching_tasks = []
+            for tid in result.matching_task_ids:
+                if tid in candidate_map:
+                    matching_tasks.append(candidate_map[tid])
 
             return {
                 "tasks": matching_tasks,
@@ -79,8 +90,25 @@ class AnalyticsService:
             }
 
         except Exception as e:
-            logger.exception("❌ AI Processing Failed") # Logs full stack trace
+            logger.exception("AI Failed")
             return {"tasks": [], "prompt": prompt, "raw_response": str(e)}
+
+    def _append_project_tasks(self, project, lines, candidate_map, indent):
+        """Helper to format tasks and populate the map"""
+        # Filter for active TaskItems
+        tasks = [i for i in project.items if isinstance(i, TaskItem) and not i.is_completed]
+
+        if not tasks:
+            return
+
+        lines.append(f"{indent}PROJECT: {project.name}")
+        for t in tasks:
+            # Add to map for later retrieval
+            candidate_map[t.id] = t
+
+            # Format for AI
+            # We include ID so AI can return it
+            lines.append(f"{indent}  - [ID: {t.id}] {t.name} | Tags: {t.tags} | Duration: {t.duration}")
 
     def estimate_project_completion(self, project_id: int) -> str:
         """
