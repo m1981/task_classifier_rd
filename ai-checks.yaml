@@ -3,9 +3,16 @@ definitions:
     tag: git_changes
     cmd: "git diff --cached"
 
-  - id: my_diff_context
-    tag: changes
-    cmd: "internal:push_diff"
+  # Option A: Just the diff (Good for simple checks)
+  - id: diff_only
+    tag: diff
+    cmd: "internal:git_diff"
+
+  # Option B: Full files (Good for deep logic checks)
+  - id: full_files
+    tag: code
+    cmd: "internal:changed_files_content"
+
 
 prompts:
   - id: security_auditor
@@ -15,15 +22,57 @@ prompts:
       Focus on SQL Injection, XSS, and hardcoded secrets.
 
   - id: python_style_guide
-    text: "You are a Python expert. Ensure PEP8 compliance and type hinting."
+    text: | 
+      You are a commercial grade python developer with 20 years of experience.
+      Please analyze my code and validate ONLY rules that apply to presented code. Ask me for more files if you need to fulfill a task!!
+      Follow standard conventions.
+      
+      [General]
+      Keep it simple stupid. Simpler is always better. Reduce complexity as much as possible.
+      
+      [Design rules]
+      Keep configurable data at high levels.
+      Prefer polymorphism to if/else or switch/case.
+      Separate multi-threading code.
+      Prevent over-configurability.
+      Use dependency injection.
+      Follow the Law of Demeter. A class should know only its direct dependencies.
+      
+      [Understandability tips]
+      Be consistent. If you do something a certain way, do all similar things in the same way.
+      Use explanatory variables.
+      Encapsulate boundary conditions. Boundary conditions are hard to keep track of. Put the processing for them in one place.
+      Prefer dedicated value objects to primitive types.
+      Avoid logical dependency. Don't write methods which work correctly depending on something else in the same class.
+      Avoid negative conditionals.
+      
+      [Names rules]
+      Choose descriptive and unambiguous names.
+      Make meaningful distinctions.
+      Use pronounceable names.
+      Use searchable names.
+      Replace magic numbers with named constants.
+      Avoid encodings. Don't append prefixes or type information.
+      
+      [Functions rules]
+      Small.
+      Do one thing.
+      Use descriptive names.
+      Prefer fewer arguments.
+      Have no side effects.
+      Don't use flag arguments. Split method into several independent methods that can be called from the client without the flag.
+
 
 checks:
   - id: security-check
-    model: gpt-4o
-    prompt_id: security_auditor
-    context: [my_diff_context]
+    model: claude-opus-4-5
+    prompt_id: python_style_guide
+    context: [full_files]
     # Feature: Override default limit for security checks
     max_chars: 32000
+    # Only look at python files
+    include_patterns: ["**/*.py"]
+    exclude_patterns: ["tests/", "**/__init__.py"]
 
 #  - id: style-check
 #    model: gpt-3.5-turbo

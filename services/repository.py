@@ -157,6 +157,46 @@ class TriageService:
             self.repo.data.inbox_tasks.append(item_text)
             self.repo.mark_dirty()
 
+    def move_inbox_item_to_project(self, item_text: str, project_id: int, tags: List[str]) -> None:
+        """
+        Convenience method: Move inbox item directly to a project as a TaskItem.
+        Used for manual assignment when user overrides AI suggestion.
+        """
+        project = self.repo.find_project(project_id)
+        if not project:
+            raise ValueError(f"Project {project_id} not found")
+        
+        # Create TaskItem directly (simpler for manual assignment)
+        task_item = TaskItem(name=item_text, tags=tags)
+        project.items.append(task_item)
+        self.repo.register_item(project, task_item)
+        
+        # Remove from inbox
+        if item_text in self.repo.data.inbox_tasks:
+            self.repo.data.inbox_tasks.remove(item_text)
+            self.repo.mark_dirty()
+
+    def create_project_from_inbox(self, item_text: str, new_project_name: str) -> None:
+        """
+        Convenience method: Create a new project and move inbox item to it.
+        """
+        # Create Project
+        existing_ids = [p.id for p in self.repo.data.projects]
+        new_id = max(existing_ids, default=0) + 1
+        new_proj = Project(id=new_id, name=new_project_name)
+        self.repo.data.projects.append(new_proj)
+        self.repo.mark_dirty()
+        
+        # Create TaskItem and add to new project
+        task_item = TaskItem(name=item_text)
+        new_proj.items.append(task_item)
+        self.repo.register_item(new_proj, task_item)
+        
+        # Remove from inbox
+        if item_text in self.repo.data.inbox_tasks:
+            self.repo.data.inbox_tasks.remove(item_text)
+            self.repo.mark_dirty()
+
 
 class PlanningService:
     def __init__(self, repo: YamlRepository):
@@ -187,6 +227,49 @@ class PlanningService:
         if item:
             project.items.append(item)
             self.repo.register_item(project, item)
+
+    def get_projects_for_goal(self, goal_id: str) -> List[Project]:
+        """Get all projects linked to a specific goal"""
+        return [p for p in self.repo.data.projects if p.goal_id == goal_id]
+
+    def get_orphaned_projects(self) -> List[Project]:
+        """Get all projects not linked to any goal"""
+        return [p for p in self.repo.data.projects if p.goal_id is None]
+
+    def add_resource(self, project_id: int, name: str, r_type: ResourceType, store: str = "General") -> None:
+        """Add a ResourceItem to a project's unified stream"""
+        project = self.repo.find_project(project_id)
+        if not project:
+            raise ValueError(f"Project {project_id} not found")
+        
+        resource_item = ResourceItem(name=name, type=r_type, store=store)
+        project.items.append(resource_item)
+        self.repo.register_item(project, resource_item)
+
+    def add_reference_item(self, project_id: int, name: str, description: str) -> None:
+        """Add a ReferenceItem to a project's unified stream"""
+        project = self.repo.find_project(project_id)
+        if not project:
+            raise ValueError(f"Project {project_id} not found")
+        
+        reference_item = ReferenceItem(name=name, content=description)
+        project.items.append(reference_item)
+        self.repo.register_item(project, reference_item)
+
+    def link_project_to_goal(self, project_id: int, goal_id: Optional[str]) -> None:
+        """Link a project to a goal (or unlink if goal_id is None)"""
+        project = self.repo.find_project(project_id)
+        if not project:
+            raise ValueError(f"Project {project_id} not found")
+        
+        # Verify goal exists if provided
+        if goal_id is not None:
+            goal_exists = any(g.id == goal_id for g in self.repo.data.goals)
+            if not goal_exists:
+                raise ValueError(f"Goal {goal_id} not found")
+        
+        project.goal_id = goal_id
+        self.repo.mark_dirty()
 
 
 class ExecutionService:
@@ -230,3 +313,16 @@ class ExecutionService:
                     shopping[item.store].append((item, p.name))
 
         return dict(shopping)
+
+    def get_aggregated_shopping_list(self) -> Dict[str, List[Tuple[ResourceItem, str]]]:
+        """Alias for get_shopping_list() to match view expectations"""
+        return self.get_shopping_list()
+
+    def toggle_resource_status(self, resource_id: str, is_acquired: bool) -> None:
+        """Toggle the acquired status of a ResourceItem"""
+        item = self.repo.find_item(resource_id)
+        if isinstance(item, ResourceItem):
+            item.is_acquired = is_acquired
+            self.repo.mark_dirty()
+        else:
+            raise ValueError(f"Item {resource_id} is not a ResourceItem")

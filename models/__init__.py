@@ -5,11 +5,15 @@ from .entities import (
     DatasetContent,
     Project,
     TaskItem,
-    Goal,
+    ResourceItem,
     ReferenceItem,
+    ProjectItem,
+    ProjectItemUnion,
+    Goal,
     SystemConfig,
     ProjectStatus,
-
+    ResourceType,
+    GoalStatus,
 )
 from .ai_schemas import (
     ClassificationResult,
@@ -21,17 +25,20 @@ from .dtos import SaveDatasetRequest, SaveDatasetResponse, SingleTaskClassificat
 __all__ = [
     'DatasetContent', 
     'Project', 
-    'Task', 
-    'Goal',
-    'ProjectResource',
+    'TaskItem',
+    'ResourceItem',
     'ReferenceItem',
+    'ProjectItem',
+    'ProjectItemUnion',
+    'Goal',
     'SystemConfig',
     'ResourceType',
     'ProjectStatus',
+    'GoalStatus',
     'ClassificationRequest',
     'ClassificationResult', 
     'ClassificationResponse',
     'SaveDatasetRequest', 
     'SaveDatasetResponse',
-    SingleTaskClassificationRequest
+    'SingleTaskClassificationRequest',
 ]

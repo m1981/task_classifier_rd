@@ -28,8 +28,12 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
         st.balloons()
         return
 
-    # Progress Bar
-    total_tasks = len(inbox_items) + sum(len(p.tasks) for p in repo.data.projects)
+    # Progress Bar - Count TaskItems from unified stream
+    from models.entities import TaskItem
+    total_tasks = len(inbox_items) + sum(
+        len([item for item in p.items if isinstance(item, TaskItem)])
+        for p in repo.data.projects
+    )
     st.progress((total_tasks - len(inbox_items)) / total_tasks if total_tasks > 0 else 1.0)
 
     current_task_text = inbox_items[0]

@@ -87,6 +87,13 @@ class YamlDatasetLoader:
         clean_data = {k: v for k, v in data.items()
                       if k not in ['tasks', 'resources', 'reference_items', 'items']}
 
+        # Migrate legacy status values
+        if 'status' in clean_data:
+            status_value = clean_data['status']
+            # Map legacy 'ongoing' to 'active'
+            if status_value == 'ongoing':
+                clean_data['status'] = 'active'
+
         return Project(
             **clean_data,
             items=unified_items  # Pydantic will validate these against the Union
