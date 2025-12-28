@@ -1,6 +1,28 @@
 import streamlit as st
 import time
 import functools
+import logging
+import sys
+
+logger = logging.getLogger("task_classifier")
+
+# Configure only once to avoid duplicate logs on rerun
+if not logger.handlers:
+    logger.setLevel(logging.INFO)
+
+    # Console Handler
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(logging.INFO)
+
+    # Format: Time | Level | Component | Message
+    formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(name)s | %(message)s', datefmt='%H:%M:%S')
+    handler.setFormatter(formatter)
+
+    logger.addHandler(handler)
+
+def get_logger(component_name: str):
+    """Returns a logger adapter with the component name pre-filled"""
+    return logging.getLogger(f"task_classifier.{component_name}")
 
 # --- CSS Styling ---
 def inject_custom_css():
@@ -26,11 +48,10 @@ def inject_custom_css():
 
 # --- DEBUG LOGGING UTILITY ---
 def log_action(action: str, details: str):
-    print(f"\n[ACTION] {action}")
-    print(f"   └── {details}")
+    logger.info(f"ACTION: {action} - {details}")
 
 def log_state(label: str, data):
-    print(f"[STATE] {label}: {data}")
+    logger.debug(f"STATE: {label} - {data}")
 
 def debug_log(func):
     """Decorator to print function calls, args, and execution time to stdout."""

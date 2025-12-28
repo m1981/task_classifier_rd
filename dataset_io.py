@@ -57,7 +57,8 @@ class YamlDatasetLoader:
                     "name": t.get('name'),
                     "is_completed": t.get('is_completed', False),
                     "tags": t.get('tags', []),
-                    "notes": t.get('notes', '')
+                    "notes": t.get('notes', ''),
+                    "duration": t.get('duration', 'unknown2')
                 })
 
         # C. MIGRATE LEGACY: 'resources' list

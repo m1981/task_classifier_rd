@@ -1,10 +1,12 @@
 from typing import List, Optional
 from datetime import datetime, timedelta
-from models.entities import TaskItem, ProjectStatus, Project
+from models.entities import TaskItem, ProjectStatus
 from models.ai_schemas import SmartFilterResult
 from services.repository import YamlRepository
 from services.services import PromptBuilder
+from views.common import get_logger # Import logger
 
+logger = get_logger("AnalyticsService")
 
 class AnalyticsService:
     def __init__(self, repo: YamlRepository, client, prompt_builder: PromptBuilder):
@@ -12,15 +14,18 @@ class AnalyticsService:
         self.client = client
         self.prompt_builder = prompt_builder
 
-    def smart_filter_tasks(self, user_query: str) -> List[TaskItem]:
+    def smart_filter_tasks(self, user_query: str) -> dict:
         """
         Filters active tasks based on a natural language query.
+        Returns a dict with keys: 'tasks', 'prompt', 'raw_response'
         """
-        # 1. Gather Candidates (All active tasks from active projects)
+        logger.info(f"🚀 Starting Smart Filter for query: '{user_query}'")
+
+        # 1. Gather Candidates
         candidates = []
-        # Handle case where repo might be None during init
         if not self.repo:
-            return []
+            logger.error("Repository is None! Cannot fetch tasks.")
+            return {"tasks": [], "prompt": "Error: Repo not loaded", "raw_response": ""}
 
         for p in self.repo.data.projects:
             if p.status != ProjectStatus.ACTIVE: continue
@@ -28,11 +33,13 @@ class AnalyticsService:
                 if isinstance(item, TaskItem) and not item.is_completed:
                     candidates.append(item)
 
+        logger.info(f"Found {len(candidates)} active candidate tasks across all projects.")
+
         if not candidates:
-            return []
+            logger.warning("No candidates found. Returning empty result.")
+            return {"tasks": [], "prompt": "No candidates found", "raw_response": ""}
 
         # 2. Build Prompt Payload
-        # We create a lightweight string representation for the AI
         task_list_str = "\n".join([
             f"- ID: {t.id} | Name: {t.name} | Tags: {t.tags} | Duration: {t.duration}"
             for t in candidates
@@ -40,11 +47,13 @@ class AnalyticsService:
 
         # 3. Build Prompt
         prompt = self.prompt_builder.build_smart_filter_prompt(user_query, task_list_str)
+        logger.debug("Prompt constructed successfully.")
 
         try:
-            # 4. Call AI with Structured Output
+            # 4. Call AI
+            logger.info("Sending request to Anthropic API...")
             response = self.client.beta.messages.parse(
-                model="claude-haiku-4-5",  # Or your preferred model
+                model="claude-haiku-4-5",
                 max_tokens=1024,
                 betas=["structured-outputs-2025-11-13"],
                 messages=[{"role": "user", "content": prompt}],
@@ -52,19 +61,26 @@ class AnalyticsService:
             )
 
             result: SmartFilterResult = response.parsed_output
+            logger.info(f"AI Response received. Matching IDs: {len(result.matching_task_ids)}")
+            logger.debug(f"AI Reasoning: {result.reasoning}")
 
             # 5. Re-hydrate Objects
-            # Map the returned IDs back to the actual TaskItem objects
             matching_tasks = [
                 t for t in candidates
                 if t.id in result.matching_task_ids
             ]
 
-            return matching_tasks
+            logger.info(f"✅ Returning {len(matching_tasks)} hydrated task objects.")
+
+            return {
+                "tasks": matching_tasks,
+                "prompt": prompt,
+                "raw_response": result.model_dump_json(indent=2)
+            }
 
         except Exception as e:
-            print(f"AI Error: {e}")
-            return []  # Fail gracefully
+            logger.exception("❌ AI Processing Failed") # Logs full stack trace
+            return {"tasks": [], "prompt": prompt, "raw_response": str(e)}
 
     def estimate_project_completion(self, project_id: int) -> str:
         """

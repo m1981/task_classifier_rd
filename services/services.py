@@ -183,33 +183,26 @@ class TaskClassifier:
             # The SDK returns a parsed object directly
             parsed_result = response.parsed_output
 
-            # We need to manually inject the original task text back into the result
-            # because the LLM output doesn't necessarily repeat it.
-            # (Assuming ClassificationResult has a 'task' field, we set it here)
-            # Note: Pydantic models are mutable by default unless config=frozen
-            parsed_result.task = request.task_text
+            # REMOVED: parsed_result.task = request.task_text  <-- DELETE THIS LINE
+            # The 'task' field no longer exists on the model.
+            # The original text is preserved in the DraftItem wrapper later.
 
             return ClassificationResponse(
                 results=[parsed_result],
                 prompt_used=prompt,
-                raw_response=str(parsed_result.model_dump())  # Debug info
+                raw_response=str(parsed_result.model_dump())
             )
 
         except Exception as e:
             # Fallback for API errors or Validation errors
-            # We return a "safe" failure response
             error_result = ClassificationResult(
-                # --- NEW REQUIRED FIELDS ---
-                classification_type=ClassificationType.TASK, # Default to Task
-                refined_text=request.task_text,              # Default to original text
-                # ---------------------------
+                classification_type=ClassificationType.TASK,
+                refined_text=request.task_text,
                 suggested_project="Unmatched",
                 confidence=0.0,
                 reasoning=f"AI Error: {str(e)}",
                 extracted_tags=[],
-                # Note: 'task' field is not in the model definition anymore based on previous updates,
-                # but if you kept it for internal use, include it.
-                # Based on your error log, it seems you might still have it or passed it as extra.
+                # REMOVED: task=request.task_text  <-- DELETE THIS LINE
             )
             return ClassificationResponse(
                 results=[error_result],
