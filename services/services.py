@@ -13,6 +13,9 @@ from models import (
     SystemConfig,
     SingleTaskClassificationRequest
 )
+
+from models.ai_schemas import ClassificationType
+
 # Import Infrastructure
 from dataset_io import YamlDatasetLoader, YamlDatasetSaver
 
@@ -196,11 +199,17 @@ class TaskClassifier:
             # Fallback for API errors or Validation errors
             # We return a "safe" failure response
             error_result = ClassificationResult(
-                task=request.task_text,
+                # --- NEW REQUIRED FIELDS ---
+                classification_type=ClassificationType.TASK, # Default to Task
+                refined_text=request.task_text,              # Default to original text
+                # ---------------------------
                 suggested_project="Unmatched",
                 confidence=0.0,
                 reasoning=f"AI Error: {str(e)}",
-                extracted_tags=[]
+                extracted_tags=[],
+                # Note: 'task' field is not in the model definition anymore based on previous updates,
+                # but if you kept it for internal use, include it.
+                # Based on your error log, it seems you might still have it or passed it as extra.
             )
             return ClassificationResponse(
                 results=[error_result],
