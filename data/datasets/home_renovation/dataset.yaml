@@ -1,87 +1,150 @@
-goals: []
-inbox_tasks:
-- Caulk around bathtub
-- Fix leaky bathroom sink
-- Install ceiling fan in bedroom
-- Install new kitchen cabinet handles
-- Mount TV on living room wall
-- Paint accent wall in bedroom
-- Repair loose deck railing
-- Replace broken light switch
+goals:
+- id: dd036cd1-ac54-4808-a361-a9f341e014d2
+  name: Find business partner
+  description: I'm going to build a SaaS product and need someone with marketing and business skills to cooperate
+  status: active
 projects:
-  bathroom_upgrade:
-    id: 2
-    name: Bathroom Upgrade
-    status: ongoing
+- id: 2
+  name: Bathroom Upgrade
+  description: ''
+  status: active
+  goal_id: null
+  tags: []
+  items:
+  - id: fcd561e5-3441-437a-a02e-e891de7b153c
+    name: Caulk around bathtub
+    created_at: '2025-12-28T22:00:02.010814'
+    kind: task
+    is_completed: false
     tags:
-    - bathroom
     - physical
-    - renovation
-    tasks:
-    - duration: 45min
-      id: 858417ff-b951-48ed-ac45-ba920cdceb16
-      is_completed: false
-      name: Install bathroom faucet
-      notes: ''
-      tags:
-      - need-tools
-      - physical
-      - plumbing
-  bedroom_makeover:
-    id: 3
-    name: Bedroom Makeover
-    status: ongoing
+    - need-material
+    - need-tools
+    duration: 1h
+    notes: ''
+    completed_at: null
+  - id: cbd6f753-eddd-42e6-8a98-646ea92e6d8d
+    name: Fix leaky bathroom sink
+    created_at: '2025-12-28T22:00:05.415990'
+    kind: task
+    is_completed: false
     tags:
-    - bedroom
     - physical
-    - renovation
-    tasks:
-    - duration: 2h
-      id: 8237a013-1925-4419-b927-a76257dab965
-      is_completed: false
-      name: Create wall shelf
-      notes: ''
-      tags:
-      - carpentry
-      - need-material
-      - need-tools
-      - physical
-    - duration: 4h
-      id: fb3cf6f8-3bfc-49c0-8706-c567936df7ee
-      is_completed: false
-      name: Paint bedroom walls
-      notes: ''
-      tags:
-      - need-material
-      - need-tools
-      - painting
-      - physical
-  kitchen_renovation:
-    goal_id: null
-    id: 1
-    name: Kitchen Renovation
-    status: ongoing
+    - need-tools
+    duration: 1-2h
+    notes: ''
+    completed_at: null
+- id: 3
+  name: Bedroom Makeover
+  description: ''
+  status: active
+  goal_id: null
+  tags: []
+  items:
+  - id: 8db40525-8e25-454e-8bf4-6ed173b5bd5a
+    name: Install ceiling fan in bedroom
+    created_at: '2025-12-28T22:00:08.658351'
+    kind: task
+    is_completed: false
     tags:
-    - kitchen
     - physical
-    - renovation
-    tasks:
-    - duration: 1h
-      id: 14545545-5a62-4f51-a317-cecafcf83f48
-      is_completed: false
-      name: Mount electrical socket
-      notes: ''
-      tags:
-      - electrical
-      - need-tools
-      - physical
-    - duration: 6h
-      id: 3a058a3b-3c24-4ac0-ab4a-0613febb7b66
-      is_completed: false
-      name: Tile kitchen backsplash
-      notes: ''
-      tags:
-      - need-material
-      - need-tools
-      - physical
-      - tiling
+    - need-tools
+    - need-material
+    duration: 2h
+    notes: ''
+    completed_at: null
+  - id: 17be8bae-67f3-4ede-b2dd-cc9f7d28e592
+    name: Paint accent wall in bedroom
+    created_at: '2025-12-28T23:15:56.306473'
+    kind: task
+    is_completed: false
+    tags:
+    - physical
+    - need-material
+    - need-tools
+    duration: unknown
+    notes: ''
+    completed_at: null
+- id: 1
+  name: Kitchen Renovation
+  description: ''
+  status: active
+  goal_id: null
+  tags: []
+  items:
+  - id: c5ae02b7-c0b8-4601-8b87-fdeacb4ab835
+    name: Install new kitchen cabinet handles
+    created_at: '2025-12-28T23:15:44.034001'
+    kind: task
+    is_completed: false
+    tags:
+    - physical
+    - need-tools
+    duration: 2h
+    notes: ''
+    completed_at: null
+- id: 4
+  name: Home Exterior Repairs
+  description: ''
+  status: active
+  goal_id: null
+  tags: []
+  items:
+  - id: bd4c2379-af1c-462e-ac1c-32f9a6a82a7f
+    name: Repair loose deck railing
+    created_at: '2025-12-28T23:14:45.285380'
+    kind: task
+    is_completed: false
+    tags: []
+    duration: unknown
+    notes: ''
+    completed_at: null
+- id: 5
+  name: Electrical Repairs & Maintenance
+  description: ''
+  status: active
+  goal_id: null
+  tags: []
+  items:
+  - id: 2a3987a3-53c3-4f30-a159-9b53dfb0deee
+    name: Replace broken light switch
+    created_at: '2025-12-28T23:14:55.149654'
+    kind: task
+    is_completed: false
+    tags: []
+    duration: unknown
+    notes: ''
+    completed_at: null
+- id: 6
+  name: Ads and invitation on social media
+  description: ''
+  status: active
+  goal_id: dd036cd1-ac54-4808-a361-a9f341e014d2
+  tags: []
+  items:
+  - id: 3382b0fe-4d8a-45da-b583-46fd7a5e4cc6
+    name: 'Write a post on Facebook with invitation to cooperate '
+    created_at: '2025-12-28T23:15:37.653550'
+    kind: task
+    is_completed: false
+    tags: []
+    duration: unknown
+    notes: ''
+    completed_at: null
+- id: 7
+  name: Living Room Renovation
+  description: ''
+  status: active
+  goal_id: null
+  tags: []
+  items:
+  - id: 52fe1f4b-3810-43ab-b3c3-395d49fda05d
+    name: Mount TV on living room wall
+    created_at: '2025-12-28T23:15:49.650974'
+    kind: task
+    is_completed: false
+    tags: []
+    duration: unknown
+    notes: ''
+    completed_at: null
+inbox_tasks: []

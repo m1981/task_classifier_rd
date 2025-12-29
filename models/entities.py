@@ -67,6 +67,7 @@ class Project(BaseModel):
     description: str = ""
     status: ProjectStatus = ProjectStatus.ACTIVE
     goal_id: Optional[str] = None
+    sort_order: float = Field(default=0.0)
     tags: List[str] = Field(default_factory=list)
     items: List[ProjectItemUnion] = Field(default_factory=list)
 

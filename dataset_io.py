@@ -97,7 +97,8 @@ class YamlDatasetLoader:
 
         return Project(
             **clean_data,
-            items=unified_items  # Pydantic will validate these against the Union
+            sort_order=data.get('sort_order', float(data.get('id', 0))),
+            items=unified_items
         )
 
 
@@ -105,7 +106,7 @@ class YamlDatasetSaver:
     def save(self, path: Path, content: DatasetContent) -> None:
         path.mkdir(parents=True, exist_ok=True)
         file_path = path / "dataset.yaml"
-
+        content.projects.sort(key=lambda p: (p.goal_id or "", p.sort_order))
         # Dump using Pydantic's built-in JSON-compatible dict dumper
         # mode='json' ensures Enums and Datetimes are serialized correctly
         data_dict = content.model_dump(mode='json')

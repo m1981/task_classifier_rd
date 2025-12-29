@@ -271,6 +271,39 @@ class PlanningService:
         project.goal_id = goal_id
         self.repo.mark_dirty()
 
+    def move_project(self, project_id: int, direction: str):
+        """
+        Moves a project 'up' or 'down' within its Goal group.
+        """
+        target_proj = self.repo.find_project(project_id)
+        if not target_proj: return
+
+        # 1. Get all projects in the same context (same Goal or same Orphaned state)
+        siblings = [
+            p for p in self.repo.data.projects
+            if p.goal_id == target_proj.goal_id
+        ]
+
+        # 2. Sort them by current order
+        siblings.sort(key=lambda p: p.sort_order)
+
+        try:
+            idx = siblings.index(target_proj)
+        except ValueError:
+            return
+
+        # 3. Swap Logic
+        if direction == "up" and idx > 0:
+            # Swap sort_order with the one above
+            neighbor = siblings[idx - 1]
+            target_proj.sort_order, neighbor.sort_order = neighbor.sort_order, target_proj.sort_order
+            self.repo.mark_dirty()
+
+        elif direction == "down" and idx < len(siblings) - 1:
+            # Swap sort_order with the one below
+            neighbor = siblings[idx + 1]
+            target_proj.sort_order, neighbor.sort_order = neighbor.sort_order, target_proj.sort_order
+            self.repo.mark_dirty()
 
 class ExecutionService:
     def __init__(self, repo: YamlRepository):
