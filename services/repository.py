@@ -271,6 +271,20 @@ class PlanningService:
         project.goal_id = goal_id
         self.repo.mark_dirty()
 
+    def complete_item(self, item_id: str) -> None:
+        """Toggle completion status of an item"""
+        item = self.repo.find_item(item_id)
+        if not item:
+            print(f"Error: Item {item_id} not found during completion toggle.")
+            return
+
+        if isinstance(item, TaskItem):
+            item.is_completed = not item.is_completed
+            self.repo.mark_dirty()
+        elif isinstance(item, ResourceItem):
+            item.is_acquired = not item.is_acquired
+            self.repo.mark_dirty()
+
     def move_project(self, project_id: int, direction: str):
         """
         Moves a project 'up' or 'down' within its Goal group.

@@ -1,49 +1,114 @@
 import streamlit as st
 from services.repository import PlanningService
 from models.entities import ResourceType, TaskItem, ResourceItem, ReferenceItem
+from views.components import render_item
+from views.common import get_logger
+
+logger = get_logger("PlanningView")
 
 
 def render_planning_view(planning_service: PlanningService):
+    logger.info("--- Rendering Planning View ---")
     st.title("🎯 Planning & Review")
 
-    # 1. Create Goal
-    with st.expander("➕ Create New Goal"):
+    # --- 1. GLOBAL ACTIONS (Create Goal) ---
+    with st.expander("➕ Create New Goal", expanded=False):
         with st.form("new_goal"):
             g_name = st.text_input("Goal Name")
             g_desc = st.text_area("Description")
             if st.form_submit_button("Create Goal"):
+                logger.info(f"Creating new goal: {g_name}")
                 planning_service.create_goal(g_name, g_desc)
                 st.success("Goal created!")
                 st.rerun()
 
-    # 2. Display Goals
+    # --- 2. DATA FETCHING ---
     goals = planning_service.get_all_goals()
-    orphaned_projects = planning_service.get_orphaned_projects()
+    all_projects = planning_service.repo.data.projects
+    logger.info(f"Fetched {len(goals)} goals and {len(all_projects)} total projects.")
 
-    def render_project_details(project):
-        # --- PROJECT HEADER CONTAINER ---
-        with st.container(border=True):
-            # Row 1: Title and Move Buttons
-            col_title, col_up, col_down = st.columns([8, 1, 1])
+    # Helper to get projects for a context (Goal or None)
+    def get_sorted_projects(goal_id):
+        projs = [p for p in all_projects if p.goal_id == goal_id]
+        # Sort by sort_order if it exists, otherwise by ID
+        projs.sort(key=lambda p: getattr(p, 'sort_order', p.id))
+        return projs
 
-            col_title.subheader(project.name)
+    # --- 3. RENDER GOALS ---
+    for goal in goals:
+        projects = get_sorted_projects(goal.id)
+        logger.debug(f"Goal '{goal.name}' has {len(projects)} projects.")
 
-            if col_up.button("⬆️", key=f"up_{project.id}", help="Move Project Up"):
-                planning_service.move_project(project.id, "up")
+        # Level 1: The Goal Container
+        with st.expander(f"🏆 {goal.name}", expanded=True):
+            if goal.description:
+                st.markdown(f"<span style='color:grey; font-style:italic'>{goal.description}</span>",
+                            unsafe_allow_html=True)
+                st.markdown("---")
+
+            if not projects:
+                st.info("No projects linked to this goal.")
+
+            for proj in projects:
+                _render_project_strip(proj, planning_service)
+
+    # --- 4. RENDER ORPHANED PROJECTS ---
+    orphaned = get_sorted_projects(None)
+    if orphaned:
+        logger.debug(f"Found {len(orphaned)} orphaned projects.")
+        st.markdown("### 📂 Uncategorized Projects")
+        for proj in orphaned:
+            _render_project_strip(proj, planning_service)
+
+
+def _render_project_strip(project, service: PlanningService):
+    """
+    Renders a project as a clean 'Strip' with a header and collapsible body.
+    """
+    logger.debug(f"Rendering Project Strip: {project.name} (ID: {project.id})")
+
+    # Level 2: The Project Strip Container
+    # with st.container(border=True):
+
+    # --- A. THE HEADER ROW (Always Visible) ---
+    # Layout: [ Title (70%) ] [ Up | Down | Settings (30%) ]
+    col_title, col_toolbar = st.columns([0.7, 0.3], vertical_alignment="center")
+
+    with col_title:
+        st.markdown(f"### {project.name}")
+        # Optional: Show progress bar or stats here in the future
+
+    with col_toolbar:
+        # Nested columns for tight button spacing
+        btn_c1, btn_c2, btn_c3 = st.columns([1, 1, 1])
+
+        # 1. Move Up
+        if btn_c1.button("⬆️", key=f"up_{project.id}", help="Move Project Up"):
+            if hasattr(service, 'move_project'):
+                logger.info(f"Moving project {project.id} UP")
+                service.move_project(project.id, "up")
                 st.rerun()
 
-            if col_down.button("⬇️", key=f"down_{project.id}", help="Move Project Down"):
-                planning_service.move_project(project.id, "down")
+        # 2. Move Down
+        if btn_c2.button("⬇️", key=f"down_{project.id}", help="Move Project Down"):
+            if hasattr(service, 'move_project'):
+                logger.info(f"Moving project {project.id} DOWN")
+                service.move_project(project.id, "down")
                 st.rerun()
 
-            # Row 2: Goal Linking
-            goals_list = planning_service.get_all_goals()
+        # 3. Settings (Popover)
+        with btn_c3.popover("⚙️", help="Project Settings"):
+            st.markdown("#### Project Settings")
+
+            # Link to Goal Logic
+            goals_list = service.get_all_goals()
             goal_options = ["None"] + [g.name for g in goals_list]
+
+            # Find current goal name
             current_goal_name = "None"
             if project.goal_id:
                 current_goal = next((g for g in goals_list if g.id == project.goal_id), None)
-                if current_goal:
-                    current_goal_name = current_goal.name
+                if current_goal: current_goal_name = current_goal.name
 
             selected_goal = st.selectbox(
                 "Link to Goal",
@@ -53,86 +118,87 @@ def render_planning_view(planning_service: PlanningService):
             )
 
             if selected_goal != current_goal_name:
-                if selected_goal == "None":
-                    planning_service.link_project_to_goal(project.id, None)
-                else:
-                    selected_goal_obj = next((g for g in goals_list if g.name == selected_goal), None)
-                    if selected_goal_obj:
-                        planning_service.link_project_to_goal(project.id, selected_goal_obj.id)
+                new_goal_id = None
+                if selected_goal != "None":
+                    g_obj = next((g for g in goals_list if g.name == selected_goal), None)
+                    if g_obj: new_goal_id = g_obj.id
+
+                logger.info(f"Linking project {project.id} to goal {new_goal_id}")
+                service.link_project_to_goal(project.id, new_goal_id)
                 st.rerun()
 
-        # --- ADD ITEM FORM ---
-        with st.expander("➕ Add Item", expanded=False):
-            item_kind = st.radio("Item Type", ["Task", "Resource", "Reference"], key=f"kind_{project.id}",
-                                 horizontal=True)
+    # --- B. THE COLLAPSIBLE BODY (Unified Stream) ---
+    # Level 3: The Content
+    item_count = len(project.items)
+    label = f"Show {item_count} Items" if item_count > 0 else "Empty Project (Add Items)"
 
-            if item_kind == "Task":
-                with st.form(f"add_task_{project.id}"):
-                    task_name = st.text_input("Task Name", key=f"task_name_{project.id}")
-                    task_tags = st.text_input("Tags (comma-separated)", key=f"task_tags_{project.id}")
-                    if st.form_submit_button("Add Task"):
-                        tags_list = [t.strip() for t in task_tags.split(",") if t.strip()] if task_tags else []
-                        planning_service.add_manual_item(project.id, "task", task_name, tags=tags_list)
-                        st.rerun()
+    with st.expander(label, expanded=False):
 
-            elif item_kind == "Resource":
-                with st.form(f"add_resource_{project.id}"):
-                    res_name = st.text_input("Resource Name", key=f"res_name_{project.id}")
-                    res_type = st.selectbox("Type", [ResourceType.TO_BUY.value, ResourceType.TO_GATHER.value],
-                                            key=f"res_type_{project.id}")
-                    res_store = st.text_input("Store/Location", key=f"res_store_{project.id}", value="General")
-                    if st.form_submit_button("Add Resource"):
-                        r_enum = ResourceType(res_type)
-                        planning_service.add_resource(project.id, res_name, r_enum, res_store)
-                        st.rerun()
-
-            elif item_kind == "Reference":
-                with st.form(f"add_reference_{project.id}"):
-                    ref_name = st.text_input("Reference Name", key=f"ref_name_{project.id}")
-                    ref_content = st.text_area("Content/Notes", key=f"ref_content_{project.id}")
-                    if st.form_submit_button("Add Reference"):
-                        planning_service.add_reference_item(project.id, ref_name, ref_content)
-                        st.rerun()
-
-        # --- UNIFIED STREAM DISPLAY ---
-        if project.items:
-            # Sort by creation time
-            for item in sorted(project.items, key=lambda x: x.created_at):
-                if isinstance(item, TaskItem):
-                    status = "✅" if item.is_completed else "⚡"
-                    tags_str = f" [{', '.join(item.tags)}]" if item.tags else ""
-                    st.markdown(f"{status} **{item.name}**{tags_str}")
-                    if item.duration != "unknown":
-                        st.caption(f"⏱️ {item.duration}")
-                elif isinstance(item, ResourceItem):
-                    icon = "🛒" if item.type == ResourceType.TO_BUY else "🧤"
-                    acquired = "✓" if item.is_acquired else ""
-                    st.markdown(f"{icon} {acquired} **{item.name}** ({item.store})")
-                elif isinstance(item, ReferenceItem):
-                    st.markdown(f"📚 **{item.name}**")
-                    if item.content:
-                        st.caption(item.content)
-        else:
+        # Render Items
+        if not project.items:
             st.caption("No items yet.")
+        else:
+            logger.debug(f"Rendering {item_count} items for project {project.name}")
+            # Sort items by creation date
+            sorted_items = sorted(project.items, key=lambda x: x.created_at)
 
-    # --- RENDER LOOP ---
-    for goal in goals:
-        with st.expander(f"🏆 {goal.name}", expanded=True):
-            st.caption(goal.description)
-            projects = planning_service.get_projects_for_goal(goal.id)
+            for item in sorted_items:
+                # Pass the completion callback!
+                # We assume PlanningService has complete_item (added in previous step)
+                # If not, we can use a lambda to call repo directly or ExecutionService logic
+                if hasattr(service, 'complete_item'):
+                    render_item(item, on_complete=service.complete_item)
+                else:
+                    # Fallback if method missing (should be added to service)
+                    render_item(item)
 
-            # Sort projects by sort_order
-            projects.sort(key=lambda p: p.sort_order)
+        st.markdown("---")
 
-            if not projects:
-                st.info("No projects linked to this goal.")
-            for proj in projects:
-                render_project_details(proj)
+        # --- C. QUICK ADD FOOTER ---
+        # Level 4: The Quick Add
+        # Using a Popover for the form keeps the list clean
+        with st.popover("➕ Add Item", use_container_width=True):
+            st.markdown("#### New Item")
 
-    if orphaned_projects:
-        with st.expander("📂 Projects without Goals", expanded=False):
-            # Sort orphaned projects by sort_order
-            orphaned_projects.sort(key=lambda p: p.sort_order)
+            # 1. Select Type
+            type_choice = st.radio(
+                "Type",
+                ["Task", "Resource", "Reference"],
+                horizontal=True,
+                key=f"type_{project.id}",
+                label_visibility="collapsed"
+            )
 
-            for proj in orphaned_projects:
-                render_project_details(proj)
+            # 2. Input Name
+            name_input = st.text_input("Item Name", key=f"name_{project.id}", placeholder="e.g., Buy paint")
+
+            # 3. Dynamic Fields
+            extra_data = {}
+            if type_choice == "Task":
+                tags = st.text_input("Tags", key=f"tags_{project.id}", placeholder="physical, urgent")
+                extra_data['tags'] = [t.strip() for t in tags.split(",")] if tags else []
+
+            elif type_choice == "Resource":
+                col_r1, col_r2 = st.columns(2)
+                res_type = col_r1.selectbox("Category", [ResourceType.TO_BUY.value, ResourceType.TO_GATHER.value],
+                                            key=f"rt_{project.id}")
+                res_store = col_r2.text_input("Store", value="General", key=f"rs_{project.id}")
+                extra_data['store'] = res_store
+                # Note: We need to pass the Enum to the service, handled below
+
+            elif type_choice == "Reference":
+                content = st.text_area("Content / URL", key=f"ref_{project.id}")
+                extra_data['content'] = content
+
+            # 4. Submit
+            if st.button("Save Item", key=f"save_{project.id}", type="primary"):
+                if name_input:
+                    logger.info(f"Manually adding item: {name_input} ({type_choice}) to project {project.id}")
+
+                    service.add_manual_item(
+                        project.id,
+                        kind=type_choice.lower(),
+                        name=name_input,
+                        **extra_data
+                    )
+                    st.rerun()
