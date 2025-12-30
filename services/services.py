@@ -84,21 +84,6 @@ class PromptBuilder:
             "basic": """Act as my personal advisor and assistant.""",
         }
 
-    def build_single_task_prompt(self, request: SingleTaskClassificationRequest) -> str:
-        project_list = ", ".join([f'"{p}"' for p in request.available_projects])
-        tags_str = ", ".join(self.config.DEFAULT_TAGS)
-
-        return f"""
-        You are a task organization assistant.
-        Task to classify: "{request.task_text}"
-        Available Projects: [{project_list}]
-        Allowed Tags: [{tags_str}]
-
-        Analyze the task. 
-        1. If it fits an existing project, set 'suggested_project' to that name.
-        2. If it does NOT fit, set 'suggested_project' to "Unmatched" and provide a 'suggested_new_project_name'.
-        """
-
     def build_triage_prompt(self, task_text: str, context_hierarchy: str) -> str:
         tags_str = ", ".join(self.config.DEFAULT_TAGS)
 

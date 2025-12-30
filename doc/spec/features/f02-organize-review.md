@@ -14,4 +14,4 @@ Goal -> Project -> [Unified Stream of Items (Tasks, Resources, References)]
     *   **References:** Links/Notes (read-only).
     *   **Tasks:** Actionable steps (with duration).
 *   **US-2.4 Unified Review:** As a user, I want to see these items interleaved chronologically.
-*   **US-2.5 Project Ordering:** As a user, I want to move projects Up/Down within a Goal to prioritize them.
+*   **US-2.5 Project Ordering:** As a user, I want to manually reorder projects (Up/Down) within a Goal to prioritize them.

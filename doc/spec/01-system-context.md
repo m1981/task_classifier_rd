@@ -23,7 +23,7 @@ We follow a **Unidirectional Data Flow** tailored for Streamlit's rerun cycle.
     *   `st.session_state.is_dirty`: Boolean flag indicating unsaved changes.
     *   `st.session_state.current_draft`: The active AI suggestion waiting for user confirmation.
     *   `st.session_state.smart_results`: Cached results from the AI Coach.
-
+    *   `st.session_state.smart_debug`: Raw prompt/response logs for the AI Coach.
 ## Data Persistence
 *   **Format:** YAML.
 *   **Strategy:** Explicit Save. The user must click "Save" to flush the `is_dirty` state to disk.

@@ -10,7 +10,9 @@ from models.entities import (
 )
 from models.ai_schemas import ClassificationResult, ClassificationType
 from services.services import DatasetManager
+import logging
 
+logger = logging.getLogger("Repository")
 
 # --- THE PROPOSAL OBJECT (Buffer) ---
 @dataclass
@@ -309,9 +311,6 @@ class PlanningService:
     def complete_item(self, item_id: str) -> None:
         """Toggle completion status of an item"""
         item = self.repo.find_item(item_id)
-        if not item:
-            print(f"Error: Item {item_id} not found during completion toggle.")
-            return
 
         if isinstance(item, TaskItem):
             item.is_completed = not item.is_completed
@@ -375,13 +374,29 @@ class ExecutionService:
 
     def complete_item(self, item_id: str) -> None:
         item = self.repo.find_item(item_id)
+
+        # --- DEBUG LOGGING ---
+        if not item:
+            print(f"[DEBUG] complete_item: Item {item_id} NOT FOUND in index.")
+            return
+
+        print(f"[DEBUG] complete_item: Found item '{item.name}' (Type: {type(item).__name__})")
+        print(
+            f"[DEBUG] State BEFORE: is_completed={getattr(item, 'is_completed', 'N/A')}, is_acquired={getattr(item, 'is_acquired', 'N/A')}")
+
         # Polymorphic completion
         if isinstance(item, TaskItem):
-            item.is_completed = True
+            item.is_completed = not item.is_completed
             self.repo.mark_dirty()
+            print(f"[DEBUG] State AFTER (Task): is_completed={item.is_completed}")
+
         elif isinstance(item, ResourceItem):
-            item.is_acquired = True
+            item.is_acquired = not item.is_acquired
             self.repo.mark_dirty()
+            print(f"[DEBUG] State AFTER (Resource): is_acquired={item.is_acquired}")
+
+        else:
+            print(f"[DEBUG] Item type {type(item)} matched neither TaskItem nor ResourceItem")
 
     def get_shopping_list(self) -> Dict[str, List[Tuple[ResourceItem, str]]]:
         from collections import defaultdict

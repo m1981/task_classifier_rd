@@ -3,8 +3,7 @@ import yaml
 from typing import List, Dict, Any
 import logging
 from models.entities import (
-    DatasetContent, Project, Goal,
-    TaskItem, ResourceItem, ReferenceItem
+    DatasetContent, Project, Goal
 )
 
 # Setup Logger
@@ -39,17 +38,16 @@ class YamlDatasetLoader:
 
         # 2. Parse Projects
         projects = []
-        raw_projects = raw_data.get('projects', {})
+        raw_projects = raw_data.get('projects', [])
 
-        # Handle both Dict (legacy) and List formats
-        if isinstance(raw_projects, dict):
-            logger.debug("Projects format: Dict (Legacy)")
-            project_iter = raw_projects.values()
-        else:
-            logger.debug("Projects format: List")
-            project_iter = raw_projects
+        # Strict List format
+        if not isinstance(raw_projects, list):
+            logger.warning(f"Projects data is not a list (got {type(raw_projects)}). Resetting to empty list.")
+            raw_projects = []
 
-        for i, p_data in enumerate(project_iter):
+        logger.debug("Projects format: List")
+
+        for i, p_data in enumerate(raw_projects):
             try:
                 projects.append(self._parse_project(p_data))
             except Exception as e:
@@ -67,71 +65,24 @@ class YamlDatasetLoader:
 
     def _parse_project(self, data: Dict[str, Any]) -> Project:
         """
-        Parses a project and migrates legacy 'tasks/resources' lists
-        into the unified 'items' stream.
+        Parses a project using the Unified Stream architecture.
         """
-        # logger.debug(f"Parsing project: {data.get('name')}")
+        # 1. Extract Unified Items
+        # Pydantic will handle the polymorphism via the 'kind' discriminator
+        unified_items = data.get('items', [])
 
-        unified_items = []
-
-        # A. Load existing unified items if they exist
-        if 'items' in data:
-            unified_items.extend(data['items'])
-
-        # B. MIGRATE LEGACY: 'tasks' list
-        if 'tasks' in data:
-            logger.debug(f"Migrating {len(data['tasks'])} legacy tasks for {data.get('name')}")
-            for t in data['tasks']:
-                unified_items.append({
-                    "kind": "task",
-                    "id": str(t.get('id')),
-                    "name": t.get('name'),
-                    "is_completed": t.get('is_completed', False),
-                    "tags": t.get('tags', []),
-                    "notes": t.get('notes', '')
-                })
-
-        # C. MIGRATE LEGACY: 'resources' list
-        if 'resources' in data:
-            logger.debug(f"Migrating {len(data['resources'])} legacy resources for {data.get('name')}")
-            for r in data['resources']:
-                unified_items.append({
-                    "kind": "resource",
-                    "id": str(r.get('id')),
-                    "name": r.get('name'),
-                    "is_acquired": r.get('is_acquired', False),
-                    "store": r.get('store', 'General'),
-                    "link": r.get('link')
-                })
-
-        # D. MIGRATE LEGACY: 'reference_items' list
-        if 'reference_items' in data:
-            logger.debug(f"Migrating {len(data['reference_items'])} legacy refs for {data.get('name')}")
-            for ref in data['reference_items']:
-                unified_items.append({
-                    "kind": "reference",
-                    "id": str(ref.get('id')),
-                    "name": ref.get('name'),
-                    "content": ref.get('description', '')
-                })
-
-        # --- FIX: Handle sort_order collision ---
+        # 2. Handle sort_order collision
         # We extract sort_order manually so we don't pass it twice
         sort_order = data.get('sort_order', float(data.get('id', 0)))
 
-        # Construct clean_data excluding keys we handle manually or want to drop
-        exclude_keys = ['tasks', 'resources', 'reference_items', 'items', 'sort_order']
+        # 3. Prepare data for Pydantic
+        # Exclude keys we handle manually or legacy keys we want to ignore
+        exclude_keys = {'items', 'sort_order', 'tasks', 'resources', 'reference_items'}
         clean_data = {k: v for k, v in data.items() if k not in exclude_keys}
-
-        # Migrate legacy status values
-        if 'status' in clean_data:
-            status_value = clean_data['status']
-            if status_value == 'ongoing':
-                clean_data['status'] = 'active'
 
         return Project(
             **clean_data,
-            sort_order=sort_order,  # Explicitly passed
+            sort_order=sort_order,
             items=unified_items
         )
 
