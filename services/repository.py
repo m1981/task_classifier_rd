@@ -197,6 +197,26 @@ class TriageService:
             self.repo.data.inbox_tasks.remove(item_text)
             self.repo.mark_dirty()
 
+    def _build_hierarchy_context(self) -> str:
+        lines = []
+        # 1. Active Goals and their Projects
+        for goal in self.repo.data.goals:
+            lines.append(f"GOAL: {goal.name}")
+            if goal.description:
+                lines.append(f"  Desc: {goal.description}")
+
+            projects = [p for p in self.repo.data.projects if p.goal_id == goal.id]
+            for p in projects:
+                lines.append(f"  - PROJECT: {p.name}")
+
+        # 2. Orphaned Projects
+        orphans = [p for p in self.repo.data.projects if not p.goal_id]
+        if orphans:
+            lines.append("NO GOAL (Maintenance/Misc):")
+            for p in orphans:
+                lines.append(f"  - PROJECT: {p.name}")
+
+        return "\n".join(lines)
 
 class PlanningService:
     def __init__(self, repo: YamlRepository):

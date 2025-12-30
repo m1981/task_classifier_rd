@@ -99,6 +99,31 @@ class PromptBuilder:
         2. If it does NOT fit, set 'suggested_project' to "Unmatched" and provide a 'suggested_new_project_name'.
         """
 
+    def build_triage_prompt(self, task_text: str, context_hierarchy: str) -> str:
+        tags_str = ", ".join(self.config.DEFAULT_TAGS)
+
+        return f"""
+        You are an expert GTD (Getting Things Done) Triage Assistant.
+
+        INCOMING TASK: "{task_text}"
+
+        CURRENT SYSTEM CONTEXT (Goals > Projects):
+        {context_hierarchy}
+
+        ALLOWED TAGS: [{tags_str}]
+
+        INSTRUCTIONS:
+        1. ANALYZE INTENT: Look at the task. Does it advance any of the active GOALS listed above?
+        2. MATCHING: 
+           - If the task supports a Goal, assign it to the relevant Project under that Goal.
+           - If the task is maintenance (no goal) but fits an existing Project context (e.g. "Fix tap" -> "Bathroom"), assign it there.
+           - Only use "Unmatched" if it truly belongs to a completely new domain.
+        3. REFINE: Rewrite the task text to be clear and actionable (start with a verb).
+        4. ESTIMATE: Provide a realistic duration (e.g. "15min", "1h").
+        6. DELEGATION: If the user says "Ask Bob to...", set 'delegate_to'="Bob".
+        7. SCHEDULING: If the user says "on Friday", extract the date.
+        """
+
     def build_prompt(self, request: ClassificationRequest) -> str:
         """Build prompt for batch processing"""
         # For batch processing, we might still need manual parsing if we want
@@ -168,12 +193,14 @@ class TaskClassifier:
         """
         Classify a single task using Pydantic validation (Structured Outputs).
         """
-        prompt = self.prompt_builder.build_single_task_prompt(request)
-
+        prompt = self.prompt_builder.build_triage_prompt(
+            request.task_text,
+            request.available_projects
+        )
         try:
             # Use the .parse() method for automatic Pydantic validation
             response = self.client.beta.messages.parse(
-                model="claude-haiku-4-5",
+                model="claude-sonnet-4-5",
                 max_tokens=1024,
                 betas=["structured-outputs-2025-11-13"],
                 messages=[{"role": "user", "content": prompt}],

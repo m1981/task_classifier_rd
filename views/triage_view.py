@@ -42,11 +42,13 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
     if 'current_draft' not in st.session_state or st.session_state.get('draft_source') != current_text:
         log_action("AI PREDICTION START", current_text)
         with st.spinner("🤖 AI is analyzing..."):
-            project_names = [p.name for p in repo.data.projects]
+            context_str = triage_service._build_hierarchy_context()
+
             req = SingleTaskClassificationRequest(
                 task_text=current_text,
-                available_projects=project_names
+                available_projects=context_str
             )
+
             # 1. Get Classification
             response = classifier.classify_single(req)
             result = response.results[0]

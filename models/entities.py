@@ -41,7 +41,9 @@ class TaskItem(ProjectItem):
     tags: List[str] = Field(default_factory=list)
     duration: str = "unknown"
     notes: str = ""
-    completed_at: Optional[datetime] = None # Added for Analytics
+    completed_at: Optional[datetime] = None
+    due_date: Optional[date] = None
+
 
 class ResourceItem(ProjectItem):
     kind: Literal["resource"] = "resource"

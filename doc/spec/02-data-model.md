@@ -36,7 +36,8 @@ We utilize a **Polymorphic Data Structure**. A Project does not contain separate
 *   `name`: String
 *   `status`: Enum [Active, OnHold, Completed]
 *   `goal_id`: UUID (Optional)
-*   **`items`: List[Union[TaskItem, ResourceItem, ReferenceItem]]**  <-- The Unified Stream
+*   `sort_order`: Float (Default: 0.0)
+*   `items`: List[Union[TaskItem, ResourceItem, ReferenceItem]]
 
 ### Goal
 *   `id`: UUID
