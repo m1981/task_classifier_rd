@@ -17,6 +17,7 @@ We utilize a **Polymorphic Data Structure**. A Project does not contain separate
 *   `is_completed`: Boolean
 *   `tags`: List[String]
 *   `duration`: String (Optional)
+*   `completed_at`: DateTime (Optional)
 
 ### ResourceItem (extends ProjectItem)
 *   `kind`: "resource"
@@ -26,8 +27,7 @@ We utilize a **Polymorphic Data Structure**. A Project does not contain separate
 
 ### ReferenceItem (extends ProjectItem)
 *   `kind`: "reference"
-*   `url`: String (Optional)
-*   `content`: Text
+*   `content`: Text (URL or Note)
 
 ## 3. The Containers
 

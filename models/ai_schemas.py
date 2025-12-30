@@ -9,12 +9,12 @@ class ClassificationType(str, Enum):
     SHOPPING = "resource"
     REFERENCE = "reference"
     NEW_PROJECT = "new_project"
-    TRASH = "trash"
+    INCUBATE = "incubate"
 
 
 class ClassificationResult(BaseModel):
     classification_type: ClassificationType = Field(
-        description="The category of the item. Use 'resource' for things to buy/acquire, 'reference' for URLs/notes, 'task' for actions."
+        description="The category of the item. Use 'resource' for things to buy, 'reference' for info, 'task' for actions, 'incubate' for someday/maybe."
     )
     suggested_project: str = Field(
         description="The exact name of the best matching project, or 'Unmatched' if none fit."

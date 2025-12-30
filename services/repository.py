@@ -31,7 +31,14 @@ class DraftItem:
         # Extract duration (default to 'unknown' if missing)
         duration = self.classification.estimated_duration or "unknown"
 
-        if kind == ClassificationType.SHOPPING:
+        if kind == ClassificationType.INCUBATE:
+            return TaskItem(
+                name=name,
+                tags=["someday"],
+                duration="unknown",
+                notes="Incubated from Triage"
+            )
+        elif kind == ClassificationType.SHOPPING:
             return ResourceItem(name=name, store="General")
 
         elif kind == ClassificationType.REFERENCE:
@@ -109,6 +116,14 @@ class TriageService:
     def add_to_inbox(self, text: str) -> None:
         self.repo.data.inbox_tasks.append(text)
         self.repo.mark_dirty()
+
+    def delete_inbox_item(self, item_text: str) -> None:
+        """
+        Manual Only: Permanently removes item from system (Trash).
+        """
+        if item_text in self.repo.data.inbox_tasks:
+            self.repo.data.inbox_tasks.remove(item_text)
+            self.repo.mark_dirty()
 
     def create_draft(self, text: str, classification: ClassificationResult) -> DraftItem:
         """Pure function: Creates a proposal object"""

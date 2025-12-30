@@ -103,25 +103,32 @@ class PromptBuilder:
         tags_str = ", ".join(self.config.DEFAULT_TAGS)
 
         return f"""
-        You are an expert GTD (Getting Things Done) Triage Assistant.
-
-        INCOMING TASK: "{task_text}"
-
-        CURRENT SYSTEM CONTEXT (Goals > Projects):
+        You are a GTD Triage Expert.
+        
+        INCOMING ITEM: "{task_text}"
+        
+        CONTEXT (Goals > Projects):
         {context_hierarchy}
 
         ALLOWED TAGS: [{tags_str}]
+        
+        DECISION LOGIC:
+        1. IS IT ACTIONABLE?
+           - NO (Reference): Useful info? -> Type: 'reference'.
+           - NO (Someday): Actionable later? -> Type: 'incubate'.
+           - NO (Junk): Ignore. (Do NOT return 'trash', user decides that).
+           
+        2. IS IT MULTI-STEP?
+           - YES: Needs a new project? -> Type: 'new_project'.
+           
+        3. IS IT A SIMPLE ACTION?
+           - YES (Do/Delegate): -> Type: 'task'.
+           - YES (Buy): -> Type: 'resource'.
 
         INSTRUCTIONS:
-        1. ANALYZE INTENT: Look at the task. Does it advance any of the active GOALS listed above?
-        2. MATCHING: 
-           - If the task supports a Goal, assign it to the relevant Project under that Goal.
-           - If the task is maintenance (no goal) but fits an existing Project context (e.g. "Fix tap" -> "Bathroom"), assign it there.
-           - Only use "Unmatched" if it truly belongs to a completely new domain.
-        3. REFINE: Rewrite the task text to be clear and actionable (start with a verb).
-        4. ESTIMATE: Provide a realistic duration (e.g. "15min", "1h").
-        6. DELEGATION: If the user says "Ask Bob to...", set 'delegate_to'="Bob".
-        7. SCHEDULING: If the user says "on Friday", extract the date.
+        - Return the JSON classification.
+        - If 'incubate', suggest a relevant project (e.g. "Someday/Maybe" or a generic one).
+        - If 'task', try to match it to an existing Project under an active Goal.
         """
 
     def build_prompt(self, request: ClassificationRequest) -> str:
@@ -210,10 +217,6 @@ class TaskClassifier:
             # The SDK returns a parsed object directly
             parsed_result = response.parsed_output
 
-            # REMOVED: parsed_result.task = request.task_text  <-- DELETE THIS LINE
-            # The 'task' field no longer exists on the model.
-            # The original text is preserved in the DraftItem wrapper later.
-
             return ClassificationResponse(
                 results=[parsed_result],
                 prompt_used=prompt,
@@ -228,12 +231,10 @@ class TaskClassifier:
                 suggested_project="Unmatched",
                 confidence=0.0,
                 reasoning=f"AI Error: {str(e)}",
-                extracted_tags=[],
-                # REMOVED: task=request.task_text  <-- DELETE THIS LINE
+                extracted_tags=[]
             )
             return ClassificationResponse(
                 results=[error_result],
                 prompt_used=prompt,
                 raw_response=str(e)
             )
-

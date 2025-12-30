@@ -11,16 +11,18 @@ We follow a **Unidirectional Data Flow** tailored for Streamlit's rerun cycle.
 ### 2. The Service Layer (Stable)
 *   **Responsibility:** Handles business logic, AI communication, and State mutation.
 *   **Components:**
-    *   `TriageService`: Manages the Inbox and AI Classification.
-    *   `PlanningService`: Manages Goals and Project structures.
-    *   **Proposal Engine:** Converts AI JSON responses into `DraftItem` objects.
+    *   `TriageService`: Manages the Inbox, AI Classification, and Proposal Engine.
+    *   `PlanningService`: Manages Goals, Project structures, and Ordering.
+    *   `ExecutionService`: Manages Task completion and Context filtering.
+    *   `AnalyticsService`: Manages "Chat with Data" (Smart Context) and Strategic Reviews.
 
 ### 3. The State Layer (The Bridge)
 *   **Responsibility:** Holds the data between reruns.
 *   **Key Flags:**
     *   `st.session_state.data`: The loaded `DatasetContent`.
     *   `st.session_state.is_dirty`: Boolean flag indicating unsaved changes.
-    *   `st.session_state.current_proposal`: The active AI suggestion waiting for user confirmation.
+    *   `st.session_state.current_draft`: The active AI suggestion waiting for user confirmation.
+    *   `st.session_state.smart_results`: Cached results from the AI Coach.
 
 ## Data Persistence
 *   **Format:** YAML.

@@ -76,7 +76,7 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
             ClassificationType.SHOPPING: "🛒 Resource",
             ClassificationType.REFERENCE: "📚 Reference",
             ClassificationType.NEW_PROJECT: "✨ New Project",
-            ClassificationType.TRASH: "🗑️ Trash"
+            ClassificationType.INCUBATE: "💤 Incubate",
         }
         type_label = icons.get(result.classification_type, "❓ Unknown")
 
@@ -88,35 +88,63 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
             st.caption(f"⏱️ Est: {result.estimated_duration}")
 
         # --- ACTIONS ---
-        c1, c2 = st.columns(2)
+        col_confirm, col_skip, col_trash = st.columns([2, 1, 1])
 
-        # CONFIRM
-        if c1.button("✅ Confirm Proposal", type="primary", use_container_width=True):
-            if result.suggested_project != "Unmatched":
-                triage_service.apply_draft(draft)
+        # 1. CONFIRM
+        with col_confirm:
+            btn_label = "✅ Confirm"
+            if result.classification_type == ClassificationType.INCUBATE:
+                btn_label = "💤 Incubate (Someday)"
+            elif result.classification_type == ClassificationType.NEW_PROJECT:
+                # Show the name the AI suggests
+                proj_name = result.suggested_new_project_name or "New Project"
+                btn_label = f"✨ Create Project: '{proj_name}'"
+
+            if st.button(btn_label, type="primary", use_container_width=True):
+
+                # CASE A: Create New Project
+                if result.classification_type == ClassificationType.NEW_PROJECT:
+                    new_name = result.suggested_new_project_name or current_text
+                    log_action("CREATE PROJECT", new_name)
+                    triage_service.create_project_from_draft(draft, new_name)
+                    _clear_draft_state()
+                    st.rerun()
+
+                # CASE B: Standard Move (Task/Resource/Ref/Incubate)
+                elif result.suggested_project != "Unmatched":
+                    triage_service.apply_draft(draft)
+                    _clear_draft_state()
+                    st.rerun()
+
+                # CASE C: Error (AI said Task but didn't pick a project)
+                else:
+                    st.error("AI could not match a project. Please use Manual Override below.")
+
+        # 2. SKIP
+        with col_skip:
+            if st.button("⏭️ Skip", use_container_width=True):
+                triage_service.skip_inbox_item(current_text)
                 _clear_draft_state()
                 st.rerun()
-            else:
-                st.error("Cannot confirm 'Unmatched' project. Please select one below.")
 
-        # SKIP (Restored)
-        if c2.button("⏭️ Skip", use_container_width=True):
-            triage_service.skip_inbox_item(current_text)
-            _clear_draft_state()
-            st.rerun()
+        # 3. TRASH
+        with col_trash:
+            if st.button("🗑️ Trash", use_container_width=True, type="secondary"):
+                log_action("TRASH", current_text)
+                triage_service.delete_inbox_item(current_text)
+                _clear_draft_state()
+                st.rerun()
 
-    # --- MANUAL SELECTION (PILLS) - RESTORED ---
+    # --- MANUAL OVERRIDE ---
     st.divider()
-    st.caption("Manual Assignment")
+    st.caption("Manual Override")
 
-    # Filter out the suggested project to avoid redundancy
-    project_options = [p.name for p in repo.data.projects if p.name != result.suggested_project]
-    selected_project = st.pills("Quick Move", project_options, selection_mode="single")
+    # Project Override
+    all_projs = [p.name for p in repo.data.projects]
+    selected_proj = st.selectbox("Assign to Project", all_projs, index=None, placeholder="Select project...")
 
-    if selected_project:
-        log_action("MANUAL MOVE", f"{current_text} -> {selected_project}")
-        target_id = repo.find_project_by_name(selected_project).id
-        # Use the convenience method for manual moves (defaults to TaskItem)
+    if selected_proj and st.button("Move to Selected Project"):
+        target_id = repo.find_project_by_name(selected_proj).id
         triage_service.move_inbox_item_to_project(current_text, target_id, [])
         _clear_draft_state()
         st.rerun()

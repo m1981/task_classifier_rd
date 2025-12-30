@@ -1,9 +1,3 @@
-This is a crucial step. By applying Alistair Cockburn's rigorous standards, we move from "developer notes" to a "contract of behavior." This ensures that the **Polymorphism**, **Proposal Engine**, and **Explicit Persistence** are not just implementation details, but observable behaviors that serve the user's goals.
-
-Here are the refined Use Case Specifications.
-
----
-
 # Use Case Catalog
 
 | ID | Name | Level | Primary Actor |
@@ -23,66 +17,71 @@ Here are the refined Use Case Specifications.
 **Level:** User Goal (Sea Level)
 
 **Stakeholders and Interests:**
-*   **User:** Wants to process raw thoughts into actionable tasks within specific projects.
+*   **User:** Wants to rapidly process "Stuff" into the correct GTD buckets (Projects, Next Actions, Reference, Incubate, Trash) with AI assistance but final control.
 
 **Preconditions:**
 1.  The System has loaded a valid Dataset.
 2.  The Inbox contains at least one raw text item.
-3.  The AI Service is available.
 
 **Success Guarantee:**
 *   The raw item is removed from the Inbox.
-*   The item is appended to the target Project's task list.
-*   The System state is updated (and persisted via auto-save or dirty flag).
+*   **Outcome A (Actionable):** Item is converted to a Task/Resource and assigned to a Project (Existing or New).
+*   **Outcome B (Non-Actionable):** Item is converted to a Reference Item or moved to the "Someday/Maybe" list (Incubate).
+*   **Outcome C (Trash):** Item is permanently deleted (Manual only).
 
-**Trigger:** User navigates to the "Inbox Triage" view.
-
-**MAIN SUCCESS SCENARIO:**
-1.  The System displays the oldest raw item from the Inbox (e.g., "Buy milk").
-2.  The System (AI) analyzes the text and presents a **Triage Card** containing:
-    *   **Reasoning:** Why the AI chose the project.
-    *   **Suggested Project:** The best match (e.g., "Groceries").
-    *   **Tags:** Extracted context tags (e.g., "errand").
-3.  The User clicks the **"Add"** button (Primary Action).
-4.  The System moves the item from the Inbox to the target Project's task list.
-5.  The System refreshes the view to show the next item (Loop to Step 1).
+**MAIN SUCCESS SCENARIO (The AI-Assisted Path):**
+1.  The System displays the oldest raw item from the Inbox.
+2.  The System (AI) analyzes the item against the Goal/Project Hierarchy to determine **Actionability**.
+3.  The System presents a **Draft Proposal** based on the analysis:
+    *   *Variation A (Actionable - Existing Project):* Suggests Type (Task/Resource) and targets an Existing Project.
+    *   *Variation B (Actionable - New Project):* Suggests Type "New Project" and proposes a Project Name.
+    *   *Variation C (Non-Actionable - Reference):* Suggests Type "Reference" and targets a relevant Project or General storage.
+    *   *Variation D (Non-Actionable - Incubate):* Suggests moving to "Someday/Maybe" list.
+4.  The User reviews the reasoning and **Confirms** the proposal.
+5.  **System Action:**
+    *   Converts the Draft into the specific concrete Entity (TaskItem, ResourceItem, ReferenceItem).
+    *   Appends the Entity to the target container (Project Stream or Someday List).
+6.  The System removes the raw item from the Inbox.
+7.  The System displays the next item.
 
 **EXTENSIONS:**
 
+*   **3a. Manual Override (User Disagrees with AI):**
+    1.  The User disagrees with the AI's classification (e.g., AI suggests "Task", User knows it's "Reference").
+    2.  The User manually selects the correct **Type** or **Target Project** via UI controls.
+    3.  The System updates the Draft to reflect the manual selection.
+    4.  The User clicks Confirm.
+    5.  Resume at Step 5.
+
+*   **3b. Trash (Manual Only):**
+    *   *Context:* The AI never suggests "Trash" to prevent data loss.
+    1.  The User determines the item is junk or no longer needed.
+    2.  The User clicks the **"Delete/Trash"** button.
+    3.  The System permanently deletes the raw item from the Inbox.
+    4.  Resume at Step 7.
+
+*   **3c. Skip Item:**
+    1.  The User is undecided.
+    2.  The User clicks **"Skip"**.
+    3.  The System moves the item to the end of the Inbox queue.
+    4.  Resume at Step 7.
+
+*   **3d. AI cannot determine context ("Unmatched"):**
+    1.  The System displays "Unmatched" and suggests a generic "New Project" or asks for input.
+    2.  The User either:
+        *   Selects an existing project manually.
+        *   Types a custom name for a New Project.
+    3.  Resume at Step 5.
+
 *   **1a. Inbox is Empty:**
-    1.  The System displays a "Inbox Zero" success message with balloons.
+    1.  The System displays a "Inbox Zero" success message.
     2.  The Use Case ends.
 
 *   **1b. Quick Capture (Interrupt):**
-    1.  The User expands the "Quick Capture" section.
+    1.  The User expands "Quick Capture".
     2.  The User types a new thought and clicks "Capture".
-    3.  The System adds the item to the end of the Inbox queue.
-    4.  The System resumes the Triage flow (Step 1).
-
-*   **2a. AI cannot find a matching project ("Unmatched"):**
-    1.  The System displays "Unsure where to put this" and hides the "Add" button.
-    2.  The System expands the "Create New Project" form (See Extension 4a) OR the User uses Manual Assignment (See Extension 3a).
-
-*   **3a. Manual Assignment (Override):**
-    1.  The User disagrees with the AI suggestion.
-    2.  The User selects a different project from the **"Manual Assignment"** pills (chips).
-    3.  The System immediately moves the item to the selected project.
-    4.  Resume at Step 5.
-
-*   **3b. User Skips the Item:**
-    1.  The User clicks the **"Skip"** button.
-    2.  The System moves the current item to the end of the Inbox queue.
-    3.  The System clears the current AI prediction cache.
-    4.  Resume at Step 5 (showing the next item).
-
-*   **4a. Create New Project:**
-    1.  The User (or AI) determines no existing project fits.
-    2.  The User enters a name in the **"New Project Name"** field.
-    3.  The User clicks "Create & Move".
-    4.  The System creates the new Project.
-    5.  The System moves the inbox item to this new Project.
-    6.  Resume at Step 5.
-
+    3.  The System appends the item to the Inbox.
+    4.  The System resumes the current Triage flow.
 ---
 
 ## UC-02: Plan Project Work
@@ -104,27 +103,19 @@ Here are the refined Use Case Specifications.
 **Trigger:** User navigates to the "Planning" view.
 
 **MAIN SUCCESS SCENARIO:**
-1.  The User selects a specific Project.
-2.  The System displays the Project's unified stream of items.
-3.  The User initiates "Add Item."
-4.  The User specifies the **Item Type** (Task, Resource, or Reference) and enters the content.
-5.  The System validates the input.
-6.  The System adds the new polymorphic item to the Project.
-7.  The System updates the view to show the new item in the stream.
+1.  The User views the Goal Dashboard.
+2.  The System displays Goals with their associated Projects rendered as **Collapsible Strips**.
+3.  The User expands a Project Strip.
+4.  The System displays the **Unified Stream** of items (Tasks, Resources, References) chronologically.
+5.  The User clicks "Add Item" (Quick Add).
+6.  The User specifies the Type and Name.
+7.  The System adds the new item to the stream.
 
-**EXTENSIONS:**
-*   **1a. Project does not exist:**
-    1.  The User creates a new Goal (optional) and a new Project.
-    2.  The System initializes an empty unified stream for the Project.
-    3.  Resume at Step 3.
-
-*   **4a. User adds a Resource (Shopping Item):**
-    1.  The User enters the Item Name and optionally the Store/Location.
-    2.  Resume at Step 5.
-
-*   **4b. User adds a Reference:**
-    1.  The User enters the Title and the URL/Content.
-    2.  Resume at Step 5.
+**VARIATIONS:**
+*   **2a. Reordering Projects:**
+    1.  The User clicks the "Up" or "Down" arrow on a Project Strip.
+    2.  The System swaps the `sort_order` of the project with its neighbor.
+    3.  The System refreshes the view with the new order.
 
 ---
 

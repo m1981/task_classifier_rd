@@ -2,7 +2,7 @@ from typing import List, Optional, Union, Literal, Annotated
 from pydantic import BaseModel, Field
 from enum import Enum
 import uuid
-from datetime import datetime
+from datetime import datetime, date
 
 # --- CONFIGURATION ---
 class SystemConfig:
@@ -83,3 +83,8 @@ class DatasetContent(BaseModel):
     goals: List[Goal] = Field(default_factory=list)
     projects: List[Project] = Field(default_factory=list)
     inbox_tasks: List[str] = Field(default_factory=list)
+
+# --- CRITICAL FIX: REBUILD MODELS ---
+# This resolves forward references and circular dependencies
+Project.model_rebuild()
+DatasetContent.model_rebuild()
