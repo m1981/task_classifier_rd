@@ -56,7 +56,7 @@ def render_planning_view(planning_service: PlanningService):
     orphaned = get_sorted_projects(None)
     if orphaned:
         logger.debug(f"Found {len(orphaned)} orphaned projects.")
-        st.markdown("### 📂 Uncategorized Projects")
+        st.markdown("#### 📂 Uncategorized Projects")
         for proj in orphaned:
             _render_project_strip(proj, planning_service)
 
@@ -75,7 +75,7 @@ def _render_project_strip(project, service: PlanningService):
     col_title, col_toolbar = st.columns([0.7, 0.3], vertical_alignment="center")
 
     with col_title:
-        st.markdown(f"### {project.name}")
+        st.markdown(f"#### {project.name}")
         # Optional: Show progress bar or stats here in the future
 
     with col_toolbar:

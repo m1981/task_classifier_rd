@@ -81,7 +81,7 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
         type_label = icons.get(result.classification_type, "❓ Unknown")
 
         st.markdown(f"**Type:** {type_label}")
-        st.markdown(f"**Project:** `{result.suggested_project}`")
+        st.markdown(f"**Project:** {result.suggested_project}")
         st.caption(f"💡 {result.reasoning}")
 
         if result.estimated_duration:

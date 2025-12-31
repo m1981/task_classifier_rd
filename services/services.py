@@ -99,9 +99,10 @@ class PromptBuilder:
         
         DECISION LOGIC:
         1. IS IT ACTIONABLE?
-           - NO (Reference): Useful info? -> Type: 'reference'.
+           - NO (Reference): Is it pure information (e.g. a URL, a fact) that requires NO further action to capture? -> Type: 'reference'.
            - NO (Someday): Actionable later? -> Type: 'incubate'.
            - NO (Junk): Ignore. (Do NOT return 'trash', user decides that).
+           - YES (Action): Does it require time/effort (even just "writing it down" or "saving it")? -> Go to step 2.
            
         2. IS IT MULTI-STEP?
            - YES: Needs a new project? -> Type: 'new_project'.
