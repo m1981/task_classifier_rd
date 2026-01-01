@@ -1,0 +1,231 @@
+goals:
+  - id: g1
+    name: Financial Freedom & Business Growth
+    description: Build SaaS products, optimize investments, and organize finances.
+    status: active
+
+  - id: g2
+    name: Family Well-being & Passions
+    description: Support kids' development, organize trips, and maintain relationships.
+    status: active
+
+  - id: g3
+    name: Living Environment Upgrade
+    description: Renovate apartments, maintain house/garden, and fix appliances.
+    status: active
+
+  - id: g4
+    name: Hobby & Technical Skills
+    description: Develop coding projects, build hardware, and learn new tech.
+    status: active
+
+  - id: g5
+    name: Health & Vitality
+    description: Maintain physical health, dental care, and mental well-being.
+    status: active
+
+projects:
+  # --- GOAL 1: FINANCIAL FREEDOM ---
+  - id: 101
+    name: ReviewMate Marketing Campaign Launched
+    goal_id: g1
+    status: active
+    items:
+      - kind: task
+        name: Hire marketing assistant on Fiverr
+      - kind: task
+        name: Define campaign requirements for Fiverr freelancers
+      - kind: task
+        name: Verify LinkedIn NFC ID
+      - kind: task
+        name: Publish LinkedIn post inviting business cooperation
+      - kind: reference
+        name: AI Agents Article (LinkedIn)
+        content: "https://www.linkedin.com/posts/ignacioandrecm_ai-artificialintelligence-aiagents..."
+
+  - id: 102
+    name: Investment Portfolio Optimized
+    goal_id: g1
+    status: active
+    items:
+      - kind: task
+        name: Transfer money to Degiro
+      - kind: task
+        name: Buy selected stocks on Degiro
+      - kind: task
+        name: Research stock recommendations on YouTube
+
+  - id: 103
+    name: Car Rental Costs Analyzed
+    goal_id: g1
+    status: active
+    items:
+      - kind: task
+        name: Calculate monthly fuel expenses
+      - kind: task
+        name: Calculate annual repair expenses
+      - kind: task
+        name: Contact Hyundai dealer for rental quote
+      - kind: task
+        name: Contact Opel dealer for rental quote
+
+  # --- GOAL 2: FAMILY ---
+  - id: 201
+    name: Family Trips Organized
+    goal_id: g2
+    status: active
+    items:
+      - kind: task
+        name: Plan itinerary for Prague (July 13-16)
+      - kind: task
+        name: Plan itinerary for Dresden (July 13-16)
+      - kind: task
+        name: Book Harry Potter Studio Tour (Watford)
+      - kind: task
+        name: Email Energylandia regarding tickets
+
+  - id: 202
+    name: Kids' Passions Supported
+    goal_id: g2
+    status: active
+    items:
+      - kind: task
+        name: Install Minecraft on PlayStation
+      - kind: task
+        name: Order "Vogue Italian" subscription for Kamila
+      - kind: task
+        name: Buy "Illustrator's Guidebook" for Natalia
+      - kind: resource
+        name: 2-Stroke 63cc Go-Kart Kit
+        link: "https://atvkart.com/..."
+        type: to_buy
+      - kind: resource
+        name: CircuitMess STEM Kit
+        link: "https://circuitmess.com"
+        type: to_buy
+
+  # --- GOAL 3: LIVING ENVIRONMENT ---
+  - id: 301
+    name: Daniel's Apartment Renovated
+    goal_id: g3
+    status: active
+    items:
+      - kind: task
+        name: Install new roller blind in kitchen
+      - kind: task
+        name: Paint kitchen walls
+      - kind: task
+        name: Mount TV bracket
+      - kind: task
+        name: Build folding desk
+      - kind: resource
+        name: Wall hinges (x3)
+        type: to_buy
+      - kind: resource
+        name: Desk top (146zł)
+        type: to_buy
+
+  - id: 302
+    name: Pantry Renovated
+    goal_id: g3
+    status: active
+    items:
+      - kind: task
+        name: Weld vinyl flooring
+      - kind: task
+        name: Screw in basket rails
+      - kind: task
+        name: Replace 380v socket with Wago connectors
+      - kind: task
+        name: Seal mouse holes with foam
+      - kind: resource
+        name: Wooden crates (x3)
+        type: to_buy
+
+  - id: 303
+    name: Kitchen Drawers Repaired
+    goal_id: g3
+    status: active
+    items:
+      - kind: resource
+        name: Self-braking rails 8x35
+        type: to_buy
+      - kind: resource
+        name: Fiberboard 35x55cm (4 pcs)
+        type: to_buy
+
+  # --- GOAL 4: HOBBY & TECH ---
+  - id: 401
+    name: Beebee Chat App Released
+    goal_id: g4
+    status: active
+    items:
+      - kind: task
+        name: Fix chat title generation stream error
+      - kind: task
+        name: Implement chat sharing (Read-only mode)
+      - kind: task
+        name: Move to remote DB with login functionality
+      - kind: task
+        name: Add "Copy" button to bottom of markdown
+
+  - id: 402
+    name: Chat Bella Features Implemented
+    goal_id: g4
+    status: active
+    items:
+      - kind: task
+        name: Resize "Send" button and change to icon
+      - kind: task
+        name: Implement Google Login
+      - kind: task
+        name: Fix title changing bug
+
+  - id: 403
+    name: Smart Mirror Built
+    goal_id: g4
+    status: active
+    items:
+      - kind: resource
+        name: EDP 4k 8K 120HZ DP Board
+        type: to_buy
+      - kind: resource
+        name: TFP401 HDMI Decoder
+        link: "https://www.adafruit.com/product/2219"
+        type: to_buy
+
+  # --- GOAL 5: HEALTH ---
+  - id: 501
+    name: Health & Dental Checkups Completed
+    goal_id: g5
+    status: active
+    items:
+      - kind: task
+        name: Schedule dentist appointment
+      - kind: task
+        name: Create 8-week exercise and diet plan in GDocs
+      - kind: task
+        name: Schedule dermatology appointment (2025-07-28)
+      - kind: task
+        name: Schedule celiac disease test for Gosia
+
+# --- THE INBOX (Items that need Triage) ---
+inbox_tasks:
+  - "Consolidate notes from multiple sources into GPT input"
+  - "Sell Kensington U-lock"
+  - "Buy white gold bracelet"
+  - "Buy Philips espresso filter"
+  - "Buy Aquaphor Cristal A + KB7 water filter"
+  - "Buy Eneloop batteries (12 pcs)"
+  - "Buy tooth mugs and fluid"
+  - "Plan 3D printer activities"
+  - "List all CSS and JS features from saved clip"
+  - "List AI app ideas from saved clip"
+  - "Learn about Apache Kafka"
+  - "Compare Kong vs Kong Insomnia"
+  - "Buy ironing board cover 35x95"
+  - "Sell heater and IR panels from attic"
+  - "Buy RC charger and propeller for plane"
+  - "Create kids' schedule for morning reading/activities"
+  - "Analyze 'SlickGPT' repo"
+  - "Analyze 'Edraw.AI' tool"
