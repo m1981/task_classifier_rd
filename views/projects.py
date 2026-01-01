@@ -2,272 +2,225 @@ import streamlit as st
 import logging
 import sys
 import os
-from datetime import datetime
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 from todoist_api_python.api import TodoistAPI
-from todoist_api_python.models import Project, Task
 
 # --- 1. LOGGING SETUP ---
-# Create a custom logger
 logger = logging.getLogger("TaskFlow")
 logger.setLevel(logging.DEBUG)
-
-# Create handler to print to console (Terminal)
 handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-
-# Avoid duplicate handlers if script re-runs
+handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 if not logger.handlers:
     logger.addHandler(handler)
 
+
 def log_step(message: str, level="info"):
-    """Helper to log to both Console and Streamlit Toast for visibility"""
     if level == "info":
         logger.info(message)
     elif level == "error":
         logger.error(message)
-    elif level == "debug":
-        logger.debug(message)
 
-# --- 2. CORE LOGIC ---
 
+# --- 2. DATA FETCHING LAYER ---
 load_dotenv()
 
-class State:
-    PROJECTS = "projects_data"
-    TASKS = "tasks_data"
 
-# --- HELPER FUNCTION ---
 def flatten_data(data):
-    """
-    Consumes the generator/paginator and flattens nested lists.
-    Handles the case where the API returns pages of results (list of lists).
-    """
-    # 1. Force conversion to list (consumes the generator)
+    """Consumes paginators and flattens list-of-lists if necessary."""
     if not isinstance(data, list):
         data = list(data)
-
     flat_list = []
     for item in data:
         if isinstance(item, list):
-            # It's a page (list of items), extend the main list
             flat_list.extend(item)
         else:
-            # It's a single item, append it
             flat_list.append(item)
-
     return flat_list
 
-# --- UPDATED CACHE FUNCTION ---
+
 @st.cache_data(ttl=3600, show_spinner=False)
-def get_cached_data(api_key: str):
-    """Fetches data and ensures it is a flat list of objects."""
-    log_step("Attempting to fetch data from Todoist API...", "info")
+def get_full_todoist_state(api_key: str):
+    """Fetches Projects, Sections, and Tasks in 3 API calls."""
+    log_step("Syncing with Todoist...", "info")
     try:
         api = TodoistAPI(api_key)
 
-        # 1. Get Projects and Flatten
-        raw_projects = api.get_projects()
-        projects = flatten_data(raw_projects)
-        log_step(f"API Success: Fetched {len(projects)} projects", "info")
+        # 1. Projects
+        projects = flatten_data(api.get_projects())
+        log_step(f"Fetched {len(projects)} projects")
 
-        # 2. Get Tasks and Flatten
-        raw_tasks = api.get_tasks()
-        tasks = flatten_data(raw_tasks)
-        log_step(f"API Success: Fetched {len(tasks)} tasks", "info")
+        # 2. Sections (NEW)
+        sections = flatten_data(api.get_sections())
+        log_step(f"Fetched {len(sections)} sections")
 
-        return projects, tasks
+        # 3. Tasks
+        tasks = flatten_data(api.get_tasks())
+        log_step(f"Fetched {len(tasks)} tasks")
+
+        return projects, sections, tasks
     except Exception as e:
-        log_step(f"API FAILURE: {type(e).__name__}: {str(e)}", "error")
-        raise Exception(f"Todoist API Error: {str(e)}")
+        log_step(f"API Error: {e}", "error")
+        raise e
 
-def get_inbox_id(projects: List[Project]) -> Optional[str]:
-    for p in projects:
-        if p.is_inbox_project:
-            return p.id
-    # Fallback
-    for p in projects:
-        if p.name.lower() in ['inbox', 'skrzynka odbiorcza']:
-            return p.id
-    return None
 
-def build_hierarchy(items: List[Any], parent_id_attr: str = 'parent_id', order_attr: str = 'order') -> List[Dict]:
-    """Recursive tree builder with debug logging for empty states."""
-    if not items:
-        return []
+# --- 3. HIERARCHY BUILDER (THE BRAIN) ---
 
-    # Convert to dicts
-    item_dicts = []
-    for item in items:
-        if hasattr(item, 'to_dict'):
-            d = item.to_dict()
-        else:
-            d = item.__dict__
-        item_dicts.append(d)
+class TodoistHierarchy:
+    def __init__(self, projects, sections, tasks):
+        self.output_lines = []
 
-    item_map = {item['id']: item for item in item_dicts}
-    children_map = {}
-    roots = []
+        # --- A. Convert to Dicts for easier access ---
+        self.projects = {p.id: p for p in projects}
+        self.sections = {s.id: s for s in sections}
+        self.tasks = {t.id: t for t in tasks}
 
-    for item in item_dicts:
-        pid = item.get(parent_id_attr)
-        if pid and pid in item_map:
-            children_map.setdefault(pid, []).append(item)
-        else:
-            roots.append(item)
+        # --- B. Build Indices (The "Buckets") ---
 
-    roots.sort(key=lambda x: x.get(order_attr, 0))
-    organized = []
+        # 1. Project Tree: Parent_ID -> [Projects]
+        self.sub_projects = {}
+        self.root_projects = []
+        for p in projects:
+            if p.parent_id:
+                self.sub_projects.setdefault(p.parent_id, []).append(p)
+            else:
+                self.root_projects.append(p)
 
-    def traverse(item, depth, prefix, is_last):
-        if depth == 0:
-            current_prefix = ""
-            child_prefix = ""
-        else:
-            current_prefix = prefix + ("└── " if is_last else "├── ")
-            child_prefix = prefix + ("    " if is_last else "│   ")
+        # 2. Sections: Project_ID -> [Sections]
+        self.project_sections = {}
+        for s in sections:
+            self.project_sections.setdefault(s.project_id, []).append(s)
 
-        item['depth'] = depth
-        item['tree_prefix'] = current_prefix
-        organized.append(item)
+        # 3. Task Buckets
+        self.tasks_by_parent = {}  # Subtasks (parent_id exists)
+        self.tasks_by_section = {}  # Section Roots (section_id exists, no parent)
+        self.tasks_by_project = {}  # Project Roots (no section, no parent)
 
-        children = children_map.get(item['id'], [])
-        children.sort(key=lambda x: x.get(order_attr, 0))
+        for t in tasks:
+            # If it has a parent, it's a subtask (regardless of section)
+            if t.parent_id:
+                self.tasks_by_parent.setdefault(t.parent_id, []).append(t)
+                continue
 
-        for i, child in enumerate(children):
-            is_last_child = (i == len(children) - 1)
-            traverse(child, depth + 1, child_prefix, is_last_child)
+            # If it has a section, it belongs to the section
+            if t.section_id and t.section_id != "0":
+                self.tasks_by_section.setdefault(t.section_id, []).append(t)
+            else:
+                # Otherwise, it's a root task in the project
+                self.tasks_by_project.setdefault(t.project_id, []).append(t)
 
-    for i, root in enumerate(roots):
-        traverse(root, 0, "", i == len(roots) - 1)
+    def _get_order(self, obj, attr_name):
+        """
+        Safely gets sorting order.
+        Tries specific attribute (e.g., 'child_order'), falls back to 'order', then 0.
+        """
+        val = getattr(obj, attr_name, None)
+        if val is not None:
+            return val
+        return getattr(obj, 'order', 0)
 
-    return organized
+    def generate_text_tree(self):
+        """Entry point to generate the text."""
+        self.output_lines = []
 
-def map_tasks_to_projects(tasks: List[Task]) -> Dict[str, List[Task]]:
-    mapping = {}
-    for task in tasks:
-        pid = task.project_id
-        if pid not in mapping:
-            mapping[pid] = []
-        mapping[pid].append(task)
-    return mapping
+        # Sort root projects
+        self.root_projects.sort(key=lambda x: self._get_order(x, 'child_order'))
 
-# --- 3. UI RENDERING ---
+        for p in self.root_projects:
+            self._render_project(p, indent=0)
+            self.output_lines.append("")  # Empty line between root projects
 
-def render_ascii_view(projects: List[Project], tasks: List[Task]):
-    log_step("Rendering ASCII View...", "debug")
+        return "\n".join(self.output_lines)
 
-    if not projects:
-        st.warning("ASCII Renderer received 0 projects.")
-        return
+    def _render_project(self, project, indent):
+        prefix = "  " * indent
+        self.output_lines.append(f"{prefix}📁 {project.name}")
 
-    organized_projects = build_hierarchy(projects, order_attr='child_order')
-    tasks_by_project = map_tasks_to_projects(tasks)
+        # 1. Render Project-Level Tasks (No Section)
+        p_tasks = self.tasks_by_project.get(project.id, [])
+        p_tasks.sort(key=lambda x: self._get_order(x, 'child_order'))
+        for t in p_tasks:
+            self._render_task(t, indent + 1)
 
-    ascii_lines = []
+        # 2. Render Sections
+        p_sections = self.project_sections.get(project.id, [])
+        p_sections.sort(key=lambda x: self._get_order(x, 'section_order'))
+        for s in p_sections:
+            self._render_section(s, indent + 1)
 
-    for proj in organized_projects:
-        ascii_lines.append(f"{proj['tree_prefix']}{proj['name']}")
-        project_tasks = tasks_by_project.get(proj['id'], [])
+        # 3. Render Sub-Projects
+        sub_projs = self.sub_projects.get(project.id, [])
+        sub_projs.sort(key=lambda x: self._get_order(x, 'child_order'))
+        for sub in sub_projs:
+            self._render_project(sub, indent + 1)
 
-        if project_tasks:
-            organized_tasks = build_hierarchy(project_tasks, order_attr='child_order')
-            for task in organized_tasks:
-                status = "✓" if task.get('is_completed') else "•"
-                base_indent = " " * (len(proj['tree_prefix']) + 4)
-                task_tree = task.get('tree_prefix', '')
-                line = f"{base_indent}{task_tree}{status} {task['content']}"
-                ascii_lines.append(line)
+    def _render_section(self, section, indent):
+        prefix = "  " * indent
+        self.output_lines.append(f"{prefix}🔹 {section.name.upper()}")
 
-        ascii_lines.append("")
+        # Render Section Tasks
+        s_tasks = self.tasks_by_section.get(section.id, [])
+        s_tasks.sort(key=lambda x: self._get_order(x, 'child_order'))
+        for t in s_tasks:
+            self._render_task(t, indent + 1)
 
-    final_text = "\n".join(ascii_lines)
-    st.code(final_text, language="text")
+    def _render_task(self, task, indent):
+        prefix = "  " * indent
+        status = "[x]" if task.is_completed else "[ ]"
+
+        # Add priority indicator
+        prio = {4: "🔴", 3: "🟡", 2: "🔵", 1: ""}.get(task.priority, "")
+
+        content = f"{prefix}{status} {prio} {task.content}"
+        if task.due:
+            # Handle due date object safely
+            due_str = task.due.date if hasattr(task.due, 'date') else str(task.due)
+            content += f" (📅 {due_str})"
+
+        self.output_lines.append(content)
+
+        # Render Sub-tasks (Recursion)
+        subtasks = self.tasks_by_parent.get(task.id, [])
+        subtasks.sort(key=lambda x: self._get_order(x, 'child_order'))
+        for sub in subtasks:
+            self._render_task(sub, indent + 1)
+
+
+# --- 4. MAIN APP ---
 
 def main():
-    st.set_page_config(page_title="TaskFlow Debug", page_icon="🐞", layout="wide")
+    st.set_page_config(page_title="Todoist Full Tree", layout="wide")
+    st.title("🌳 Todoist Full Hierarchy")
 
-    # --- DEBUG PANEL ---
-    with st.expander("🐞 Debug Info (Click to expand)", expanded=False):
-        st.write("Python Version:", sys.version)
-        st.write("Environment API Key Present:", "Yes" if os.getenv('TODOIST_API_KEY') else "No")
-
-    st.title("✅ TaskFlow Pro (Debug Mode)")
-
-    # Sidebar
     with st.sidebar:
-        # Try to get key from env, otherwise empty
-        default_key = os.getenv('TODOIST_API_KEY', '')
-        api_key = st.text_input("Todoist API Key", value=default_key, type="password")
-
-        st.divider()
-        if st.button("🔄 Force Refresh", use_container_width=True):
+        api_key = st.text_input("API Key", value=os.getenv('TODOIST_API_KEY', ''), type="password")
+        if st.button("Refresh"):
             st.cache_data.clear()
             st.rerun()
 
     if not api_key:
-        st.warning("⚠️ No API Key provided. Please enter it in the sidebar.")
+        st.warning("Enter API Key")
         return
 
-    # Main Logic
     try:
-        with st.spinner("Syncing with Todoist..."):
-            projects_raw, tasks_raw = get_cached_data(api_key)
+        # Fetch Data
+        projects, sections, tasks = get_full_todoist_state(api_key)
 
-        # --- DATA VALIDATION ---
-        if not projects_raw:
-            st.error("❌ API returned 0 projects. Check if your Todoist account has projects.")
-            # Log raw response type for debugging
-            st.write("Raw Projects Type:", type(projects_raw))
+        if not projects:
+            st.warning("No projects found.")
             return
 
-        # View Selection
-        view_mode = st.radio("View Mode", ["Tree Dashboard", "ASCII Export"], horizontal=True)
-        st.divider()
+        # Process Data
+        processor = TodoistHierarchy(projects, sections, tasks)
+        tree_text = processor.generate_text_tree()
 
-        if view_mode == "Tree Dashboard":
-            col1, col2 = st.columns([2, 1])
-
-            with col1:
-                st.subheader("📁 Project Structure")
-                organized_projs = build_hierarchy(projects_raw, order_attr='child_order')
-
-                if not organized_projs:
-                    st.warning("Hierarchy builder returned empty list.")
-
-                for p in organized_projs:
-                    icon = "📥" if p.get('is_inbox_project') else "⭐" if p.get('is_favorite') else "📁"
-                    st.text(f"{p['tree_prefix']}{icon} {p['name']}")
-
-            with col2:
-                st.subheader("📥 Inbox Quick View")
-                inbox_id = get_inbox_id(projects_raw)
-
-                if inbox_id:
-                    inbox_tasks = [t for t in tasks_raw if t.project_id == inbox_id]
-                    if not inbox_tasks:
-                        st.info("Inbox is empty.")
-                    else:
-                        organized_inbox = build_hierarchy(inbox_tasks, order_attr='child_order')
-                        for t in organized_inbox:
-                            prio_color = {4: "🔴", 3: "🟡", 2: "🔵", 1: "⚪"}.get(t.get('priority'), "⚪")
-                            st.markdown(f"{t['tree_prefix']} {prio_color} {t['content']}")
-                else:
-                    st.error("Could not find Inbox ID in project list.")
-                    st.write("Available Projects:", [p.name for p in projects_raw])
-
-        else:
-            render_ascii_view(projects_raw, tasks_raw)
+        # Display
+        st.subheader("Text Output")
+        st.text_area("Copy this:", value=tree_text, height=600)
 
     except Exception as e:
-        st.error(f"🔥 Critical Application Error: {e}")
-        logger.exception("Critical Error") # Prints full stack trace to console
-        if st.button("Clear Cache & Retry"):
-            st.cache_data.clear()
-            st.rerun()
+        st.error(f"Error: {e}")
+
 
 if __name__ == "__main__":
     main()
