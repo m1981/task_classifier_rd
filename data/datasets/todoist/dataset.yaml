@@ -1,47 +1,73 @@
 goals:
   - id: g1
     name: Financial Freedom & Business Growth
-    description: Build SaaS products, optimize investments, and organize finances.
+    description: "Make myself financially free, Review Mate, Business Ideas"
     status: active
 
   - id: g2
     name: Family Well-being & Passions
-    description: Support kids' development, organize trips, and maintain relationships.
+    description: "I live a great life, Spędzamy razem fajnie czas, Dzieciaki mają super"
     status: active
 
   - id: g3
     name: Living Environment Upgrade
-    description: Renovate apartments, maintain house/garden, and fix appliances.
+    description: "Dom i ogród pięknieją, Daniel ma pięknie w mieszkaniu, Other's Needs"
     status: active
 
   - id: g4
     name: Hobby & Technical Skills
-    description: Develop coding projects, build hardware, and learn new tech.
+    description: "Hobby Projects, Coding, AI, Electronics"
     status: active
 
   - id: g5
     name: Health & Vitality
-    description: Maintain physical health, dental care, and mental well-being.
+    description: "Mam zdrowe ciało i kondycję"
+    status: active
+
+  - id: g6
+    name: Helping Others
+    description: "Dla Asystentki, Lucy, Gosia, Marta"
     status: active
 
 projects:
   # --- GOAL 1: FINANCIAL FREEDOM ---
   - id: 101
-    name: ReviewMate Marketing Campaign Launched
+    name: Review Mate Campaign & Backlog
     goal_id: g1
     status: active
     items:
       - kind: task
-        name: Hire marketing assistant on Fiverr
+        name: Znajdę asystentkę lub osobę od marketingu która regularnie poprowadziła by mnie przez process promocji ReviewMate
       - kind: task
-        name: Define campaign requirements for Fiverr freelancers
+        name: Kickoff meeting z gościem od Startapów na Fiverr
       - kind: task
-        name: Verify LinkedIn NFC ID
+        name: Zrobię z tego wymagania dla Osób z Fiverr
       - kind: task
-        name: Publish LinkedIn post inviting business cooperation
-      - kind: reference
-        name: AI Agents Article (LinkedIn)
-        content: "https://www.linkedin.com/posts/ignacioandrecm_ai-artificialintelligence-aiagents..."
+        name: Wybiorę Fiverr do setupu kampani
+      - kind: task
+        name: Print color Roadmap
+      - kind: task
+        name: "Invite business partner: Verify LinkedIn NFC ID"
+      - kind: task
+        name: "Invite business partner: Update LinkedIn profile"
+      - kind: task
+        name: "Invite business partner: Publish post to invite someone to biz cooperation"
+      - kind: task
+        name: "Invite business partner: Systematic Enrich my PixelCrate FB and IG accounts"
+      - kind: task
+        name: założyć pomocnicze domeny ReviewMate, AliceChat, etc.
+      - kind: task
+        name: Zrobię listę cytatów z filmików
+      - kind: task
+        name: Zgromadze wssystkie materiały kupione w produkcie "100task". Zaloguje się do plqtformy onlinr.
+      - kind: task
+        name: Spiszę kroki z dwóch filmików od Alex,a
+      - kind: task
+        name: Wydrukuje wizytówki z cytatami
+      - kind: task
+        name: Dodam do AI dane z tej stronki Alexa
+      - kind: task
+        name: Znajdę swoich patronów guru
 
   - id: 102
     name: Investment Portfolio Optimized
@@ -49,25 +75,27 @@ projects:
     status: active
     items:
       - kind: task
-        name: Transfer money to Degiro
+        name: Find stock to buy on YouTube (📅 2025-10-11)
       - kind: task
-        name: Buy selected stocks on Degiro
+        name: Transfer money on Degiro (📅 2025-08-11)
       - kind: task
-        name: Research stock recommendations on YouTube
+        name: Buy stocks on Degiro (📅 2025-08-12)
 
   - id: 103
-    name: Car Rental Costs Analyzed
+    name: Car Rental Analysis
     goal_id: g1
     status: active
     items:
       - kind: task
-        name: Calculate monthly fuel expenses
+        name: Wycenić wynajem e Samochodu
       - kind: task
-        name: Calculate annual repair expenses
+        name: Spisać ile na paliwo miesięcznie się wydaje
       - kind: task
-        name: Contact Hyundai dealer for rental quote
+        name: Spisać ile na naprawy rocznie się wydaje
       - kind: task
-        name: Contact Opel dealer for rental quote
+        name: Hyundai znajdę deleara i zapytam o wynajem
+      - kind: task
+        name: Opel znajfe dealera i zapytam o wynajem
 
   # --- GOAL 2: FAMILY ---
   - id: 201
@@ -76,33 +104,205 @@ projects:
     status: active
     items:
       - kind: task
-        name: Plan itinerary for Prague (July 13-16)
+        name: Zaplanuję Pragę 13-16 Lipiec
       - kind: task
-        name: Plan itinerary for Dresden (July 13-16)
+        name: Zaplanuję Drezno 13-16 Lipiec
       - kind: task
-        name: Book Harry Potter Studio Tour (Watford)
+        name: "Wycieczki: Drezno"
       - kind: task
-        name: Email Energylandia regarding tickets
+        name: "Wycieczki: Wiedeń"
+      - kind: task
+        name: "Wycieczki: Praga"
+      - kind: task
+        name: "Wycieczki: Harry Potter Watford"
+      - kind: task
+        name: Mail do Energylandii (Energy trip)
+      - kind: task
+        name: Spiszę listę celów finansowych i wycieczek eventow przeprowadzek studiów
+      - kind: task
+        name: Spisać jakie cele chcę osiągać
 
   - id: 202
-    name: Kids' Passions Supported
+    name: Quality Family Time & Activities
     goal_id: g2
     status: active
     items:
       - kind: task
-        name: Install Minecraft on PlayStation
-      - kind: task
-        name: Order "Vogue Italian" subscription for Kamila
-      - kind: task
-        name: Buy "Illustrator's Guidebook" for Natalia
+        name: Polatać samolotem z dzieciakami
       - kind: resource
-        name: 2-Stroke 63cc Go-Kart Kit
-        link: "https://atvkart.com/..."
+        name: Kupię ładowarkę RC
         type: to_buy
       - kind: resource
-        name: CircuitMess STEM Kit
-        link: "https://circuitmess.com"
+        name: Kupię śmigło
         type: to_buy
+      - kind: task
+        name: spisać grafik dzieciakow do kalendarza żeby rano poczytać coś z tymkiem a jak tymek na jamedze to porobić coś z Seba
+      - kind: task
+        name: Salon gier w dominikańskiej
+      - kind: task
+        name: Minecraft na PlayStation zainstalować
+      - kind: task
+        name: Jump hall kolo teczy
+      - kind: task
+        name: Poulduchy z magnesi co Wojtki byli
+      - kind: task
+        name: Gra rozmowa z dziećmi
+      - kind: task
+        name: Wybiorę i kupię zabawkę s Cranchlabs super zabawki naukowe
+      - kind: task
+        name: Noc pod namiotem
+      - kind: task
+        name: Sprawdzę daty imprez moto we Wrocławiu
+      - kind: task
+        name: Pixel XL gra kafle LED nq rynku
+      - kind: task
+        name: Daniel jeździ na skuterze
+      - kind: task
+        name: Łukasz jeździ Traficarem
+      - kind: task
+        name: Zestaw z Sebą
+      - kind: task
+        name: Zrobić kartkę co lubię w Sebastianie
+      - kind: resource
+        name: Kalendarz magnetyczny zamowie
+        type: to_buy
+      - kind: task
+        name: Namiot indiański w ogrodzie
+      - kind: task
+        name: Poniedziałek kino horyzonty Stich
+      - kind: reference
+        content: "[Linden Park - centrum kreatywnej zabawy](https://g.co/kgs/6K4xZ1)"
+        name: "Linden Park - centrum kreatywnej zabawy"
+      - kind: reference
+        content: "[Miniaturowy domek DIY](https://www.sklep.habarri.pl/Miniaturowy-domek-DIY-Kreatywne-popoludnie)"
+        name: "Miniaturowy domek DIY"
+      - kind: reference
+        name: "DIY Lemonade Stand Idea"
+        content: "diy-lemonade-stand"
+      - kind: resource
+        name: "Bramka piłkarska samorozkładająca GOALKEEPER 2 szt"
+        link: "https://allegro.pl/oferta/bramka-pilkarska-samorozkladajaca-goalkeeper-2-szt-13343698641"
+        type: to_buy
+      - kind: resource
+        name: "2X BRAMKA PIŁKARSKA BRAMKI DO PIŁKI NOŻNEJ ZESTAW"
+        link: "https://allegro.pl/oferta/2x-bramka-pilkarska-bramki-do-pilki-noznej-zestaw-13523297039"
+        type: to_buy
+      - kind: resource
+        name: "Magnetic Wall Board"
+        type: to_buy
+
+  - id: 203
+    name: Kids' Development & Passions
+    goal_id: g2
+    status: active
+    items:
+      - kind: task
+        name: Dzieciaki dostają rozwijające książki, miesięczniki, todo, DIY
+      - kind: task
+        name: Przelew studia 3250zł every 27 September (📅 2025-09-27)
+      - kind: task
+        name: "Sebastian: Kiwico dla dzieci"
+      - kind: task
+        name: "Sebastian: Wykłady z projektorem dla dzieci"
+      - kind: task
+        name: "Sebastian: Projekty z dziećmi"
+      - kind: task
+        name: "Tymek: Eksperymenty z dziećmi"
+      - kind: task
+        name: "Mati: Ostrow Tumski plener Mati"
+      - kind: task
+        name: "Łukasz: Łukasz bawi się elektroniką"
+      - kind: task
+        name: "Kamila: Kamila ma prenumeratę interior design"
+      - kind: resource
+        name: "Kamila: Vogue Italian Magazine Subscription"
+        link: "https://www.newsstand.co.uk/125-italian-magazines/5286-subscribe-to-vogue-italian-magazine-subscription.aspx#"
+        type: to_buy
+      - kind: resource
+        name: "Kamila: Vogue Collections Magazine Subscription"
+        link: "https://www.newsstand.co.uk/123-french-magazines/10527-subscribe-to-vogue-collections-magazine-subscription.aspx"
+        type: to_buy
+      - kind: resource
+        name: "Kamila: Sztuka szycia (Antonina Samecka)"
+        link: "https://tantis.pl/sztuka-szycia-p3185788"
+        type: to_buy
+      - kind: resource
+        name: "Kamila: Vogue: The Covers"
+        link: "https://www.libristo.pl/pl/ksiazka/vogue-the-covers_16064645"
+        type: to_buy
+      - kind: resource
+        name: "Kamila: Komputer do grafiki"
+        type: to_buy
+      - kind: task
+        name: "Natalia: Natalia ma prawko kat. A"
+      - kind: task
+        name: "Natalia: Natala jeździ skuterem"
+      - kind: task
+        name: "Natalia: Natalia jeździ samochodem"
+      - kind: task
+        name: "Natalia: Natalia rysuje"
+      - kind: resource
+        name: "Natalia: Buy the Illustrator's Guidebook eBook by 21 Draw"
+        type: to_buy
+      - kind: resource
+        name: "Natalia: Super wkładki do butów super skoczne"
+        type: to_buy
+      - kind: resource
+        name: "Natalia: Sztuka rysowania twarze"
+        link: "https://allegro.pl/oferta/sztuka-rysowania-twarze-15-minutowe-cwiczenia-13532479065"
+        type: to_buy
+      - kind: resource
+        name: "Natalia: Funko pop star wars Ahsoka"
+        link: "https://allegro.pl/oferta/funko-pop-star-wars-figurka-kolekcjonerska-ahsoka-464-16130286121"
+        type: to_buy
+      - kind: reference
+        name: "Synthesis Tutor AI"
+        content: "[Synthesis Tutor](https://www.synthesis.com/tutor)"
+      - kind: reference
+        name: "CircuitMess DIY Kits"
+        content: "[DIY STEM Kits for Kids | CircuitMess](https://circuitmess.com)"
+      - kind: reference
+        name: "Capo U4 RC Car Model"
+        content: "[Capo U4 CD 1582X Queen 1/8 Scale](https://www.stirlingkit.com/products/capo-u4-cd-1582x-queen-1-8-scale-2-4g-all-metal-off-road-climibing-car-vehicles-kits)"
+      - kind: reference
+        name: "Mini Drone Kit"
+        content: "[Mini Drone Kit](https://harishprojects.com/product/mini-drone-kit-rc-diy-drone-2-4ghz-headless-mode-6-axis-gyro-led-light/)"
+      - kind: reference
+        name: "Mel Science Subscription"
+        content: "https://melscience.com/PL-en/subscription/..."
+      - kind: reference
+        name: "LEGO Light Kits"
+        content: "[Our LEGO Light Kits](https://www.lightmybricks.eu/collections/lego-light-kits)"
+      - kind: reference
+        name: "Strategic Parenting Course"
+        content: "[Strategic Parenting](https://strategicparenting.com)"
+      - kind: reference
+        name: "Home Assistant on Pi Zero Guide"
+        content: "[Home Assistant on a Pi Zero W](https://community.home-assistant.io/t/home-assistant-on-a-pi-zero-w-in-30-minutes/42494)"
+      - kind: reference
+        name: "Spintronics Mechanical Circuits"
+        content: "[Spintronics](https://store-eu.upperstory.com/collections/spintronics)"
+      - kind: reference
+        name: "2-Stroke Go Kart Engine"
+        content: "[(Basic Style) 2-Stroke 63cc](https://atvkart.com/products/2-stroke-90cc-off-road-go-kart)"
+
+  - id: 204
+    name: English Vocabulary Mastered
+    goal_id: g2
+    status: active
+    items:
+      - kind: task
+        name: Spisać 20 słówek angielskich z AI
+      - kind: task
+        name: Phrasals starting on leter A
+      - kind: task
+        name: Idioms starting on A
+      - kind: task
+        name: Used in conversation
+      - kind: task
+        name: Used in Business
+      - kind: task
+        name: Dodam Słówka do super memo
 
   # --- GOAL 3: LIVING ENVIRONMENT ---
   - id: 301
@@ -111,48 +311,163 @@ projects:
     status: active
     items:
       - kind: task
-        name: Install new roller blind in kitchen
+        name: Roleta w kuchni nowa założona
       - kind: task
-        name: Paint kitchen walls
+        name: Znaleźć gdzie ja to kupiłem (roleta)
       - kind: task
-        name: Mount TV bracket
+        name: Założyć roletę
       - kind: task
-        name: Build folding desk
+        name: Drzwi Daniela czyste
+      - kind: task
+        name: Drzwi w budynku zamykają się na klucz
+      - kind: task
+        name: Furtka zamyka się na klucz
+      - kind: task
+        name: Kuchnia pomalowana
+      - kind: task
+        name: Zaślepić dziurę went. w oknie
+      - kind: task
+        name: Szafka pod TV Daniel
+      - kind: task
+        name: Uchwyt tv zalozny
+      - kind: task
+        name: Listwa progowa zalozona
+      - kind: task
+        name: Zaslepki listew plastikowe zalozone
+      - kind: task
+        name: Listewki do framugi przyklejone
+      - kind: task
+        name: Kółka pod szafką przykręcone
+      - kind: task
+        name: Termometr kupiony
+      - kind: task
+        name: Uchwyt na odkurzacz kupiony i założony
+      - kind: task
+        name: Lustro powieszone
+      - kind: task
+        name: Nowe biurko składane zrobię
       - kind: resource
-        name: Wall hinges (x3)
+        name: Zawiasy na sciane x 3
         type: to_buy
       - kind: resource
-        name: Desk top (146zł)
+        name: Nogi kantówki x 2
         type: to_buy
+      - kind: resource
+        name: Zawiazy na nogi x 2
+        type: to_buy
+      - kind: resource
+        name: Blat 146zł kupie
+        type: to_buy
+      - kind: task
+        name: Daniel ma sklepy na parterze co przyciągnie finanse i uwagę zarządcy - Zdjęcie sklepów pod Danielem
 
   - id: 302
-    name: Pantry Renovated
+    name: Pantry & Utility Room Renovated
     goal_id: g3
     status: active
     items:
       - kind: task
-        name: Weld vinyl flooring
+        name: Pralni remont skończony
       - kind: task
-        name: Screw in basket rails
+        name: Wyłączę prąd i obetnę kable w szafce
       - kind: task
-        name: Replace 380v socket with Wago connectors
+        name: Szafkę zdejmę
       - kind: task
-        name: Seal mouse holes with foam
+        name: Przytnę płyte GK od Daniela na rozmiar dziury
+      - kind: task
+        name: Przykleję płytę w dziurze
+      - kind: task
+        name: "Spiżarnia: Spawanie winylu zrobie"
+      - kind: task
+        name: "Spiżarnia: Listwy przy koszu przykrecę"
+      - kind: task
+        name: "Spiżarnia: Gniazdo 380v zastąpione złączkami Wago"
+      - kind: task
+        name: "Spiżarnia: Próg bramy zalepiony, zamaskowany poprawnie"
+      - kind: task
+        name: "Spiżarnia: Dziury po myszach zaklejone pianką"
       - kind: resource
-        name: Wooden crates (x3)
+        name: 2 skrzynie 45x40 na owoce
+        type: to_buy
+      - kind: resource
+        name: 3 x drewniane skrzynie
         type: to_buy
 
   - id: 303
-    name: Kitchen Drawers Repaired
+    name: General Home Improvements
     goal_id: g3
     status: active
     items:
+      - kind: task
+        name: Huśtawka dla gangusów 🛝🥅
+      - kind: task
+        name: Listwy poprawione w korytarzu na dole
+      - kind: task
+        name: Brodzik szczelny i drzwi nie wypadaja
+      - kind: task
+        name: Brodzik blokady ma założone 10min
+      - kind: task
+        name: Silicon nałożę przy szybie
+      - kind: task
+        name: "Klimatyzacja: Kwadrat zaszpachluję przy listwie pod Zuzy biurkiem"
+      - kind: task
+        name: "Klimatyzacja: Kwadrat pomaluję przy listwie"
+      - kind: task
+        name: Napiszę kroki do zamontowania klimatyzacji
+      - kind: task
+        name: Półka 90x15cm wisi pod tablicą na czarnych uchwytach z Brico
+      - kind: task
+        name: Przegródkę do szafy skręcić na metalowe kątowniki
+      - kind: task
+        name: Brico cięcie półek
       - kind: resource
-        name: Self-braking rails 8x35
+        name: Brico - uchwyty dla Zuzy i Lukasz 4 sztuki
         type: to_buy
       - kind: resource
-        name: Fiberboard 35x55cm (4 pcs)
+        name: Półka 90x15
         type: to_buy
+      - kind: resource
+        name: Brico 2 x 80cmx20xm u Tymka i Seby
+        type: to_buy
+      - kind: task
+        name: Łukasz gniazdko zaślepione
+      - kind: task
+        name: Zwijacze ostatnie dwa do rolet założę (📅 2025-07-16)
+      - kind: task
+        name: Okap ma nowy wentylator kanałowy
+      - kind: task
+        name: Projektor ze zdjęciami na ścianę na schodach
+      - kind: resource
+        name: "Wentylator kanałowy 150 mm ETAMASTER"
+        link: "https://www.ventigo.pl/pl_PL/p/wentylator-kanalowy-150-mm-o-przeplywie-mieszanym-etamaster-em-150-e2-02/8346/"
+        type: to_buy
+      - kind: task
+        name: Szuflady w kuchni jak nowe
+      - kind: resource
+        name: Szyny 8x 35 samo hamujące
+        type: to_buy
+      - kind: resource
+        name: Pilsniowe plyty 35x55cm x 4szt
+        type: to_buy
+      - kind: task
+        name: Szuflady Matiego jak nowe
+      - kind: resource
+        name: Szyny samohamujace 40x8
+        type: to_buy
+      - kind: task
+        name: Woda filtrowana z zasobnikiem w kuchni (Aquaphor)
+      - kind: task
+        name: Patryk ma przyklejony kafel w łazience
+      - kind: resource
+        name: Fugę jasno szarą kupię
+        type: to_buy
+      - kind: resource
+        name: Klej do płytki mały kupię
+        type: to_buy
+      - kind: task
+        name: Zabiore szlifierkę i papiery scierne
+      - kind: task
+        name: Zabiorę gumę do fugowania
 
   # --- GOAL 4: HOBBY & TECH ---
   - id: 401
@@ -163,11 +478,47 @@ projects:
       - kind: task
         name: Fix chat title generation stream error
       - kind: task
-        name: Implement chat sharing (Read-only mode)
+        name: Create with AI pastel colors for chat folders in light theme.
+      - kind: task
+        name: Fix chat content area alignment in screen width center
+      - kind: task
+        name: Copy markdown "Copy"button to bottom
+      - kind: task
+        name: Floating botton action bar
+      - kind: task
+        name: Floating arrow to place with open edition
+      - kind: task
+        name: Implement Save and Save as buttons as floating
+      - kind: task
+        name: Simple search
+      - kind: task
+        name: 🔴 Prevent open more than one instance of the app in the same browser
+      - kind: task
+        name: Chat sharing
+      - kind: task
+        name: "F11: Create chat sharing so anyone can get ad have chat in read only mode. unless have API keys."
+      - kind: task
+        name: Add content highlighting and preserve higlights when chat is shared using base64 data in URL (related to F11)
       - kind: task
         name: Move to remote DB with login functionality
       - kind: task
-        name: Add "Copy" button to bottom of markdown
+        name: Max words/letters limit - on Submit button
+      - kind: task
+        name: 🔵 Preserve scroll possition for all chats. So when I back to some chat I opens on last position I was before exiting chat.
+      - kind: task
+        name: Create default prompts list from server during build
+      - kind: task
+        name: Add links at the end of last message that will help user create next prompts
+      - kind: task
+        name: Add total $ spend for every chat
+      - kind: task
+        name: Add canvas on the right sidebar like Slack has
+      - kind: task
+        name: Store update datetime for each conversation (not chat)
+      - kind: task
+        name: Add Docker, Terraform color schemes
+      - kind: task
+        name: Place another Copy button on bottom of mardown field.
 
   - id: 402
     name: Chat Bella Features Implemented
@@ -175,24 +526,85 @@ projects:
     status: active
     items:
       - kind: task
-        name: Resize "Send" button and change to icon
+        name: Powiększyć guzik Send i zmienić go na ikonkę
       - kind: task
-        name: Implement Google Login
+        name: Slow down streaming text to be more appealing to read right away
       - kind: task
-        name: Fix title changing bug
+        name: Dodać stały guzik Stop na dole czata żeby łatwo go kliknąć
+      - kind: task
+        name: Screenshot można wysłać konkretnej wiadomości. Fajne do szerowania ciekawostek
+      - kind: task
+        name: FT Share chat with user
+      - kind: task
+        name: Dodać guziki na ostatnim czacie z listą następnych pytań jakie mogą mnie interesować
+      - kind: task
+        name: Dodać ogóry Mini pasek z opcjami powiększenia czcionki i zmiany czcionki jest oczywiście wybranego zestawu czcionek
+      - kind: task
+        name: Zrobić osobno szablony dla apki mobilnej i dla desktopa
+      - kind: task
+        name: Przechowywać czaty wszystkie ustawienia użytkownika w bazie danych
+      - kind: task
+        name: 🟡 FT Dodać folder Czatów który będzie zawierał pojedyncze a ty tak jak to jest w tej drugiej aplikacji
+      - kind: task
+        name: FT Publikacja czatów w postaci artykułu w formacie Markdow
+      - kind: task
+        name: Dodać logowanie poprzez za pomocą Google
+      - kind: task
+        name: Naprawię zmianę tytułu bo nie działa i dodam testy w jest
+      - kind: task
+        name: Create more color schemes
 
   - id: 403
-    name: Smart Mirror Built
+    name: AI Chat bots loved by clients
+    goal_id: g4
+    status: active
+    items:
+      - kind: task
+        name: Errbot in python
+      - kind: task
+        name: Program który pozwala mi pytać AI o tematy które już przerabiałem (jak Ecom, SaaS, etc.)
+      - kind: task
+        name: Zgromadzę listę użytkowników których chcę z digitalizować
+      - kind: task
+        name: Dla każdego użytkownika zgromadzę linki z jakich chcę zrobić transcript
+      - kind: task
+        name: Dla każdego linka pobiorę transcript i go poprawię za pomocą AI
+      - kind: task
+        name: Wymyślę jak przechować transcripty w bazie vectorowej tak żebym mógł dokładać nowe transcripty.
+
+  - id: 404
+    name: Smart Mirror/Calendar Built
     goal_id: g4
     status: active
     items:
       - kind: resource
-        name: EDP 4k 8K 120HZ DP Board
+        name: "**EDP 4k 8K 120HZ DP**"
         type: to_buy
       - kind: resource
-        name: TFP401 HDMI Decoder
+        name: Board
+        type: to_buy
+      - kind: resource
+        name: Brass frame LCD
+        link: "Building a USB-C touchscreen monitor (new for modern devices)"
+        type: to_buy
+      - kind: resource
+        name: TFP401 Adafruit TTL 40 to HDMI
         link: "https://www.adafruit.com/product/2219"
         type: to_buy
+
+  - id: 405
+    name: Digital Data Centralized
+    goal_id: g4
+    status: active
+    items:
+      - kind: task
+        name: Modify Bell chat app to export json chats compatible with MyChat
+      - kind: task
+        name: Add uploading files to MyChat
+      - kind: task
+        name: Add connector to my Todoist app
+      - kind: task
+        name: Add connector to G Calendar
 
   # --- GOAL 5: HEALTH ---
   - id: 501
@@ -201,31 +613,191 @@ projects:
     status: active
     items:
       - kind: task
-        name: Schedule dentist appointment
+        name: Do dentysty umówię się (📅 2025-12-26)
       - kind: task
-        name: Create 8-week exercise and diet plan in GDocs
+        name: Otworzę G Docs do rozpiski ćwiczenia i diety na 8 tygodni
       - kind: task
-        name: Schedule dermatology appointment (2025-07-28)
+        name: Ask how people asking other to support their startup's describe my fear
       - kind: task
-        name: Schedule celiac disease test for Gosia
+        name: Co znaczy being vulnerable i czy warto takim być
+      - kind: task
+        name: Gosia badanie na celiakię i inne uczulenia
+      - kind: task
+        name: Badania dermatolog skóry (📅 2025-07-28)
+      - kind: resource
+        name: "Fisetin - Ultra Pure - 100mg"
+        link: "https://timehealth.co.uk/product/fisetin/"
+        type: to_buy
+      - kind: reference
+        name: "Bryan Johnson Blueprint"
+        content: "[blueprint](https://protocol.bryanjohnson.com/#step-2-supplements)"
+      - kind: reference
+        name: "ALAB: Hormony apetytu"
+        content: "[Hormony regulujące apetyt i metabolizm](https://www.alab.pl/pakiet/hormony-regulujace-apetyt-i-metabolizm)"
+      - kind: reference
+        name: "ALAB: Mikroflora jelitowa"
+        content: "[Pakiet ocena mikroflory jelitowej](https://www.alab.pl/pakiet/ocena-mikroflory-jelitowej)"
+      - kind: reference
+        name: "ALAB: Nietolerancja mleka"
+        content: "[Nie toleruję mleka rozszerzony](https://www.alab.pl/pakiet/nie-toleruje-mleka-rozszerzony)"
+      - kind: reference
+        name: "ALAB: Celiakia"
+        content: "[Celiakia - badania w pakiecie glutenowym](https://www.alab.pl/pakiet/celiakia-pakiet-diagnostyczny)"
+      - kind: reference
+        name: "ALAB: Serce"
+        content: "[Pakiet - serce pod kontrolą kompleksowy](https://www.alab.pl/pakiet/pakiet-serce-pod-kontrola-kompleksowy)"
+      - kind: reference
+        name: "Szpital Śrem Laryngologia"
+        content: "[Oddział Laryngologiczny – Szpital w Śremie](https://szpital-srem.pl/?oddzialy=oddzial-laryngologiczny)"
+      - kind: reference
+        name: "Szpital Gniezno Otolaryngologia"
+        content: "[Szpital Pomnik Chrztu Polski - Oddział Otolaryngologiczny](https://szpitalpomnik.pl/szpital/oddzialy/oddzial-otolaryngologiczny)"
+  - id: 601
+    name: Job Search Support (Lucy/Marta/Gosia)
+    goal_id: g6
+    status: active
+    items:
+      - kind: task
+        name: Masaże Ula
+      - kind: task
+        name: Znaleźć pracę lub płatny staż dla Gosi
+      - kind: task
+        name: Znaleźć pracę dla Marty
+      - kind: task
+        name: Znaleźć pracę dla Lucy
+      - kind: task
+        name: Daniel ma CV zrobione
+      - kind: task
+        name: Znaleźć oferty pracy dla Lucy
+      - kind: task
+        name: Zagadam do Kasia z Irlandii o pracę testera Cypress Playwright
 
-# --- THE INBOX (Items that need Triage) ---
+  - id: 602
+    name: Kelemntynka - Generosity Network
+    goal_id: g6
+    status: active
+    items:
+      - kind: task
+        name: How to segment ptospects
+
+  # --- MISC PROJECTS (From Inbox/Bieżące) ---
+  - id: 701
+    name: Piaggio Scooter Restored
+    goal_id: g2
+    status: active
+    items:
+      - kind: task
+        name: Filtr wymienię w moto
+      - kind: task
+        name: Zleje olej przez dren
+      - kind: task
+        name: Odkręce filtr
+      - kind: task
+        name: Założę nowy filtr
+      - kind: task
+        name: Wleje olej i flush
+      - kind: task
+        name: Złoże drukarkę 3D
+
+  - id: 702
+    name: Tenerife Trip Prep
+    goal_id: g2
+    status: active
+    items:
+      - kind: task
+        name: Dulsevia kupiona na 5 miesiecy
+      - kind: task
+        name: Dulsevia włożona jako lkarnityna
+      - kind: task
+        name: Wzmacniacz DAC kupiony
+      - kind: task
+        name: Głośniki kupione
+
+# --- INBOX (Unsorted Items) ---
 inbox_tasks:
-  - "Consolidate notes from multiple sources into GPT input"
-  - "Sell Kensington U-lock"
-  - "Buy white gold bracelet"
-  - "Buy Philips espresso filter"
-  - "Buy Aquaphor Cristal A + KB7 water filter"
-  - "Buy Eneloop batteries (12 pcs)"
-  - "Buy tooth mugs and fluid"
-  - "Plan 3D printer activities"
-  - "List all CSS and JS features from saved clip"
-  - "List AI app ideas from saved clip"
-  - "Learn about Apache Kafka"
-  - "Compare Kong vs Kong Insomnia"
-  - "Buy ironing board cover 35x95"
-  - "Sell heater and IR panels from attic"
-  - "Buy RC charger and propeller for plane"
-  - "Create kids' schedule for morning reading/activities"
-  - "Analyze 'SlickGPT' repo"
-  - "Analyze 'Edraw.AI' tool"
+  - "🔴 Mam za dużo miejsc gdzie trzymam pomysły i notatki. Trzeba to scalić. Po drugie trzeba to spisać jako input do GPT."
+  - "🔴 Ogarnę budget (📅 2025-08-04)"
+  - "* Create next action ⏭"
+  - "Kensington Ulock sprzedać"
+  - "Kupię bransoletkę ze złota białego"
+  - "Kupię filtr do ekspresy Philips"
+  - "Kupię filtr do wody pod zlew Aquaphor Cristal A + KB7"
+  - "Enelop do pianina 12szt"
+  - "Kubeczki do zębów"
+  - "Plyn do zębów"
+  - "Zabawy na drukarce 3D zaplanuję"
+  - "[NEO ZESTAW SURVIVALOWY 8 W 1 MULTITOOL NÓŻ LATARKA KRZESIWO KOMPAS 63-154 - 5907558482041 - 14013698738 - Allegro](https://allegro.pl/oferta/neo-zestaw-survivalowy-8-w-1-multitool-noz-latarka-krzesiwo-kompas-63-154-14013698738)"
+  - "[Hulajnoga wyczynowa Movino Nitro -4952 w cenie ★ 239 zł ★ na Decathlon.pl. Hulajnoga dla początkujących, szeroki podest, waga 3,2 kg. ](https://search.app/hWhvbdrFeFXS4Chj9)"
+  - "List all CSS and JS features from this clip"
+  - "List AI app ideas from this clip"
+  - "Prepare unitary gain from this table"
+  - "You have noting to loose, you will be the same"
+  - "Apache Kafka what is it for"
+  - "Kong vs Kong Insomnia"
+  - "[SlickGPT](https://slickgpt.vercel.app/)"
+  - "[Edraw.AI](https://www.edraw.ai/app/recent)"
+  - "Pokrowiec na deskę do prasowania 35x95"
+  - "Świetlówka założona na strychu"
+  - "Strych - sprzedać piecyk na kólkach i panele IR Daniela (📅 2025-11-15)"
+  - "[eufyMake | UV Printing Made Easy - eufymake Europe](https://www.eufymake.com/eu-en/eufymake-uv-printer-e)"
+  - "Manage my day: What to do today? System gets overdue tasks from todoist and ask which of them have been accomplished [system knows about my long term goals, short term goals and other circumstances as facts list]"
+  - "[Local JavaScript Vector Database that works offline | RxDB - JavaScript Database](https://rxdb.info/articles/javascript-vector-database.html) #"
+  - "Filtr Auquaphor pod zlewem działa"
+  - "[Falcor: What is Falcor](https://netflix.github.io/falcor/starter/what-is-falcor.html)"
+  - "[Provision Postgres at Scale with the Neon API - Neon](https://neon.tech/blog/provision-postgres-neon-api)"
+  - "Improve Story Telling"
+  - "[Lightbox Maker](https://makerworld.com/en/makerlab/lightboxMaker?from=makerlab)"
+  - "[Adam Sarr (@slattisreal) | Stan](https://stan.store/slattisreal)"
+  - "[Qwen3 🇨🇳 from Alibaba : How to deploy this very communist but smart model 100% Locally? | by Henry Navarro | May, 2025 | Medium](https://henrynavarro.org/qwen3-from-alibaba-how-to-deploy-this-very-communist-but-smart-model-100-locally-d60347ac9344)"
+  - "Regał magazynowy garaż"
+  - "[GPU as a Service - Beyond.pl](https://www.beyond.pl/uslugi/gpu-as-a-service-gpuaas/?cd=22612236219&ad=178667282365&kd=&gad_source=1&gad_campaignid=22612236219&gbraid=0AAAAAB304-rQENBZcYoHKq6ky2hbSJdWj&gclid=EAIaIQobChMIk7rZkofsjQMVfkpBAh3njQ_OEAAYAiAAEgLHuvD_BwE)"
+  - "[QuickPod](https://console.quickpod.io/)"
+  - "[Flux Kontext Guidebook](https://openart.ai/fluxkontextbook)"
+  - "[Create - AI Image Generator | Create Art or Modify Images with AI](https://openart.ai/create?prompt=Imagine+A+paper+cup+of+cofee+as+assasin+in+cartoon+style)"
+  - "[Wabi-sabi - Google Search](https://www.google.com/search?client=safari&sca_esv=f7156635f6e9a261&hl=en-pl&udm=2&fbs=AIIjpHz2LkAPJDdeiKYzFgacvjxVM1lIEW1_Krd9ls3mdywZopSGU-2mTFFUhVkcQKmCmgH_rHqSRdgOtYHf0LF9zSSuJdAc5ezEI5I3FiAWExQi5nL267gjhKrkO5WsdhS7E-XAyJATIWhuBzVPTnwv74uiw0ZjPmUxT0EOkSKbj8NsYhVcOPcRm3bJM2OW1vcnNEeuu26W577RgOek0RewLg_vpLfWROQQUm3gKnxzuCXa72tBJCU&q=Wabi-sabi&sa=X&ved=2ahUKEwj0qoz7nbCOAxWyJBAIHfe0J5IQtKgLegQIDRAB&biw=414&bih=714&dpr=2)"
+  - "[Pet Hair Remover Glove – ROVAXZ](https://rovaxz.com/products/pet-hair-remover-glove?_pos=1&_sid=da3ec5973&_ss=r&fbclid=PAQ0xDSwLc5j9leHRuA2FlbQIxMQABp-W1whIrxPhc6ydomqLF4k8vgU0UD5U_JPrEUR7hy5Cpk8r0kBzONz6_BvoU_aem_adv9m5JV-ERH02EJktlWsg)"
+  - "Kupię blender"
+  - "[Introduction - How to use PocketBase - Docs - PocketBase](https://pocketbase.io/docs/how-to-use/) Super baza danych"
+  - "Kimi K2 super model GPT sparse"
+  - "[Model 17: Sakura 240 + Sport Pack – 3D Sets](https://3dsets.com/product/model-17-sakura-240-sport-pack/)"
+  - "https://oferta.elektrotechniczni.pl/upsell?utm_medium=paid&utm_source=ig&utm_id=120232190812770404&utm_content=120232190812800404&utm_term=120232190812740404&utm_campaign=120232190812770404&fbclid=PAQ0xDSwL9VohleHRuA2FlbQEwAGFkaWQBqyaKfnMINAGnMXTolQ8eW292ZQyLXQO1bAE-1s9_bOOUHZ9BX85OelP0HqB7mSQ1xnUuNKE_aem_O-BLw0f2hAL8nLUgdazxAQ"
+  - "[Hypersketch – Lighting-fast idea sketching for designers](https://hypersketch.com/)"
+  - "[Material Tailwind PRO - Supercharge Your Development With Powerful Blocks](https://www.material-tailwind.com/blocks#application-admin-ui)"
+  - "[CodeRocket - Build Stunning Tailwind Websites with AI](https://www.coderocket.app/)"
+  - "[Collapsing Drill Sword (Print-in-Place) by 3D Printing World | Download free STL model | Printables.com](https://www.printables.com/model/535985-collapsing-drill-sword-print-in-place/files)"
+  - "[printpal - Model | printpal.io](https://printpal.io/model/4dad30c1f3b842948a72bf35992f4ee0)"
+  - "[printpal - Text-to-CAD | printpal.io](https://printpal.io/text-to-cad)"
+  - "[Miska ustępowa wisząca bez kołnierza z deską wolnoopadającą Slim - OLTENS JOG | lazienkaplus.pl](https://www.lazienkaplus.pl/pl/zestaw-oltens-jog-miska-wc-wiszaca-purerim-z-powloka-smartclean-z-deska-wolnoopadajaca-slim-42505000,507616,89,i/?_gl=1*1pk0u9z*_up*MQ..*_gs*MQ..&gclid=Cj0KCQjw2IDFBhDCARIsABDKOJ7kiSQIFAKGhiW-GGzm9T8lFNJauhlUn55YRNnSAfB620_fqqr7L1IaAoJWEALw_wcB&gbraid=0AAAAAD4Ga6V5g2AyXOrnUa6UkXALGd05-)"
+  - "[Kabina prysznicowa Essential 80-90 x 80 x 90185 cm Sensea - Leroy Merlin](https://www.leroymerlin.pl/produkty/kabina-prysznicowa-essential-80-90-x-80-x-90185-cm-sensea-82173389.html?_gl=1*lcvm0n*_up*MQ..*_gs*MQ..&gclid=Cj0KCQjw2IDFBhDCARIsABDKOJ4Eb4cQMGaXuicLYfRLJUPE1m0T-Y_zeF7hQkXnwD4luJFbAn5jmEgaAoTIEALw_wcB&gclsrc=aw.ds&gbraid=0AAAAAD3eUPEzEkC7hbgqi2lEzhKeAy7DN)"
+  - "Jazda na skuterze"
+  - "Gra terenowa"
+  - "Automaty"
+  - "Brainroty koszulki zrobię"
+  - "Ładowarkę lipo kupię do samolotu"
+  - "Smigło do samolotu kupie"
+  - "Strzelnica z Natalią"
+  - "Zwizualizuję sobie i opisze domek na wodzie i jak dzieciaki pracują"
+  - "Zapiszę kiedy dzieci będą w szkole i kiedy pojedziemy do USA i Japonii i Korei"
+  - "Pościele wszyscy mają ładne i nowiutkie"
+  - "Kupię narzędzia do serwisu padów"
+  - "Kupię gałkę do pada Xbox"
+  - "Kupię żarówki świeczki E27 x *3 E14* x 3"
+  - "Kupię uchwyt na rurę do odkurzacza dla Daniela"
+  - "OLX wystawię: Wentylator duży"
+  - "OLX wystawię: Bateria kuchenna"
+  - "OLX wystawię: Klucze dynamo metryczne"
+  - "OLX wystawię: Kurtka moto 1"
+  - "OLX wystawię: Kurtka moto 2"
+  - "[magnetic lcd digital alarm clock large screen displays date - Temu Poland](https://share.temu.com/TWm2iHXjwTA)"
+  - "[modern temperature humidity monitor large lcd - Temu Poland](https://share.temu.com/fkO7CPnOvfA)"
+  - "[#ai #artificialintelligence #aiagents #agenticai #rag #llm #machinelearning #deeplearning #vectordb #datascience #aiarchitecture #aipipeline #innovation #mlops #tech #autonomousagents #aiworkflow |…](https://www.linkedin.com/posts/ignacioandrecm_ai-artificialintelligence-aiagents-share-7390928956180344832-MwV8?utm_source=share&utm_medium=member_ios&rcm=ACoAAABtK2oBFKH1lkGsMXB8jEjuaIkTe1lzMaI)"
+  - "[Exa: The Search Engine for Developers & Custom AI Search Solution](https://exa.ai/about)"
+  - "[Home Assistant Green Smart Home Hub – Matter, Zigbee, 2X USB, HDMI, LAN – mediarath - Martin Damrath](https://mediarath.de/products/home-assistant-green-smart-home-hub-2x-usb-gigabit-lan-hmdi-microsd-slot)"
+  - "Python Social Auth OAuth2"
+  - "[Simple Pure CSS Drop Down Menu](https://codepen.io/philhoyt/pen/DzXPoZ)"
+  - "Colors"
+  - "[Animated Tab Bar](https://codepen.io/abxlfazl/pen/VwKzaEm)"
+  - "[Stripe Subscription Starter – Vercel](https://vercel.com/templates/next.js/subscription-starter)"
+  - "Jak zadawać pytania gościom na stronie"
+  - "process diagram"
+  - "BusinessIdea evaluator SWAT"
