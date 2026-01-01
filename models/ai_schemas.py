@@ -3,7 +3,6 @@ from pydantic import BaseModel, Field
 from enum import Enum
 from dataclasses import dataclass
 
-
 class ClassificationType(str, Enum):
     TASK = "task"
     SHOPPING = "resource"
@@ -11,10 +10,15 @@ class ClassificationType(str, Enum):
     NEW_PROJECT = "new_project"
     INCUBATE = "incubate"
 
-
 class ClassificationResult(BaseModel):
+    # --- CHAIN OF THOUGHT (Moved to Top) ---
+    reasoning: str = Field(
+        description="First, think step-by-step about the item. Analyze the user's intent, the context hierarchy, and the GTD rules. Explain why it fits a specific type and project."
+    )
+
+    # --- THE DECISION ---
     classification_type: ClassificationType = Field(
-        description="The category of the item. Use 'resource' for things to buy, 'reference' for info, 'task' for actions, 'incubate' for someday/maybe."
+        description="The category of the item based on the reasoning above."
     )
     suggested_project: str = Field(
         description="The exact name of the best matching project, or 'Unmatched' if none fit."
@@ -22,9 +26,8 @@ class ClassificationResult(BaseModel):
     confidence: float = Field(
         description="Confidence score between 0.0 and 1.0."
     )
-    reasoning: str = Field(
-        description="Brief explanation (max 15 words) of why this project and type were chosen."
-    )
+
+    # --- METADATA ---
     extracted_tags: List[str] = Field(
         default_factory=list,
         description="Relevant tags from the allowed list."
@@ -36,18 +39,16 @@ class ClassificationResult(BaseModel):
         default=None,
         description="If Unmatched, suggest a concise name for a NEW project."
     )
-
     estimated_duration: Optional[str] = Field(
         default=None,
-        description="An estimated duration string (e.g., '15min', '1h') if inferable from the task complexity."
+        description="An estimated duration string (e.g., '15min', '1h') if inferable."
     )
     alternative_projects: List[str] = Field(
         default_factory=list,
         description="Up to 2 other projects that might be a close second match."
     )
 
-# --- SERVICE OBJECTS (Dataclasses) ---
-# These were missing in the previous update
+# --- SERVICE OBJECTS ---
 
 @dataclass
 class ClassificationRequest:
@@ -59,6 +60,7 @@ class ClassificationResponse:
     """Standardized response wrapper used by TaskClassifier"""
     results: List[ClassificationResult]
     prompt_used: str
+    tool_schema: dict  # <--- NEW: To store the raw tool definition
     raw_response: str
 
 class SmartFilterResult(BaseModel):

@@ -151,24 +151,20 @@ class PromptBuilder:
 
 
 class TaskClassifier:
-    """
-    Application Service: Orchestrates the AI classification.
-    Uses Anthropic Structured Outputs for reliability.
-    """
-
     def __init__(self, client, prompt_builder: PromptBuilder):
         self.client = client
         self.prompt_builder = prompt_builder
 
     def classify_single(self, request: SingleTaskClassificationRequest) -> ClassificationResponse:
-        """
-        Classify a single task using Pydantic validation (Structured Outputs).
-        """
         prompt = self.prompt_builder.build_triage_prompt(
             request.task_text,
             request.available_projects,
             request.existing_tags
         )
+
+        # Capture the "Form" definition we are sending
+        tool_schema = ClassificationResult.model_json_schema()
+
         try:
             # Use the .parse() method for automatic Pydantic validation
             response = self.client.beta.messages.parse(
@@ -185,21 +181,22 @@ class TaskClassifier:
             return ClassificationResponse(
                 results=[parsed_result],
                 prompt_used=prompt,
-                raw_response=str(parsed_result.model_dump())
+                tool_schema=tool_schema, # <--- Pass schema
+                raw_response=parsed_result.model_dump_json(indent=2) # <--- Pretty JSON
             )
 
         except Exception as e:
-            # Fallback for API errors or Validation errors
             error_result = ClassificationResult(
+                reasoning=f"AI Error: {str(e)}", # Reasoning first!
                 classification_type=ClassificationType.TASK,
                 refined_text=request.task_text,
                 suggested_project="Unmatched",
                 confidence=0.0,
-                reasoning=f"AI Error: {str(e)}",
                 extracted_tags=[]
             )
             return ClassificationResponse(
                 results=[error_result],
                 prompt_used=prompt,
+                tool_schema=tool_schema,
                 raw_response=str(e)
             )

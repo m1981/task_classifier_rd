@@ -155,11 +155,9 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
                     st.rerun()
 
     # --- MANUAL OVERRIDE & NEW PROJECT ---
-    st.divider()
-
     # 1. Project Selector (Manual)
     all_projs = [p.name for p in repo.data.projects]
-    selected_proj = st.selectbox("Manual Assignment", all_projs, index=None, placeholder="Select project...")
+    selected_proj = st.selectbox("All projects", all_projs, index=None, placeholder="Select project...")
 
     if selected_proj and st.button("Move to Selected Project"):
         target_id = repo.find_project_by_name(selected_proj).id
@@ -190,15 +188,17 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
 
     # --- DEBUG SECTION ---
     st.markdown("---")
-    with st.expander("🛠️ Debug Info"):
+    with st.expander("🛠️ Debug Info (Raw Request/Response)"):
         if 'last_raw_response' in st.session_state:
             resp = st.session_state.last_raw_response
 
-            st.markdown("**1. Exact Prompt Sent:**")
-            # st.code preserves exact whitespace, newlines, and the ``` blocks
+            st.subheader("1. The Prompt (User Message)")
             st.code(resp.prompt_used, language='markdown')
 
-            st.markdown("**2. Raw AI Response:**")
+            st.subheader("2. The Schema (The 'Form' sent to AI)")
+            st.json(resp.tool_schema)
+
+            st.subheader("3. The Raw Response (Filled Form)")
             st.code(resp.raw_response, language='json')
         else:
             st.info("No AI request made yet.")
