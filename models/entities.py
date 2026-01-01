@@ -8,9 +8,21 @@ from datetime import datetime, date
 class SystemConfig:
     """Central configuration for domain logic"""
     DEFAULT_TAGS: List[str] = [
-        "physical", "digital", "out", "need-material", "need-tools", "buy"
-    ]
+        # Energy Level (Physical)
+        "Physical-Light", "Physical-Medium", "Physical-Heavy",
 
+        # Cognitive Load (Mental)
+        "Mental-Low", "Mental-Medium", "Mental-Deep",
+
+        # Focus Type
+        "Creative", "Analytical", "Administrative",
+
+        # Context
+        "@Computer", "@Home", "@Garage", "@Garden", "@Errands", "@Phone", "@Anywhere",
+
+        # Energy State
+        "HighEnergy", "LowEnergy", "Morning", "Evening"
+    ]
 # --- ENUMS ---
 class ProjectStatus(str, Enum):
     ACTIVE = "active"

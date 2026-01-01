@@ -85,11 +85,15 @@ class PromptBuilder:
         }
 
     def build_triage_prompt(self, task_text: str, context_hierarchy: str, existing_tags: List[str] = None) -> str:
-        # Use existing tags from the repo if available, otherwise fallback to config defaults
-        if existing_tags:
-            tags_str = ", ".join(existing_tags)
-        else:
-            tags_str = ", ".join(self.config.DEFAULT_TAGS)
+        # 1. Merge Tags
+        all_tags = list(set(self.config.DEFAULT_TAGS + (existing_tags or [])))
+        tags_str = ", ".join(all_tags)
+
+        # 2. Dynamic Category Examples (DRY)
+        # We filter the config tags to provide relevant examples dynamically
+        context_ex = ", ".join([t for t in self.config.DEFAULT_TAGS if t.startswith("@")][:3])
+        effort_ex = ", ".join([t for t in self.config.DEFAULT_TAGS if "Mental" in t or "Physical" in t][:3])
+        energy_ex = ", ".join([t for t in self.config.DEFAULT_TAGS if "Energy" in t or "Morning" in t][:3])
 
         return f"""
         You are a GTD Triage Expert.
@@ -97,28 +101,44 @@ class PromptBuilder:
         INCOMING ITEM: "{task_text}"
         
         CONTEXT (Goals > Projects):
-        
         {context_hierarchy}
+        
+        AVAILABLE TAGS: [{tags_str}]
+        
+        TAGGING RULES:
+        - Select 3-5 tags that best describe the task.
+        - Categorize by:
+          1. CONTEXT (Where? e.g. {context_ex})
+          2. EFFORT (How hard? e.g. {effort_ex})
+          3. ENERGY (When? e.g. {energy_ex})
         
         DECISION LOGIC:
         1. IS IT ACTIONABLE?
-           - NO (Reference): Is it pure information (e.g. a URL, a fact) that requires NO further action to capture? -> Type: 'reference'.
-           - NO (Someday): Actionable later? -> Type: 'incubate'.
-           - NO (Junk): Ignore. (Do NOT return 'trash', user decides that).
-           - YES (Action): Does it require time/effort (even just "writing it down" or "saving it")? -> Go to step 2.
+           - NO (Reference): Is it pure info (URL, fact) needing no action? -> Type: "reference"
+           - NO (Someday): Is it for "someday" or "maybe"? -> Type: "incubate"
+           - YES (Action): Does it require time/effort? -> Go to step 2.
            
-        2. IS IT MULTI-STEP?
-           - YES: Needs a new project? -> Type: 'new_project'.
-           
-        3. IS IT A SIMPLE ACTION?
-           - YES (Do/Delegate): -> Type: 'task'.
-           - YES (Buy): -> Type: 'resource'.
+        2. MATCHING:
+           - Match to an existing PROJECT name (do NOT select a GOAL name).
+           - If no project fits, set suggested_project to "Unmatched" and suggest a new name.
 
+        OUTPUT FORMAT (Strict JSON):
+        {{
+            "classification_type": "task",
+            "suggested_project": "Project Name",
+            "confidence": 0.9,
+            "reasoning": "Explanation...",
+            "extracted_tags": ["@Computer", "Mental-Deep", "HighEnergy"],
+            "refined_text": "Actionable Verb Task Name",
+            "suggested_new_project_name": null,
+            "estimated_duration": "30min",
+            "alternative_projects": []
+        }}
+        
         INSTRUCTIONS:
-        - Return the JSON classification.
-        - If 'incubate', suggest a relevant project (e.g. "Someday/Maybe" or a generic one).
-        - If 'task', try to match it to an existing Project under an active Goal.
-        - If the project match is uncertain, provide up to 3 'alternative_projects'.
+        - Return ONLY the JSON object.
+        - Use double quotes for JSON.
+        - Apply tags strictly from the AVAILABLE TAGS list if possible.
         """
 
     def build_smart_filter_prompt(self, query: str, tasks_str: str) -> str:

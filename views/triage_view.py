@@ -3,6 +3,7 @@ from services.repository import TriageService, YamlRepository, DraftItem
 from services import TaskClassifier
 from models.dtos import SingleTaskClassificationRequest
 from models.ai_schemas import ClassificationType
+from models.entities import SystemConfig, TaskItem
 from views.common import log_action, log_state
 
 
@@ -28,8 +29,7 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
         st.balloons()
         return
 
-    # Progress Bar - Count TaskItems from unified stream
-    from models.entities import TaskItem
+    # Progress Bar
     total_tasks = len(inbox_items) + sum(
         len([item for item in p.items if isinstance(item, TaskItem)])
         for p in repo.data.projects
@@ -45,12 +45,14 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
             # 1. Prepare Context
             context_str = triage_service.build_full_context_tree()
 
-            existing_tags = triage_service.get_all_tags()
+            # B. Prepare Tags (DB + System Defaults)
+            db_tags = triage_service.get_all_tags()
+            # We pass this to the prompt builder so AI knows what's available
 
             req = SingleTaskClassificationRequest(
                 task_text=current_text,
                 available_projects=context_str,
-                existing_tags=existing_tags
+                existing_tags=db_tags
             )
 
             # 2. Get Classification
@@ -69,16 +71,7 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
     draft: DraftItem = st.session_state.current_draft
     result = draft.classification
 
-    # --- LOGIC: DETERMINE FLOW ---
-    # We treat it as a "Creation Flow" if:
-    # 1. It's explicitly a NEW_PROJECT type
-    # 2. It's INCUBATE type but Unmatched (implies we need a Someday/Maybe project)
-    is_creation_flow = (
-        result.classification_type == ClassificationType.NEW_PROJECT or
-        (result.classification_type == ClassificationType.INCUBATE and result.suggested_project == "Unmatched")
-    )
-
-    # --- THE PROPOSAL CARD ---
+    # --- 4. THE PROPOSAL CARD ---
     with st.container(border=True):
         st.markdown(f"#### {current_text}")
 
@@ -96,6 +89,29 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
         st.markdown(f"**Project:** {result.suggested_project}")
         st.caption(f"💡 {result.reasoning}")
 
+        # --- TAG EDITOR (New Feature) ---
+        # Merge System Defaults + DB Tags + AI Suggestions for the dropdown
+        db_tags = triage_service.get_all_tags()
+        system_tags = SystemConfig.DEFAULT_TAGS
+        all_options = list(set(db_tags + system_tags + result.extracted_tags))
+        all_options.sort()
+
+        selected_tags = st.multiselect(
+            "Tags",
+            options=all_options,
+            default=result.extracted_tags,
+            key="tag_editor",
+            placeholder="Add or select tags..."
+        )
+
+        # 4. Update the Draft Object in Real-time
+        # This ensures that when 'Confirm' is clicked, it uses the user's edited tags
+        if selected_tags != result.extracted_tags:
+            draft.classification.extracted_tags = selected_tags
+            # No need to rerun, the draft object is mutable and updated in memory
+
+        # -----------------------
+
         if result.estimated_duration:
             st.caption(f"⏱️ Est: {result.estimated_duration}")
 
@@ -104,22 +120,16 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
 
         # 1. CONFIRM BUTTON LOGIC
         with col_confirm:
-            # CASE A: Creation Flow (New Project or Incubate->New)
-            if is_creation_flow:
+            # Logic: If New Project, point down. If Matched, allow confirm.
+            if result.classification_type == ClassificationType.NEW_PROJECT:
                 st.info("👇 Review New Project details below")
 
             # CASE B: Standard Move (Only if matched)
             elif result.suggested_project != "Unmatched":
-                # Verify project exists
-                if repo.find_project_by_name(result.suggested_project):
-                    if st.button("✅ Confirm", type="primary", use_container_width=True):
-                        triage_service.apply_draft(draft)
-                        _clear_draft_state()
-                        st.rerun()
-                else:
-                    st.error(f"Project '{result.suggested_project}' not found!")
-
-            # CASE C: Unmatched (Task/Resource)
+                if st.button("✅ Confirm", type="primary", use_container_width=True):
+                    triage_service.apply_draft(draft)
+                    _clear_draft_state()
+                    st.rerun()
             else:
                 st.warning("👇 Select a project below")
 
@@ -141,9 +151,7 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
     # --- ALTERNATIVE PROJECTS (PILLS) - Requirement 2 ---
     if result.alternative_projects:
         st.caption("Or move to...")
-        # Create columns for pills to keep them compact
-        # We limit to 3 to avoid layout breaking
-        alts = result.alternative_projects[:3]
+        alts = result.alternative_projects[:3] # Limit to 3
         cols = st.columns(len(alts))
         for i, proj_name in enumerate(alts):
             if cols[i].button(proj_name, key=f"alt_{i}", use_container_width=True):
@@ -161,21 +169,20 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
 
     if selected_proj and st.button("Move to Selected Project"):
         target_id = repo.find_project_by_name(selected_proj).id
-        triage_service.move_inbox_item_to_project(current_text, target_id, [])
+        triage_service.move_inbox_item_to_project(current_text, target_id, result.extracted_tags)
         _clear_draft_state()
         st.rerun()
 
-    # 2. Create New Project (Unified)
-    with st.expander("➕ Create New Project", expanded=is_creation_flow):
+    # B. Create New Project (Unified)
+    # Auto-expand if AI suggested it
+    is_new_proj_suggestion = (result.classification_type == ClassificationType.NEW_PROJECT)
+
+    with st.expander("➕ Create New Project", expanded=is_new_proj_suggestion):
         with st.form(key="create_form", clear_on_submit=True, border=False):
             c_input, c_btn = st.columns([3, 1], vertical_alignment="bottom")
 
-            # Determine Default Name
-            default_name = ""
-            if result.suggested_new_project_name:
-                default_name = result.suggested_new_project_name
-            elif result.classification_type == ClassificationType.INCUBATE:
-                default_name = "Someday/Maybe"
+            # Pre-fill name if AI suggested it
+            default_name = result.suggested_new_project_name if is_new_proj_suggestion else ""
 
             new_proj_name = c_input.text_input("New Project Name", value=default_name)
 
