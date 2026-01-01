@@ -53,7 +53,6 @@ class ClassificationResult(BaseModel):
 class ClassificationRequest:
     """Batch request object (Legacy/Future use)"""
     dataset: Any
-    prompt_variant: str = "basic"
 
 @dataclass
 class ClassificationResponse:

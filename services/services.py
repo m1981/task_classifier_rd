@@ -84,8 +84,12 @@ class PromptBuilder:
             "basic": """Act as my personal advisor and assistant.""",
         }
 
-    def build_triage_prompt(self, task_text: str, context_hierarchy: str) -> str:
-        tags_str = ", ".join(self.config.DEFAULT_TAGS)
+    def build_triage_prompt(self, task_text: str, context_hierarchy: str, existing_tags: List[str] = None) -> str:
+        # Use existing tags from the repo if available, otherwise fallback to config defaults
+        if existing_tags:
+            tags_str = ", ".join(existing_tags)
+        else:
+            tags_str = ", ".join(self.config.DEFAULT_TAGS)
 
         return f"""
         You are a GTD Triage Expert.
@@ -93,9 +97,8 @@ class PromptBuilder:
         INCOMING ITEM: "{task_text}"
         
         CONTEXT (Goals > Projects):
+        
         {context_hierarchy}
-
-        ALLOWED TAGS: [{tags_str}]
         
         DECISION LOGIC:
         1. IS IT ACTIONABLE?
@@ -115,15 +118,8 @@ class PromptBuilder:
         - Return the JSON classification.
         - If 'incubate', suggest a relevant project (e.g. "Someday/Maybe" or a generic one).
         - If 'task', try to match it to an existing Project under an active Goal.
+        - If the project match is uncertain, provide up to 3 'alternative_projects'.
         """
-
-    def build_prompt(self, request: ClassificationRequest) -> str:
-        """Build prompt for batch processing"""
-        # For batch processing, we might still need manual parsing if we want
-        # multiple items in one response, OR we can use a List[Model] output format.
-        # For simplicity in this refactor, we will focus on the single task flow
-        # which is what the App uses.
-        return self._build_dynamic_prompt(request)
 
     def build_smart_filter_prompt(self, query: str, tasks_str: str) -> str:
         return f"""
@@ -141,24 +137,6 @@ class PromptBuilder:
         4. If the query implies a time limit (e.g. "I have 1 hour"), try to fill that time with the highest priority/best fitting tasks without exceeding it significantly.
         5. Provide a brief reasoning.
         """
-
-    def _build_dynamic_prompt(self, request: ClassificationRequest) -> str:
-        guidance = self._get_dynamic_guidance(request.prompt_variant)
-        projects_list = self._format_projects(request.dataset.projects)
-        tasks_list = self._format_inbox_tasks(request.dataset.inbox_tasks)
-        tags_list = "\n".join([f"  {t}" for t in self.config.DEFAULT_TAGS])
-
-        return f"""{guidance}
-
-Available projects:
-{projects_list}
-
-Classify these tasks:
-{tasks_list}
-
-Available tags:
-{tags_list}
-"""
 
     def _get_dynamic_guidance(self, variant: str) -> str:
         return self._dynamic_variants.get(variant, "Act as a helpful task organizer.")
@@ -188,7 +166,8 @@ class TaskClassifier:
         """
         prompt = self.prompt_builder.build_triage_prompt(
             request.task_text,
-            request.available_projects
+            request.available_projects,
+            request.existing_tags
         )
         try:
             # Use the .parse() method for automatic Pydantic validation

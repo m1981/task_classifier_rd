@@ -42,29 +42,41 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
     if 'current_draft' not in st.session_state or st.session_state.get('draft_source') != current_text:
         log_action("AI PREDICTION START", current_text)
         with st.spinner("🤖 AI is analyzing..."):
-            context_str = triage_service._build_hierarchy_context()
+            # 1. Prepare Context
+            context_str = triage_service.build_full_context_tree()
+
+            existing_tags = triage_service.get_all_tags()
 
             req = SingleTaskClassificationRequest(
                 task_text=current_text,
-                available_projects=context_str
+                available_projects=context_str,
+                existing_tags=existing_tags
             )
 
-            # 1. Get Classification
+            # 2. Get Classification
             response = classifier.classify_single(req)
             result = response.results[0]
 
-            # 2. Create Draft (Proposal)
+            # 3. Create Draft
             draft = triage_service.create_draft(current_text, result)
 
-            # 3. Store in Session
+            # 4. Store in Session
             st.session_state.current_draft = draft
             st.session_state.draft_source = current_text
-            # Store raw response for debug view
             st.session_state.last_raw_response = response
             log_action("DRAFT CREATED", f"{result.classification_type} -> {result.suggested_project}")
 
     draft: DraftItem = st.session_state.current_draft
     result = draft.classification
+
+    # --- LOGIC: DETERMINE FLOW ---
+    # We treat it as a "Creation Flow" if:
+    # 1. It's explicitly a NEW_PROJECT type
+    # 2. It's INCUBATE type but Unmatched (implies we need a Someday/Maybe project)
+    is_creation_flow = (
+        result.classification_type == ClassificationType.NEW_PROJECT or
+        (result.classification_type == ClassificationType.INCUBATE and result.suggested_project == "Unmatched")
+    )
 
     # --- THE PROPOSAL CARD ---
     with st.container(border=True):
@@ -90,35 +102,26 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
         # --- ACTIONS ---
         col_confirm, col_skip, col_trash = st.columns([2, 1, 1])
 
-        # 1. CONFIRM
+        # 1. CONFIRM BUTTON LOGIC
         with col_confirm:
-            btn_label = "✅ Confirm"
-            if result.classification_type == ClassificationType.INCUBATE:
-                btn_label = "💤 Incubate (Someday)"
-            elif result.classification_type == ClassificationType.NEW_PROJECT:
-                # Show the name the AI suggests
-                proj_name = result.suggested_new_project_name or "New Project"
-                btn_label = f"✨ Create Project: '{proj_name}'"
+            # CASE A: Creation Flow (New Project or Incubate->New)
+            if is_creation_flow:
+                st.info("👇 Review New Project details below")
 
-            if st.button(btn_label, type="primary", use_container_width=True):
-
-                # CASE A: Create New Project
-                if result.classification_type == ClassificationType.NEW_PROJECT:
-                    new_name = result.suggested_new_project_name or current_text
-                    log_action("CREATE PROJECT", new_name)
-                    triage_service.create_project_from_draft(draft, new_name)
-                    _clear_draft_state()
-                    st.rerun()
-
-                # CASE B: Standard Move (Task/Resource/Ref/Incubate)
-                elif result.suggested_project != "Unmatched":
-                    triage_service.apply_draft(draft)
-                    _clear_draft_state()
-                    st.rerun()
-
-                # CASE C: Error (AI said Task but didn't pick a project)
+            # CASE B: Standard Move (Only if matched)
+            elif result.suggested_project != "Unmatched":
+                # Verify project exists
+                if repo.find_project_by_name(result.suggested_project):
+                    if st.button("✅ Confirm", type="primary", use_container_width=True):
+                        triage_service.apply_draft(draft)
+                        _clear_draft_state()
+                        st.rerun()
                 else:
-                    st.error("AI could not match a project. Please use Manual Override below.")
+                    st.error(f"Project '{result.suggested_project}' not found!")
+
+            # CASE C: Unmatched (Task/Resource)
+            else:
+                st.warning("👇 Select a project below")
 
         # 2. SKIP
         with col_skip:
@@ -135,13 +138,28 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
                 _clear_draft_state()
                 st.rerun()
 
-    # --- MANUAL OVERRIDE ---
-    st.divider()
-    st.caption("Manual Override")
+    # --- ALTERNATIVE PROJECTS (PILLS) - Requirement 2 ---
+    if result.alternative_projects:
+        st.caption("Or move to...")
+        # Create columns for pills to keep them compact
+        # We limit to 3 to avoid layout breaking
+        alts = result.alternative_projects[:3]
+        cols = st.columns(len(alts))
+        for i, proj_name in enumerate(alts):
+            if cols[i].button(proj_name, key=f"alt_{i}", use_container_width=True):
+                # Find project ID
+                proj = repo.find_project_by_name(proj_name)
+                if proj:
+                    triage_service.move_inbox_item_to_project(current_text, proj.id, result.extracted_tags)
+                    _clear_draft_state()
+                    st.rerun()
 
-    # Project Override
+    # --- MANUAL OVERRIDE & NEW PROJECT ---
+    st.divider()
+
+    # 1. Project Selector (Manual)
     all_projs = [p.name for p in repo.data.projects]
-    selected_proj = st.selectbox("Assign to Project", all_projs, index=None, placeholder="Select project...")
+    selected_proj = st.selectbox("Manual Assignment", all_projs, index=None, placeholder="Select project...")
 
     if selected_proj and st.button("Move to Selected Project"):
         target_id = repo.find_project_by_name(selected_proj).id
@@ -149,33 +167,41 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
         _clear_draft_state()
         st.rerun()
 
-    # --- CREATE NEW PROJECT - RESTORED ---
-    should_expand = (result.suggested_project == "Unmatched")
-    default_new_name = ""
-    if hasattr(result, 'suggested_new_project_name') and result.suggested_new_project_name:
-        default_new_name = result.suggested_new_project_name
-
-    with st.expander("➕ Create New Project", expanded=should_expand):
+    # 2. Create New Project (Unified)
+    with st.expander("➕ Create New Project", expanded=is_creation_flow):
         with st.form(key="create_form", clear_on_submit=True, border=False):
             c_input, c_btn = st.columns([3, 1], vertical_alignment="bottom")
-            new_proj_name = c_input.text_input("New Project Name", value=default_new_name,
-                                               placeholder="e.g., Bedroom Paint")
+
+            # Determine Default Name
+            default_name = ""
+            if result.suggested_new_project_name:
+                default_name = result.suggested_new_project_name
+            elif result.classification_type == ClassificationType.INCUBATE:
+                default_name = "Someday/Maybe"
+
+            new_proj_name = c_input.text_input("New Project Name", value=default_name)
+
             if c_btn.form_submit_button("Create & Move"):
                 if new_proj_name:
                     log_action("CREATE PROJECT", new_proj_name)
-                    # Use the convenience method
                     triage_service.create_project_from_inbox(current_text, new_proj_name)
                     _clear_draft_state()
                     st.rerun()
 
-    # --- DEBUG SECTION - RESTORED ---
+    # --- DEBUG SECTION ---
     st.markdown("---")
     with st.expander("🛠️ Debug Info"):
         if 'last_raw_response' in st.session_state:
             resp = st.session_state.last_raw_response
-            st.text(f"Prompt: {resp.prompt_used}")
-            st.code(resp.raw_response, language='json')
 
+            st.markdown("**1. Exact Prompt Sent:**")
+            # st.code preserves exact whitespace, newlines, and the ``` blocks
+            st.code(resp.prompt_used, language='markdown')
+
+            st.markdown("**2. Raw AI Response:**")
+            st.code(resp.raw_response, language='json')
+        else:
+            st.info("No AI request made yet.")
 
 def _clear_draft_state():
     if 'current_draft' in st.session_state: del st.session_state.current_draft

@@ -8,8 +8,7 @@ from datetime import datetime, date
 class SystemConfig:
     """Central configuration for domain logic"""
     DEFAULT_TAGS: List[str] = [
-        "physical", "digital",
-        "out", "need-material", "need-tools", "buy"
+        "physical", "digital", "out", "need-material", "need-tools", "buy"
     ]
 
 # --- ENUMS ---

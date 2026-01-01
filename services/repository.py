@@ -214,25 +214,69 @@ class TriageService:
             self.repo.data.inbox_tasks.remove(item_text)
             self.repo.mark_dirty()
 
-    def _build_hierarchy_context(self) -> str:
-        lines = []
-        # 1. Active Goals and their Projects
+    def get_all_tags(self) -> List[str]:
+        tags = set()
+        for p in self.repo.data.projects:
+            for item in p.items:
+                if hasattr(item, 'tags'):
+                    tags.update(item.tags)
+        return list(tags)
+
+    def build_full_context_tree(self) -> str:
+        """
+        Builds a rich, indented text tree of Goals > Projects > Active Items.
+        Wrapped in a code block for clear AI parsing.
+        """
+        lines = ["```"]  # Start Code Block
+
+        # Helper to format items
+        def _append_items(project, indent="    "):
+            # Filter for incomplete tasks/resources only
+            active_items = [i for i in project.items if
+                            not getattr(i, 'is_completed', False) and not getattr(i, 'is_acquired', False)]
+
+            if not active_items:
+                lines.append(f"{indent}(No active items)")
+                return
+
+            for item in active_items:
+                if item.kind == 'task':
+                    # Format: "Fix sink: 1h, [physical, tool]"
+                    tags_str = ", ".join(item.tags) if item.tags else "no-tags"
+                    lines.append(f"{indent}- {item.name}: {item.duration}, [{tags_str}]")
+
+                elif item.kind == 'resource':
+                    # Format: "Paint: Home Depot (Resource)"
+                    lines.append(f"{indent}- {item.name}: {item.store} (Resource)")
+
+                elif item.kind == 'reference':
+                    lines.append(f"{indent}- {item.name} (Reference)")
+
+        # 1. Process Goals
         for goal in self.repo.data.goals:
             lines.append(f"GOAL: {goal.name}")
-            if goal.description:
-                lines.append(f"  Desc: {goal.description}")
 
-            projects = [p for p in self.repo.data.projects if p.goal_id == goal.id]
-            for p in projects:
-                lines.append(f"  - PROJECT: {p.name}")
+            # Get active projects for this goal
+            projects = [p for p in self.repo.data.projects if p.goal_id == goal.id and p.status == "active"]
 
-        # 2. Orphaned Projects
-        orphans = [p for p in self.repo.data.projects if not p.goal_id]
+            if not projects:
+                lines.append("  (No active projects)")
+
+            for proj in projects:
+                lines.append(f"  PROJECT: {proj.name}")
+                _append_items(proj)
+
+            lines.append("")  # Spacer between goals
+
+        # 2. Process Orphaned Projects (Maintenance/Misc)
+        orphans = [p for p in self.repo.data.projects if not p.goal_id and p.status == "active"]
         if orphans:
-            lines.append("NO GOAL (Maintenance/Misc):")
-            for p in orphans:
-                lines.append(f"  - PROJECT: {p.name}")
+            lines.append("GOAL: Maintenance & Misc (No specific goal)")
+            for proj in orphans:
+                lines.append(f"  PROJECT: {proj.name}")
+                _append_items(proj)
 
+        lines.append("```") # End Code Block
         return "\n".join(lines)
 
 class PlanningService:

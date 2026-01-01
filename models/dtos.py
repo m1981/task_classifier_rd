@@ -4,8 +4,8 @@ from typing import List, Optional
 @dataclass
 class SingleTaskClassificationRequest:
     task_text: str
-    available_projects: List[str]
-    prompt_variant: str = "basic"
+    available_projects: str
+    existing_tags: List[str] = None
 
 @dataclass
 class SaveDatasetRequest:
