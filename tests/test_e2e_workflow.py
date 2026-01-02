@@ -148,7 +148,7 @@ def test_transition_incubate(e2e_env):
     item = project.items[0]
     assert isinstance(item, TaskItem)
     assert "someday" in item.tags
-    assert item.notes == "Incubated from Triage"
+    assert item.notes == "Incubated from Triage."
 
 
 def test_transition_reference(e2e_env):

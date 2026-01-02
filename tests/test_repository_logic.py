@@ -61,7 +61,7 @@ def test_draft_to_entity_incubate():
     assert isinstance(entity, TaskItem)
     assert entity.name == "Learn Guitar"
     assert "someday" in entity.tags
-    assert entity.notes == "Incubated from Triage"
+    assert entity.notes == "Incubated from Triage."
 
 
 def test_draft_to_entity_shopping():
