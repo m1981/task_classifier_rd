@@ -46,7 +46,7 @@ class ClassificationResult(BaseModel):
     )
     alternative_projects: List[str] = Field(
         default_factory=list,
-        description="Up to 2 other projects that might be a close second match."
+        description="Identify exactly 3 other existing projects from the context that could be valid destinations, sorted by relevance. If fewer than 3 make sense, list as many as possible."
     )
 
     notes: Optional[str] = Field(

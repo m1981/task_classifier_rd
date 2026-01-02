@@ -124,6 +124,7 @@ class PromptBuilder:
         2. MATCHING:
            - Match to an existing PROJECT name (do NOT select a GOAL name).
            - If no project fits, set suggested_project to "Unmatched" and suggest a new name.
+            - CRITICAL: You MUST identify 3 "alternative_projects" from the list. Even if the primary match is obvious, provide the next 3 most logical destinations
 
         OUTPUT FORMAT (Strict JSON):
         {{
@@ -197,7 +198,7 @@ class TaskClassifier:
                 temperature=0,
                 betas=["structured-outputs-2025-11-13"],
                 messages=[{"role": "user", "content": prompt}],
-                output_format=ClassificationResult,  # Pass the Pydantic model class
+                output_format=ClassificationResult,
             )
 
             # The SDK returns a parsed object directly
@@ -206,13 +207,13 @@ class TaskClassifier:
             return ClassificationResponse(
                 results=[parsed_result],
                 prompt_used=prompt,
-                tool_schema=tool_schema, # <--- Pass schema
-                raw_response=parsed_result.model_dump_json(indent=2) # <--- Pretty JSON
+                tool_schema=tool_schema,
+                raw_response=parsed_result.model_dump_json(indent=2)
             )
 
         except Exception as e:
             error_result = ClassificationResult(
-                reasoning=f"AI Error: {str(e)}", # Reasoning first!
+                reasoning=f"AI Error: {str(e)}",
                 classification_type=ClassificationType.TASK,
                 refined_text=request.task_text,
                 suggested_project="Unmatched",
