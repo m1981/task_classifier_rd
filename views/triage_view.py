@@ -73,12 +73,32 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
 
     # --- 4. THE PROPOSAL CARD ---
     with st.container(border=True):
-        # Display Refined Text if available, otherwise raw
-        display_text = result.refined_text or current_text
-        st.markdown(f"#### {display_text}")
 
-        if result.refined_text:
-            st.caption(f"Original: {current_text}")
+        # --- 1. EDITABLE TITLE (Refined Text) ---
+        # Logic: Always allow editing, but highlight if confidence is low
+        is_low_confidence = result.confidence < 0.8
+
+        if is_low_confidence:
+            st.warning(f"⚠️ Low Confidence ({result.confidence:.2f}). Please verify translation/project.")
+
+        # Use the refined text (translated by AI) as default, fallback to raw text
+        default_text = result.refined_text or current_text
+
+        # The Input Field
+        edited_text = st.text_input(
+            "Task Name",
+            value=default_text,
+            key=f"title_{hash(current_text)}",
+            help="AI translated/refined text. Edit to correct."
+        )
+
+        # Update Draft immediately if changed
+        if edited_text != result.refined_text:
+            draft.classification.refined_text = edited_text
+
+        # Show original if translation happened
+        if edited_text != current_text:
+            st.caption(f"Original: *{current_text}*")
 
         # Type Icon
         icons = {
@@ -94,56 +114,72 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
         st.markdown(f"**Project:** {result.suggested_project}")
         st.caption(f"💡 {result.reasoning}")
 
-        # --- TAG EDITOR (New Feature) ---
-        # Merge System Defaults + DB Tags + AI Suggestions for the dropdown
+        # --- TAG EDITOR ---
+        # 1. Define Callback to add new tags
+        def add_new_tag():
+            # Get value from session state using the key
+            key = f"new_tag_{hash(current_text)}"
+            new_val = st.session_state.get(key, "").strip()
+            if new_val:
+                # Add to draft if not present
+                if new_val not in draft.classification.extracted_tags:
+                    draft.classification.extracted_tags.append(new_val)
+                # Clear the input field
+                st.session_state[key] = ""
+
+        # 2. Prepare Options
         db_tags = triage_service.get_all_tags()
         system_tags = SystemConfig.DEFAULT_TAGS
-        all_options = list(set(db_tags + system_tags + result.extracted_tags))
+        # Critical: Include tags currently in the draft so they don't disappear
+        all_options = list(set(db_tags + system_tags + draft.classification.extracted_tags))
         all_options.sort()
 
-        dynamic_key = f"tag_editor_{hash(current_text)}"
-
+        # 3. Render Multiselect (For selecting existing)
         selected_tags = st.multiselect(
             "Tags",
             options=all_options,
-            default=result.extracted_tags,
-            key=dynamic_key,  # <--- CHANGED FROM "tag_editor"
+            default=draft.classification.extracted_tags,
+            key=f"tag_editor_{hash(current_text)}",  # Dynamic key
             placeholder="Select context, energy, effort..."
         )
 
-        # 4. Update the Draft Object in Real-time
-        # This ensures that when 'Confirm' is clicked, it uses the user's edited tags
-        if selected_tags != result.extracted_tags:
+        # Sync removal: If user removed a tag in multiselect, update draft
+        if selected_tags != draft.classification.extracted_tags:
             draft.classification.extracted_tags = selected_tags
-            # No need to rerun, the draft object is mutable and updated in memory
 
+        # 4. Render Input (For creating new)
+        st.text_input(
+            "➕ Create new tag",
+            key=f"new_tag_{hash(current_text)}",
+            on_change=add_new_tag,  # <--- Magic happens here
+            placeholder="Type new tag and hit Enter"
+        )
         # -----------------------
 
-        # --- DURATION EDITOR (New Feature) ---
+        # --- DURATION EDITOR (Pills) ---
         # Standard GTD durations
-        duration_options = ["5min", "15min", "30min", "45min", "1h", "1.5h", "2h", "3h", "4h", "Day"]
+        duration_options = ["15min", "30min", "1h", "2h", "4h"]
 
-        # Determine current value (handle AI guess or default)
-        current_duration = result.estimated_duration or "15min"
+        # Determine default selection
+        # If AI's guess isn't in our standard list, we default to None (no pill selected)
+        # or map it to the closest one. For simplicity, we try to match exactly.
+        default_selection = result.estimated_duration if result.estimated_duration in duration_options else None
 
-        # If AI guessed something weird (e.g. "10min"), add it to options temporarily
-        if current_duration not in duration_options:
-            duration_options.insert(0, current_duration)
-
-        # Render Selectbox
-        selected_duration = st.selectbox(
+        selected_duration = st.pills(
             "Estimated Duration",
             options=duration_options,
-            index=duration_options.index(current_duration),
-            key=f"duration_{hash(current_text)}"  # Dynamic key!
+            default=default_selection,
+            selection_mode="single",
+            key=f"duration_{hash(current_text)}"
         )
 
-        # Update Draft
-        if selected_duration != result.estimated_duration:
+        # Update Draft immediately
+        # If user selects nothing, we keep the AI's original guess or set to unknown
+        if selected_duration:
             draft.classification.estimated_duration = selected_duration
-
-        if result.estimated_duration:
-            st.caption(f"⏱️ Est: {result.estimated_duration}")
+        elif result.estimated_duration and result.estimated_duration not in duration_options:
+            # Keep AI's custom guess if it wasn't one of the pills
+            st.caption(f"Custom AI Estimate: {result.estimated_duration}")
 
         # --- ACTIONS ---
         col_confirm, col_skip, col_trash = st.columns([2, 1, 1])

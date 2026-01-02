@@ -139,6 +139,7 @@ class PromptBuilder:
         - Return ONLY the JSON object.
         - Use double quotes for JSON.
         - Apply tags strictly from the AVAILABLE TAGS list if possible.
+        - TRANSLATION RULE: If the INCOMING ITEM is not in English, the 'refined_text' MUST be translated into clear, concise English.
         """
 
     def build_smart_filter_prompt(self, query: str, tasks_str: str) -> str:
@@ -188,7 +189,7 @@ class TaskClassifier:
         try:
             # Use the .parse() method for automatic Pydantic validation
             response = self.client.beta.messages.parse(
-                model="claude-sonnet-4-5",
+                model="claude-haiku-4-5",
                 max_tokens=1024,
                 betas=["structured-outputs-2025-11-13"],
                 messages=[{"role": "user", "content": prompt}],
