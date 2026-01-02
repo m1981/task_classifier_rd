@@ -23,6 +23,8 @@ class SystemConfig:
         # Energy State
         "HighEnergy", "LowEnergy", "Morning", "Evening"
     ]
+    ALLOWED_DURATIONS: List[str] = ["15min", "30min", "1h", "2h", "4h"]
+
 # --- ENUMS ---
 class ProjectStatus(str, Enum):
     ACTIVE = "active"

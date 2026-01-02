@@ -88,6 +88,7 @@ class PromptBuilder:
         # 1. Merge Tags
         all_tags = list(set(self.config.DEFAULT_TAGS + (existing_tags or [])))
         tags_str = ", ".join(all_tags)
+        durations_str = ", ".join(self.config.ALLOWED_DURATIONS)
 
         # 2. Dynamic Category Examples (DRY)
         # We filter the config tags to provide relevant examples dynamically
@@ -105,6 +106,8 @@ class PromptBuilder:
         
         AVAILABLE TAGS: [{tags_str}]
         
+        ALLOWED DURATIONS: [{durations_str}]
+
         TAGGING RULES:
         - Select 3-5 tags that best describe the task.
         - Categorize by:

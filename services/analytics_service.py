@@ -4,7 +4,7 @@ from models.entities import TaskItem, ProjectStatus
 from models.ai_schemas import SmartFilterResult
 from services.repository import YamlRepository
 from services.services import PromptBuilder
-from views.common import get_logger # Import logger
+from views.common import get_logger
 
 logger = get_logger("AnalyticsService")
 
@@ -185,14 +185,15 @@ class AnalyticsService:
         for project in projects_to_review:
             for item in project.items:
                 if isinstance(item, TaskItem) and item.is_completed and item.completed_at:
-                    # Parse completed_at if it's a string
-                    if isinstance(item.completed_at, str):
+                    # --- ROBUST DATE PARSING ---
+                    completed_dt = item.completed_at
+                    if isinstance(completed_dt, str):
                         try:
-                            completed_dt = datetime.fromisoformat(item.completed_at.replace('Z', '+00:00'))
-                        except:
-                            continue
-                    else:
-                        completed_dt = item.completed_at
+                            # Handle ISO format with Z or offset
+                            completed_dt = datetime.fromisoformat(completed_dt.replace('Z', '+00:00'))
+                        except ValueError:
+                            continue # Skip invalid dates
+                    # --- FIX ENDS HERE ---
                     
                     if completed_dt >= cutoff_date:
                         completed_tasks.append({

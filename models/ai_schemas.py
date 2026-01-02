@@ -42,7 +42,7 @@ class ClassificationResult(BaseModel):
     )
     estimated_duration: Optional[str] = Field(
         default=None,
-        description="An estimated duration string (e.g., '15min', '1h') if inferable."
+        description=f"Estimate from this specific list: {SystemConfig.ALLOWED_DURATIONS}. If applicable."
     )
     alternative_projects: List[str] = Field(
         default_factory=list,

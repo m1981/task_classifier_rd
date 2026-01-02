@@ -197,11 +197,9 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
 
         # --- DURATION EDITOR (Pills) ---
         # Standard GTD durations
-        duration_options = ["15min", "30min", "1h", "2h", "4h"]
+        duration_options = SystemConfig.ALLOWED_DURATIONS
 
         # Determine default selection
-        # If AI's guess isn't in our standard list, we default to None (no pill selected)
-        # or map it to the closest one. For simplicity, we try to match exactly.
         default_selection = result.estimated_duration if result.estimated_duration in duration_options else None
 
         selected_duration = st.pills(
