@@ -1,19 +1,22 @@
 # Feature F-01: Capture & Clarify (Inbox Mode)
 
 ## Value Proposition
-To empty the user's brain into a trusted system and rapidly process vague thoughts into concrete items using AI.
+To empty the user's brain into a trusted system and rapidly process vague thoughts into concrete items using AI, while retaining full user control over the final data quality.
 
 ## User Stories
 *   **US-1.1 Quick Capture:** As a user, I can add a raw text string to the Inbox from any screen.
 *   **US-1.2 AI Triage (Proposal Engine):** As a user, I want the AI to analyze an inbox item against my **Goals and Projects hierarchy** and propose a Draft containing:
     *   **Type:** Task, Resource (Shopping), Reference, Incubate (Someday), or New Project.
     *   **Target:** The specific Project it belongs to.
-    *   **Metadata:** Estimated duration and tags.
+    *   **Refinement:** A cleaned-up, actionable title.
+    *   **Metadata:** Estimated duration and context tags.
 *   **US-1.3 One-Touch Processing:** As a user, I want to accept the AI proposal with a single click to create the concrete entity.
+*   **US-1.4 Interactive Refinement:** As a user, I want to manually adjust the **Tags** and **Estimated Duration** of the proposal using standard options *before* confirming, so the data is clean from the start.
 
 ## UI Components
 *   **Inbox Counter:** "5 items remaining"
-*   **Proposal Card:** The central card showing the current item, the AI's reasoning, and the proposed classification.
+*   **Proposal Card:** The central card showing the refined item, reasoning, interactive editors, and classification.
+
 
 
 
@@ -140,6 +143,24 @@ Three distinct exit paths for the item.
     *   `duration`: String
     *   `new_project_name`: String
 
+### B. The Proposal Card (Center)
+
+1.  **Header:** 
+    *   Displays the **Refined Text** (cleaned by AI).
+    *   Shows original raw text as a caption if different.
+2.  **Metadata Display:**
+    *   **Type:** Icon + Label.
+    *   **Project:** Suggested project name.
+    *   **Reasoning:** AI explanation.
+3.  **Tag Editor (Interactive):**
+    *   **Widget:** Multi-select.
+    *   **Behavior:** Pre-filled with AI tags. User can add/remove.
+    *   **State:** Uses dynamic key to reset on new item. Updates Draft immediately.
+4.  **Duration Editor (Interactive):**
+    *   **Widget:** Selectbox.
+    *   **Options:** Standard GTD times (5min, 15min, 30min, 1h, 2h, 4h, Day).
+    *   **Behavior:** Pre-selected with AI estimate. User can override. Updates Draft immediately.
+
 ```mermaid
 
 stateDiagram-v2
@@ -170,6 +191,9 @@ stateDiagram-v2
     %% --- The User Interface State (The Proposal) ---
     state "📝 Draft Proposal" as Proposal {
         state "AI Suggestion" as Suggestion
+        state "User Refinement" as Refine
+        
+        Suggestion --> Refine : Edit Tags/Time
         
         note right of Suggestion
             AI Proposes:

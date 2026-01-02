@@ -73,7 +73,12 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
 
     # --- 4. THE PROPOSAL CARD ---
     with st.container(border=True):
-        st.markdown(f"#### {current_text}")
+        # Display Refined Text if available, otherwise raw
+        display_text = result.refined_text or current_text
+        st.markdown(f"#### {display_text}")
+
+        if result.refined_text:
+            st.caption(f"Original: {current_text}")
 
         # Type Icon
         icons = {
@@ -96,12 +101,14 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
         all_options = list(set(db_tags + system_tags + result.extracted_tags))
         all_options.sort()
 
+        dynamic_key = f"tag_editor_{hash(current_text)}"
+
         selected_tags = st.multiselect(
             "Tags",
             options=all_options,
             default=result.extracted_tags,
-            key="tag_editor",
-            placeholder="Add or select tags..."
+            key=dynamic_key,  # <--- CHANGED FROM "tag_editor"
+            placeholder="Select context, energy, effort..."
         )
 
         # 4. Update the Draft Object in Real-time
@@ -111,6 +118,29 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
             # No need to rerun, the draft object is mutable and updated in memory
 
         # -----------------------
+
+        # --- DURATION EDITOR (New Feature) ---
+        # Standard GTD durations
+        duration_options = ["5min", "15min", "30min", "45min", "1h", "1.5h", "2h", "3h", "4h", "Day"]
+
+        # Determine current value (handle AI guess or default)
+        current_duration = result.estimated_duration or "15min"
+
+        # If AI guessed something weird (e.g. "10min"), add it to options temporarily
+        if current_duration not in duration_options:
+            duration_options.insert(0, current_duration)
+
+        # Render Selectbox
+        selected_duration = st.selectbox(
+            "Estimated Duration",
+            options=duration_options,
+            index=duration_options.index(current_duration),
+            key=f"duration_{hash(current_text)}"  # Dynamic key!
+        )
+
+        # Update Draft
+        if selected_duration != result.estimated_duration:
+            draft.classification.estimated_duration = selected_duration
 
         if result.estimated_duration:
             st.caption(f"⏱️ Est: {result.estimated_duration}")
@@ -181,8 +211,8 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
         with st.form(key="create_form", clear_on_submit=True, border=False):
             c_input, c_btn = st.columns([3, 1], vertical_alignment="bottom")
 
-            # Pre-fill name if AI suggested it
-            default_name = result.suggested_new_project_name if is_new_proj_suggestion else ""
+            # FIX: Always try to use the suggested name if available, regardless of classification type
+            default_name = result.suggested_new_project_name or ""
 
             new_proj_name = c_input.text_input("New Project Name", value=default_name)
 
