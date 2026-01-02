@@ -100,6 +100,8 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
         if edited_text != current_text:
             st.caption(f"Original: *{current_text}*")
 
+        st.markdown(f"Goes to -> **{result.suggested_project}**")
+
         # ==========================================
         # 🆕 NEW SECTION: NOTES EDITOR
         # ==========================================
@@ -144,7 +146,6 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
                 st.rerun()
 
         # Project Display
-        st.markdown(f"**Project:** `{result.suggested_project}`")
         st.caption(f"💡 {result.reasoning}")
 
         # --- TAG EDITOR ---

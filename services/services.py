@@ -194,6 +194,7 @@ class TaskClassifier:
             response = self.client.beta.messages.parse(
                 model="claude-haiku-4-5",
                 max_tokens=8024,
+                temperature=0,
                 betas=["structured-outputs-2025-11-13"],
                 messages=[{"role": "user", "content": prompt}],
                 output_format=ClassificationResult,  # Pass the Pydantic model class
