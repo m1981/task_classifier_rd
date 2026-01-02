@@ -314,7 +314,8 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
 
     if selected_proj and st.button("Move to Selected Project"):
         target_id = repo.find_project_by_name(selected_proj).id
-        triage_service.move_inbox_item_to_project(current_text, target_id, result.extracted_tags)
+        triage_service.apply_draft(draft, override_project_id=target_id)
+
         _clear_draft_state()
         st.rerun()
 

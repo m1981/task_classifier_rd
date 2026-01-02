@@ -99,12 +99,20 @@ class PromptBuilder:
         
         INCOMING ITEM: "{task_text}"
         
+        INSTRUCTIONS:
+        - Return ONLY the JSON object.
+        - Use double quotes for JSON.
+        - Apply tags strictly from the AVAILABLE TAGS list.
+        - Select 'estimated_duration' STRICTLY from the ALLOWED DURATIONS list.
+        
+        - URL HANDLING:
+          1. Extract the page title/topic into 'refined_text'.
+          2. Copy the EXACT URL into 'notes'.
+          3. Do not strip UTM parameters unless they are excessively long.
+
         CONTEXT (Goals > Projects > Existing Items):
         {context_hierarchy}
         
-        AVAILABLE TAGS: [{tags_str}]
-        
-        ALLOWED DURATIONS: [{durations_str}]
 
 ```mermaid
 flowchart TD
@@ -166,7 +174,7 @@ flowchart TD
     
     note_task["<b>CRITICAL LOGIC:</b><br/>Only Actionable items<br/>can trigger 'Unmatched'<br/>to prompt a New Project."] -.-> AssignNew
     
-    - TRANSLATION RULE: If the INCOMING ITEM is not in English, the 'refined_text' MUST be translated into clear, concise English."""
+"""
 
     def build_smart_filter_prompt(self, query: str, tasks_str: str) -> str:
         return f"""

@@ -44,14 +44,15 @@ class DraftItem:
             return ResourceItem(name=name, store="General")
 
         elif kind == ClassificationType.REFERENCE:
-            return ReferenceItem(name=name, content=self.source_text)
+            content_val = notes if notes else self.source_text
+            return ReferenceItem(name=name, content=content_val)
 
         else:
             # Map duration here
             return TaskItem(
                 name=name,
                 tags=tags,
-                duration=duration,
+                duration=self.classification.estimated_duration or "unknown",
                 notes=notes
             )
 
@@ -241,20 +242,19 @@ class TriageService:
 
             for item in active_items:
                 if item.kind == 'task':
-                    # Format: "Fix sink: 1h, [physical, tool]"
                     tags_str = ", ".join(item.tags) if item.tags else "no-tags"
                     lines.append(f"{indent}- {item.name}: {item.duration}, [{tags_str}]")
-
                 elif item.kind == 'resource':
-                    # Format: "Paint: Home Depot (Resource)"
                     lines.append(f"{indent}- {item.name}: {item.store} (Resource)")
-
                 elif item.kind == 'reference':
                     lines.append(f"{indent}- {item.name} (Reference)")
 
         # 1. Process Goals
         for goal in self.repo.data.goals:
             lines.append(f"GOAL: {goal.name}")
+
+            if goal.description:
+                lines.append(f"  MOTIVATION: {goal.description}")
 
             # Get active projects for this goal
             projects = [p for p in self.repo.data.projects if p.goal_id == goal.id and p.status == "active"]
@@ -264,9 +264,13 @@ class TriageService:
 
             for proj in projects:
                 lines.append(f"  PROJECT: {proj.name}")
+
+                if proj.description:
+                    lines.append(f"    CONTEXT: {proj.description}")
+
                 _append_items(proj)
 
-            lines.append("")  # Spacer between goals
+            lines.append("")
 
         # 2. Process Orphaned Projects (Maintenance/Misc)
         orphans = [p for p in self.repo.data.projects if not p.goal_id and p.status == "active"]
@@ -274,6 +278,8 @@ class TriageService:
             lines.append("GOAL: Maintenance & Misc (No specific goal)")
             for proj in orphans:
                 lines.append(f"  PROJECT: {proj.name}")
+                if proj.description:
+                    lines.append(f"    CONTEXT: {proj.description}")
                 _append_items(proj)
 
         lines.append("```") # End Code Block

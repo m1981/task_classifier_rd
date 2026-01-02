@@ -38,7 +38,7 @@ class ClassificationResult(BaseModel):
         description=f"Select tags STRICTLY from this list: {SystemConfig.DEFAULT_TAGS}"
     )
     refined_text: str = Field(
-        description="Cleaned up title. For URLs, extract the page title."
+        description="Cleaned up title. Try extract the page title. MUST be translated into clear, concise English"
     )
     suggested_new_project_name: Optional[str] = Field(
         default=None,
@@ -56,9 +56,9 @@ class ClassificationResult(BaseModel):
         description="Identify exactly 3 other existing projects from the context that could be valid destinations, sorted by relevance. If fewer than 3 make sense, list as many as possible."
     )
 
-    notes: Optional[str] = Field(
+    notes: str = Field(
         default="",
-        description="Summary, context, or URL description. Empty string if none."
+        description="If the input contains a URL, YOU MUST COPY THE FULL URL HERE. Then add your summary/context."
     )
 
 # --- SERVICE OBJECTS ---

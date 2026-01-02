@@ -199,3 +199,56 @@ def test_execution_complete_resource_toggle(mock_repo):
     # Assert
     assert res.is_acquired is True
     mock_repo.mark_dirty.assert_called()
+
+
+def test_regression_manual_override_preserves_ai_data(mock_repo):
+    """
+    Regression Test for Bug: Data Loss during Manual Override.
+
+    Scenario:
+      1. Input is a URL.
+      2. AI classifies as Reference, extracts URL to notes, refines title.
+      3. User manually selects a specific project (Override).
+
+    Failure Mode (Previous Bug):
+      - Created a generic TaskItem.
+      - Name was the raw URL.
+      - Notes were empty (URL lost).
+
+    Success Criteria (Fix):
+      - Creates a ReferenceItem.
+      - Name is the AI-refined title.
+      - Content is the URL from AI notes.
+    """
+    service = TriageService(mock_repo)
+
+    # 1. Setup: Target Project exists
+    target_proj = Project(id=99, name="Manual Target")
+    mock_repo.data.projects = [target_proj]
+    # Ensure the mock finds the project by ID (simulating the override lookup)
+    mock_repo.find_project.side_effect = lambda pid: target_proj if pid == 99 else None
+
+    # 2. Setup: The Draft (AI Analysis)
+    # The AI found a URL and put it in notes
+    ai_result = ClassificationResult(
+        classification_type=ClassificationType.REFERENCE,
+        suggested_project="Wrong Project",  # AI guessed wrong (or General)
+        confidence=0.8,
+        reasoning="It is a link",
+        refined_text="Refined Title",
+        notes="http://real-url.com",  # The critical data
+        extracted_tags=[]
+    )
+    draft = DraftItem(source_text="http://raw-input.com", classification=ai_result)
+
+    # 3. Act: Apply Draft with Override (Simulating the fixed View logic)
+    service.apply_draft(draft, override_project_id=99)
+
+    # 4. Assert
+    assert len(target_proj.items) == 1
+    item = target_proj.items[0]
+
+    # Check for Data Preservation
+    assert isinstance(item, ReferenceItem), "Should be ReferenceItem, not TaskItem"
+    assert item.name == "Refined Title", "Should use refined title, not raw text"
+    assert item.content == "http://real-url.com", "Should preserve URL from notes"
