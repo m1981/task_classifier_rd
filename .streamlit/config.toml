@@ -1,5 +1,8 @@
 [client]
 showSidebarNavigation = false
 
+[server]
+headless = true
+
 [logger]
 level = "info"
