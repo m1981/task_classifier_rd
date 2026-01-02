@@ -252,3 +252,50 @@ def test_regression_manual_override_preserves_ai_data(mock_repo):
     assert isinstance(item, ReferenceItem), "Should be ReferenceItem, not TaskItem"
     assert item.name == "Refined Title", "Should use refined title, not raw text"
     assert item.content == "http://real-url.com", "Should preserve URL from notes"
+
+def test_regression_reference_tags_preservation(mock_repo):
+    """
+    Regression Test for Bug: Tags lost for Reference Items.
+
+    Scenario:
+      1. AI classifies item as REFERENCE.
+      2. AI extracts tags (e.g. ["@Computer", "Research"]).
+      3. User confirms.
+
+    Failure Mode (Previous Bug):
+      - ReferenceItem was created, but tags were empty [].
+      - ReferenceItem class didn't support tags, or mapper didn't pass them.
+
+    Success Criteria (Fix):
+      - ReferenceItem has tags field (inherited from ProjectItem).
+      - Tags are persisted from Draft to Entity.
+    """
+    service = TriageService(mock_repo)
+
+    # 1. Setup: Target Project
+    proj = Project(id=1, name="Research Project")
+    mock_repo.data.projects = [proj]
+    mock_repo.find_project_by_name.return_value = proj
+
+    # 2. Setup: The Draft with Tags
+    ai_result = ClassificationResult(
+        classification_type=ClassificationType.REFERENCE,
+        suggested_project="Research Project",
+        confidence=1.0,
+        reasoning="Docs",
+        refined_text="Documentation",
+        extracted_tags=["@Computer", "Research"],  # <--- The Critical Data
+        notes="http://docs.com"
+    )
+    draft = DraftItem(source_text="http://docs.com", classification=ai_result)
+
+    # 3. Act
+    service.apply_draft(draft)
+
+    # 4. Assert
+    assert len(proj.items) == 1
+    item = proj.items[0]
+
+    assert isinstance(item, ReferenceItem)
+    # Verify tags are present (Order doesn't strictly matter, but list equality checks it)
+    assert item.tags == ["@Computer", "Research"]

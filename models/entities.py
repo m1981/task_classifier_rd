@@ -47,11 +47,11 @@ class ProjectItem(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     created_at: datetime = Field(default_factory=datetime.now)
+    tags: List[str] = Field(default_factory=list)
 
 class TaskItem(ProjectItem):
     kind: Literal["task"] = "task"
     is_completed: bool = False
-    tags: List[str] = Field(default_factory=list)
     duration: str = "unknown"
     notes: str = ""
     completed_at: Optional[datetime] = None
