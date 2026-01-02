@@ -71,6 +71,38 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
     draft: DraftItem = st.session_state.current_draft
     result = draft.classification
 
+    # ============================================================
+    # 🛡️ ERROR HANDLING BLOCK (New)
+    # ============================================================
+    if result.suggested_project == "SystemError" or result.reasoning.startswith("AI Error"):
+        with st.container(border=True):
+            st.error("🔌 Connection Failed")
+            st.markdown(f"**Error Details:** `{result.reasoning}`")
+
+            st.info("The AI could not analyze this item. You can try again or process it manually.")
+
+            col_retry, col_manual = st.columns(2)
+
+            with col_retry:
+                if st.button("🔄 Retry AI Analysis", use_container_width=True):
+                    # Clear session state to force re-run of AI logic
+                    if 'current_draft' in st.session_state: del st.session_state.current_draft
+                    if 'draft_source' in st.session_state: del st.session_state.draft_source
+                    st.rerun()
+
+            with col_manual:
+                # Allow user to skip to manual processing (treat as simple task)
+                if st.button("📝 Process Manually", use_container_width=True):
+                    # Reset the draft to a clean "Task" state so the user can edit it normally
+                    draft.classification.suggested_project = "Unmatched"
+                    draft.classification.reasoning = "Manual override due to connection error."
+                    draft.classification.confidence = 1.0  # Fake confidence to hide warning
+                    st.rerun()
+
+        # Stop execution here so we don't render the broken form
+        return
+        # ============================================================
+
     # --- 4. THE PROPOSAL CARD ---
     with st.container(border=True):
 
