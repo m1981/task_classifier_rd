@@ -2,6 +2,7 @@ from typing import List, Optional, Any
 from pydantic import BaseModel, Field
 from enum import Enum
 from dataclasses import dataclass
+from models.entities import SystemConfig
 
 class ClassificationType(str, Enum):
     TASK = "task"
@@ -46,6 +47,11 @@ class ClassificationResult(BaseModel):
     alternative_projects: List[str] = Field(
         default_factory=list,
         description="Up to 2 other projects that might be a close second match."
+    )
+
+    notes: Optional[str] = Field(
+        default="",
+        description="Any secondary details, context, or descriptions extracted from the input text that shouldn't be in the main title."
     )
 
 # --- SERVICE OBJECTS ---

@@ -100,18 +100,51 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
         if edited_text != current_text:
             st.caption(f"Original: *{current_text}*")
 
-        # Type Icon
-        icons = {
-            ClassificationType.TASK: "⚡ Task",
-            ClassificationType.SHOPPING: "🛒 Resource",
-            ClassificationType.REFERENCE: "📚 Reference",
-            ClassificationType.NEW_PROJECT: "✨ New Project",
-            ClassificationType.INCUBATE: "💤 Incubate",
-        }
-        type_label = icons.get(result.classification_type, "❓ Unknown")
+        # ==========================================
+        # 🆕 NEW SECTION: NOTES EDITOR
+        # ==========================================
+        st.caption("📝 Notes")
+        notes_input = st.text_area(
+            "Notes",
+            value=draft.classification.notes,
+            key=f"notes_{hash(current_text)}",
+            placeholder="Add details, links, or sub-tasks...",
+            height=100, # Enough for ~3 lines of text
+            label_visibility="collapsed"
+        )
 
-        st.markdown(f"**Type:** {type_label}")
-        st.markdown(f"**Project:** {result.suggested_project}")
+        # --- B. TYPE EDITOR (Pills) ---
+        # Map friendly labels to internal Enum
+        type_mapping = {
+            "⚡ Task": ClassificationType.TASK,
+            "🛒 Resource": ClassificationType.SHOPPING,
+            "📚 Reference": ClassificationType.REFERENCE,
+            "✨ Project": ClassificationType.NEW_PROJECT,
+            "💤 Incubate": ClassificationType.INCUBATE
+        }
+
+        # Find the label that matches the current enum
+        current_enum = draft.classification.classification_type # Use draft, not result, to reflect edits
+        default_label = next((k for k, v in type_mapping.items() if v == current_enum), "⚡ Task")
+
+        selected_type_label = st.pills(
+            "Type",
+            options=list(type_mapping.keys()),
+            default=default_label,
+            selection_mode="single",
+            key=f"type_pills_{hash(current_text)}"
+        )
+
+        # Update Draft immediately if changed
+        if selected_type_label:
+            new_enum = type_mapping[selected_type_label]
+            if new_enum != draft.classification.classification_type:
+                draft.classification.classification_type = new_enum
+                # We must rerun because changing type affects the Action Buttons logic below
+                st.rerun()
+
+        # Project Display
+        st.markdown(f"**Project:** `{result.suggested_project}`")
         st.caption(f"💡 {result.reasoning}")
 
         # --- TAG EDITOR ---
@@ -139,7 +172,7 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
             "Tags",
             options=all_options,
             default=draft.classification.extracted_tags,
-            key=f"tag_editor_{hash(current_text)}",  # Dynamic key
+            key=f"tag_editor_{hash(current_text)}",
             placeholder="Select context, energy, effort..."
         )
 
@@ -151,10 +184,16 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
         st.text_input(
             "➕ Create new tag",
             key=f"new_tag_{hash(current_text)}",
-            on_change=add_new_tag,  # <--- Magic happens here
+            on_change=add_new_tag,
             placeholder="Type new tag and hit Enter"
         )
-        # -----------------------
+
+
+
+        # Immediate Sync (Keeps session state fresh if user clicks away)
+        if notes_input != draft.classification.notes:
+            draft.classification.notes = notes_input
+        # ==========================================
 
         # --- DURATION EDITOR (Pills) ---
         # Standard GTD durations
@@ -193,6 +232,16 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
             # CASE B: Standard Move (Only if matched)
             elif result.suggested_project != "Unmatched":
                 if st.button("✅ Confirm", type="primary", use_container_width=True):
+                    # FINAL SYNC: Ensure draft has latest values from widgets before applying
+                    # This catches cases where user typed but didn't blur before clicking
+                    if edited_text: draft.classification.refined_text = edited_text
+                    if selected_tags: draft.classification.extracted_tags = selected_tags
+                    if selected_duration: draft.classification.estimated_duration = selected_duration
+
+                    # 🆕 SYNC NOTES
+                    if notes_input is not None:
+                        draft.classification.notes = notes_input
+
                     triage_service.apply_draft(draft)
                     _clear_draft_state()
                     st.rerun()

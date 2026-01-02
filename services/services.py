@@ -190,7 +190,7 @@ class TaskClassifier:
             # Use the .parse() method for automatic Pydantic validation
             response = self.client.beta.messages.parse(
                 model="claude-haiku-4-5",
-                max_tokens=1024,
+                max_tokens=8024,
                 betas=["structured-outputs-2025-11-13"],
                 messages=[{"role": "user", "content": prompt}],
                 output_format=ClassificationResult,  # Pass the Pydantic model class

@@ -30,7 +30,7 @@ class DraftItem:
         name = self.classification.refined_text or self.source_text
         tags = self.classification.extracted_tags
 
-        # Extract duration (default to 'unknown' if missing)
+        notes = self.classification.notes
         duration = self.classification.estimated_duration or "unknown"
 
         if kind == ClassificationType.INCUBATE:
@@ -38,7 +38,7 @@ class DraftItem:
                 name=name,
                 tags=["someday"],
                 duration="unknown",
-                notes="Incubated from Triage"
+                notes=f"Incubated from Triage. {notes}".strip()
             )
         elif kind == ClassificationType.SHOPPING:
             return ResourceItem(name=name, store="General")
@@ -51,9 +51,9 @@ class DraftItem:
             return TaskItem(
                 name=name,
                 tags=tags,
-                duration=duration  # <--- MAPPED
+                duration=duration,
+                notes=notes
             )
-
 
 # --- REPOSITORY ---
 class YamlRepository:
