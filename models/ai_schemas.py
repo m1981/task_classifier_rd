@@ -14,7 +14,7 @@ class ClassificationType(str, Enum):
 class ClassificationResult(BaseModel):
     # --- CHAIN OF THOUGHT (Moved to Top) ---
     reasoning: str = Field(
-        description="First, think step-by-step about the item. Analyze the user's intent, the context hierarchy, and the GTD rules. Explain why it fits a specific type and project."
+        description="Step-by-step analysis of the item against GTD rules and the Project Hierarchy."
     )
 
     # --- THE DECISION ---
@@ -22,7 +22,11 @@ class ClassificationResult(BaseModel):
         description="The category of the item based on the reasoning above."
     )
     suggested_project: str = Field(
-        description="The exact name of the best matching project, or 'Unmatched' if none fit."
+        description=(
+            "The exact name of the best matching EXISTING project. "
+            "If the item is a Reference or Incubate and no project fits, use 'General'. "
+            "Only use 'Unmatched' if it is a TASK that requires a NEW project."
+        )
     )
     confidence: float = Field(
         description="Confidence score between 0.0 and 1.0."
@@ -31,18 +35,21 @@ class ClassificationResult(BaseModel):
     # --- METADATA ---
     extracted_tags: List[str] = Field(
         default_factory=list,
-        description="Relevant tags from the allowed list."
+        description=f"Select tags STRICTLY from this list: {SystemConfig.DEFAULT_TAGS}"
     )
     refined_text: str = Field(
-        description="A cleaned-up version of the task text (e.g., removing 'I need to buy' from 'I need to buy milk')."
+        description="Cleaned up title. For URLs, extract the page title."
     )
     suggested_new_project_name: Optional[str] = Field(
         default=None,
-        description="If Unmatched, suggest a concise name for a NEW project."
+        description="Required ONLY if suggested_project is 'Unmatched'. Suggest a concise name."
     )
     estimated_duration: Optional[str] = Field(
         default=None,
-        description=f"Estimate from this specific list: {SystemConfig.ALLOWED_DURATIONS}. If applicable."
+        description=(
+            f"Strictly one of: {SystemConfig.ALLOWED_DURATIONS}. "
+            "MUST be null if classification_type is 'reference' or 'incubate'."
+        )
     )
     alternative_projects: List[str] = Field(
         default_factory=list,
@@ -51,7 +58,7 @@ class ClassificationResult(BaseModel):
 
     notes: Optional[str] = Field(
         default="",
-        description="Any secondary details, context, or descriptions extracted from the input text that shouldn't be in the main title."
+        description="Summary, context, or URL description. Empty string if none."
     )
 
 # --- SERVICE OBJECTS ---
@@ -66,7 +73,7 @@ class ClassificationResponse:
     """Standardized response wrapper used by TaskClassifier"""
     results: List[ClassificationResult]
     prompt_used: str
-    tool_schema: dict  # <--- NEW: To store the raw tool definition
+    tool_schema: dict
     raw_response: str
 
 class SmartFilterResult(BaseModel):

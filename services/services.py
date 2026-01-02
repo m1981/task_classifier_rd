@@ -88,63 +88,85 @@ class PromptBuilder:
         # 1. Merge Tags
         all_tags = list(set(self.config.DEFAULT_TAGS + (existing_tags or [])))
         tags_str = ", ".join(all_tags)
+
+        # 2. Durations
         durations_str = ", ".join(self.config.ALLOWED_DURATIONS)
 
-        # 2. Dynamic Category Examples (DRY)
-        # We filter the config tags to provide relevant examples dynamically
-        context_ex = ", ".join([t for t in self.config.DEFAULT_TAGS if t.startswith("@")][:3])
-        effort_ex = ", ".join([t for t in self.config.DEFAULT_TAGS if "Mental" in t or "Physical" in t][:3])
-        energy_ex = ", ".join([t for t in self.config.DEFAULT_TAGS if "Energy" in t or "Morning" in t][:3])
-
         return f"""
-        You are a GTD Triage Expert.
+        Act as my personal advisor and Getting Things Done methodology expert.
+        Please analzye my item from inbox and follow flowchart and help me decide wher to put it.
+        Respond in JSON based on structure I prepered for you in tools.
         
         INCOMING ITEM: "{task_text}"
         
-        CONTEXT (Goals > Projects):
+        CONTEXT (Goals > Projects > Existing Items):
         {context_hierarchy}
         
         AVAILABLE TAGS: [{tags_str}]
         
         ALLOWED DURATIONS: [{durations_str}]
 
-        TAGGING RULES:
-        - Select 3-5 tags that best describe the task.
-        - Categorize by:
-          1. CONTEXT (Where? e.g. {context_ex})
-          2. EFFORT (How hard? e.g. {effort_ex})
-          3. ENERGY (When? e.g. {energy_ex})
-        
-        DECISION LOGIC:
-        1. IS IT ACTIONABLE?
-           - NO (Reference): Is it pure info (URL, fact) needing no action? -> Type: "reference"
-           - NO (Someday): Is it for "someday" or "maybe"? -> Type: "incubate"
-           - YES (Action): Does it require time/effort? -> Go to step 2.
-           
-        2. MATCHING:
-           - Match to an existing PROJECT name (do NOT select a GOAL name).
-           - If no project fits, set suggested_project to "Unmatched" and suggest a new name.
-            - CRITICAL: You MUST identify 3 "alternative_projects" from the list. Even if the primary match is obvious, provide the next 3 most logical destinations
+```mermaid
+flowchart TD
+    %% --- STYLES ---
+    classDef input fill:#333,stroke:#fff,color:#fff,stroke-width:2px
+    classDef ai fill:#E3F2FD,stroke:#1565C0,color:#0D47A1
+    classDef logic fill:#FFF3E0,stroke:#EF6C00,color:#E65100
+    classDef user fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20
+    classDef db fill:#F3E5F5,stroke:#7B1FA2,color:#4A148C
 
-        OUTPUT FORMAT (Strict JSON):
-        {{
-            "classification_type": "task",
-            "suggested_project": "Project Name",
-            "confidence": 0.9,
-            "reasoning": "Explanation...",
-            "extracted_tags": ["@Computer", "Mental-Deep", "HighEnergy"],
-            "refined_text": "Actionable Verb Task Name",
-            "suggested_new_project_name": null,
-            "estimated_duration": "30min",
-            "alternative_projects": []
-        }}
+    %% --- START ---
+    Start([📥 Inbox Item]) --> AI_Analysis
+    class Start input
+
+    %% --- AI BRAIN ---
+    subgraph AI_Analysis ["🤖 AI Analysis (The Prompt)"]
+        direction TB
+        Parse["1. Analyze Intent"]
+        Context["2. Scan Project Tree"]
         
-        INSTRUCTIONS:
-        - Return ONLY the JSON object.
-        - Use double quotes for JSON.
-        - Apply tags strictly from the AVAILABLE TAGS list if possible.
-        - TRANSLATION RULE: If the INCOMING ITEM is not in English, the 'refined_text' MUST be translated into clear, concise English.
-        """
+        Parse --> Context
+        Context --> Decision{{Actionable}}
+    end
+    class Parse,Context,Decision ai
+
+    %% --- LOGIC BRANCHES ---
+    Decision -- "NO (Info/URL)" --> RefLogic["Type: REFERENCE"]
+    Decision -- "NO (Someday)" --> IncLogic["Type: INCUBATE"]
+    Decision -- "YES (Do/Buy)" --> ActLogic["Type: TASK / RESOURCE"]
+
+    class RefLogic,IncLogic,ActLogic logic
+
+    %% --- ROUTING LOGIC (The Our Logic Part) ---
+    subgraph Routing ["🧠 Project Routing Logic"]
+        direction TB
+        
+        %% Reference Path
+        RefLogic --> CheckRefMatch{{"Topic Matches<br/>Existing Project?"}}
+        CheckRefMatch -- YES --> AssignRef["Target: Existing Project"]
+        CheckRefMatch -- NO --> AssignGen["Target: 'General'"]
+        
+        %% Incubate Path
+        IncLogic --> CheckIncMatch{{"Topic Matches<br/>Existing Project?"}}
+        CheckIncMatch -- YES --> AssignInc["Target: Existing Project"]
+        CheckIncMatch -- NO --> AssignSomeday["Target: 'Someday/Maybe'"]
+
+        %% Actionable Path
+        ActLogic --> CheckActMatch{{"Topic Matches<br/>Existing Project?"}}
+        CheckActMatch -- YES --> AssignAct["Target: Existing Project"]
+        CheckActMatch -- NO --> NewProjLogic{{"Is it Multi-step?"}}
+        NewProjLogic -- YES --> AssignNew["Target: 'Unmatched'<br/>(Suggest New Project)"]
+        NewProjLogic -- NO --> AssignMisc["Target: 'General'<br/>(Single Orphan Task)"]
+    end
+
+    class Commit,Rotate,Delete,CreateProj db
+
+    %% --- CRITICAL LOGIC HIGHLIGHT ---
+    note_ref["<b>CRITICAL LOGIC:</b><br/>References that don't fit<br/>a project go to 'General'.<br/>They NEVER trigger<br/>'New Project'."] -.-> AssignGen
+    
+    note_task["<b>CRITICAL LOGIC:</b><br/>Only Actionable items<br/>can trigger 'Unmatched'<br/>to prompt a New Project."] -.-> AssignNew
+    
+    - TRANSLATION RULE: If the INCOMING ITEM is not in English, the 'refined_text' MUST be translated into clear, concise English."""
 
     def build_smart_filter_prompt(self, query: str, tasks_str: str) -> str:
         return f"""

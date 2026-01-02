@@ -110,9 +110,6 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
         # Logic: Always allow editing, but highlight if confidence is low
         is_low_confidence = result.confidence < 0.8
 
-        if is_low_confidence:
-            st.warning(f"⚠️ Low Confidence ({result.confidence:.2f}). Please verify translation/project.")
-
         # Use the refined text (translated by AI) as default, fallback to raw text
         default_text = result.refined_text or current_text
 
@@ -131,6 +128,8 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
         # Show original if translation happened
         if edited_text != current_text:
             st.caption(f"Original: *{current_text}*")
+        if is_low_confidence:
+            st.warning(f"⚠️ Low Confidence ({result.confidence:.2f}). Please verify translation/project.")
 
         st.markdown(f"Goes to -> **{result.suggested_project}**")
 
