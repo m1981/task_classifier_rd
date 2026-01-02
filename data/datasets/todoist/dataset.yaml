@@ -24,24 +24,6 @@ goals:
   description: Career support for friends, Generosity Network, Sharing Knowledge
   status: active
 projects:
-- id: 703
-  name: Personal Budget Under Control
-  description: Critical foundation for funding Business & Renovation
-  status: active
-  goal_id: g2
-  sort_order: 0.0
-  tags: []
-  items:
-  - id: ec750e03-2039-4b1d-9c0e-b97fa4c8a5ca
-    name: 🔴 Ogarnę budget (📅 2025-08-04)
-    created_at: '2026-01-02T12:10:37.143156'
-    kind: task
-    is_completed: false
-    tags: []
-    duration: unknown
-    notes: ''
-    completed_at: null
-    due_date: null
 - id: 704
   name: Declutter Space
   description: ''
@@ -60,22 +42,17 @@ projects:
     notes: ''
     completed_at: null
     due_date: null
-- id: 705
-  name: Personal Accessories & Jewelry
-  description: ''
-  status: active
-  goal_id: g2
-  sort_order: 0.0
-  tags: []
-  items:
-  - id: d74cc06b-1c89-4dbb-bea7-fd1a68bcd940
-    name: Kupię bransoletkę ze złota białego
-    created_at: '2026-01-02T12:21:43.006555'
+  - id: 66b6c2af-f558-45d1-93dc-e969b76a6fd7
+    name: Sell wheeled heater and IR panels from Daniel's attic
+    created_at: '2026-01-02T16:18:34.389317'
     kind: task
     is_completed: false
-    tags: []
-    duration: unknown
-    notes: ''
+    tags:
+    - '@Garage'
+    - Physical-Light
+    - Administrative
+    duration: 30min
+    notes: 'Items are located in attic (Strych). Deadline: November 15, 2025. These are Daniel''s items (IR panels and wheeled heater).'
     completed_at: null
     due_date: null
 - id: 101
@@ -335,6 +312,42 @@ projects:
   - id: ac2201c7-a613-494a-a2ba-cae117d225a6
     name: Opel znajfe dealera i zapytam o wynajem
     created_at: '2026-01-02T11:46:46.707112'
+    kind: task
+    is_completed: false
+    tags: []
+    duration: unknown
+    notes: ''
+    completed_at: null
+    due_date: null
+- id: 703
+  name: Personal Budget Under Control
+  description: Critical foundation for funding Business & Renovation
+  status: active
+  goal_id: g2
+  sort_order: 0.0
+  tags: []
+  items:
+  - id: ec750e03-2039-4b1d-9c0e-b97fa4c8a5ca
+    name: 🔴 Ogarnę budget (📅 2025-08-04)
+    created_at: '2026-01-02T12:10:37.143156'
+    kind: task
+    is_completed: false
+    tags: []
+    duration: unknown
+    notes: ''
+    completed_at: null
+    due_date: null
+- id: 705
+  name: Personal Accessories & Jewelry
+  description: ''
+  status: active
+  goal_id: g2
+  sort_order: 0.0
+  tags: []
+  items:
+  - id: d74cc06b-1c89-4dbb-bea7-fd1a68bcd940
+    name: Kupię bransoletkę ze złota białego
+    created_at: '2026-01-02T12:21:43.006555'
     kind: task
     is_completed: false
     tags: []
@@ -1819,6 +1832,19 @@ projects:
     notes: ''
     completed_at: null
     due_date: null
+  - id: f34c2dcf-2508-411d-a6fb-96625932838f
+    name: Install led lamp in attic
+    created_at: '2026-01-02T15:39:03.437668'
+    kind: task
+    is_completed: false
+    tags:
+    - '@Home'
+    - Physical-Light
+    - LowEnergy
+    duration: 1h
+    notes: ''
+    completed_at: null
+    due_date: null
 - id: 401
   name: Beebee Chat App SaaS MVP
   description: Commercializing the Chat App. Focus on features that sell.
@@ -2626,8 +2652,6 @@ projects:
     completed_at: null
     due_date: null
 inbox_tasks:
-- Świetlówka założona na strychu
-- Strych - sprzedać piecyk na kólkach i panele IR Daniela (📅 2025-11-15)
 - '[eufyMake | UV Printing Made Easy - eufymake Europe](https://www.eufymake.com/eu-en/eufymake-uv-printer-e)'
 - 'Manage my day: What to do today? System gets overdue tasks from todoist and ask which of them have been accomplished [system knows about my long term goals, short term goals and other circumstances as facts list]'
 - '[Local JavaScript Vector Database that works offline | RxDB - JavaScript Database](https://rxdb.info/articles/javascript-vector-database.html) #'
