@@ -4,6 +4,8 @@ from services import TaskClassifier
 from models.entities import ResourceType, TaskItem, ResourceItem, ReferenceItem
 from views.components import render_item
 from views.common import get_logger
+from views.components import render_item, render_debug_panel
+from views.common import get_logger, set_debug_state
 
 logger = get_logger("PlanningView")
 
@@ -60,6 +62,8 @@ def render_planning_view(planning_service: PlanningService, classifier: TaskClas
         st.markdown("#### 📂 Uncategorized Projects")
         for proj in orphaned:
             _render_project_strip(proj, planning_service, classifier)
+
+    render_debug_panel()
 
 
 def _render_project_strip(project, service: PlanningService, classifier: TaskClassifier):
@@ -134,10 +138,20 @@ def _render_project_strip(project, service: PlanningService, classifier: TaskCla
             if st.button("✨ Auto-Enrich Items", key=f"enrich_{project.id}",
                          help="Use AI to add tags and duration to empty tasks"):
                 with st.spinner(f"Enriching '{project.name}'..."):
-                    count = service.enrich_project(project.id, classifier)
 
-                    if count > 0:
-                        st.success(f"Enriched {count} items!")
+                    result_stats, debug_info = service.enrich_project(project.id, classifier)
+
+                    # 4. SET DEBUG STATE
+                    if debug_info:
+                        set_debug_state(
+                            source=f"Enricher ({project.name})",
+                            prompt=debug_info.get('prompt', ''),
+                            response=debug_info.get('response', ''),
+                            schema=debug_info.get('schema', None)
+                        )
+
+                    if result_stats > 0:
+                        st.success(f"Enriched {result_stats} items!")
                         st.rerun()
                     else:
                         st.info("No items needed enrichment.")

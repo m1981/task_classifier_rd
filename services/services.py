@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import List
 import anthropic
 import json
+from models.ai_schemas import ClassificationType, EnrichmentResult
 
 # Import Domain Models and DTOs
 from models import (
@@ -176,6 +177,26 @@ flowchart TD
     
 """
 
+    def build_enrichment_prompt(self, item_name: str, project_name: str, goal_name: str) -> str:
+        return f"""
+        You are a GTD Data Cleaner.
+
+        ITEM: "{item_name}"
+        CURRENT PROJECT: "{project_name}"
+        GOAL CONTEXT: "{goal_name}"
+
+        AVAILABLE TAGS: {self.config.DEFAULT_TAGS}
+        ALLOWED DURATIONS: {self.config.ALLOWED_DURATIONS}
+
+        INSTRUCTIONS:
+        1. Analyze the item in the context of its project.
+        2. Assign appropriate tags (Context, Energy, Effort).
+        3. Estimate duration if it's a task.
+        4. If the item name contains a URL, extract it to notes.
+        5. Determine if this is really a Task, or if it should be a Resource (Shopping) or Reference.
+        """
+
+
     def build_smart_filter_prompt(self, query: str, tasks_str: str) -> str:
         return f"""
         You are a productivity assistant helping a user select tasks.
@@ -256,3 +277,25 @@ class TaskClassifier:
                 tool_schema=tool_schema,
                 raw_response=str(e)
             )
+
+    def enrich_single_item(self, item_name: str, project_name: str, goal_name: str) -> EnrichmentResult:
+        prompt = self.prompt_builder.build_enrichment_prompt(item_name, project_name, goal_name)
+
+        # Capture Schema
+        tool_schema = EnrichmentResult.model_json_schema()
+
+        response = self.client.beta.messages.parse(
+            model="claude-haiku-4-5",
+            max_tokens=500,
+            messages=[{"role": "user", "content": prompt}],
+            output_format=EnrichmentResult,
+        )
+
+        debug_data = {
+            "prompt": prompt,
+            "response": response.parsed_output.model_dump_json(indent=2),
+            "schema": tool_schema
+        }
+
+        # Return Tuple
+        return response.parsed_output, debug_data

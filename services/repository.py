@@ -13,7 +13,7 @@ from models.ai_schemas import ClassificationResult, ClassificationType
 from services.services import DatasetManager
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("Repository")
 
 # --- THE PROPOSAL OBJECT (Buffer) ---
 @dataclass
@@ -474,6 +474,59 @@ class PlanningService:
             neighbor = siblings[idx + 1]
             target_proj.sort_order, neighbor.sort_order = neighbor.sort_order, target_proj.sort_order
             self.repo.mark_dirty()
+
+    def enrich_project(self, project_id: int, classifier) -> Tuple[int, Dict]:
+        """
+        Iterates through active items in a project and enriches them using AI.
+        Returns: (count_of_enriched_items, debug_data_dict)
+        """
+        project = self.repo.find_project(project_id)
+        if not project: return 0, {}
+
+        # Find Goal Name for context
+        goal_name = "No Goal"
+        if project.goal_id:
+            goal = next((g for g in self.repo.data.goals if g.id == project.goal_id), None)
+            if goal: goal_name = goal.name
+
+        count = 0
+        last_debug_info = {} # Store debug info from the last AI call
+
+        for item in project.items:
+            # Skip if already completed or already has tags/duration (don't overwrite good data)
+            if getattr(item, 'is_completed', False) or getattr(item, 'is_acquired', False):
+                continue
+
+            # Heuristic: Only enrich if "poor" data (no tags AND unknown duration)
+            has_tags = bool(item.tags)
+            has_duration = getattr(item, 'duration', 'unknown') != 'unknown'
+
+            if not has_tags and not has_duration:
+                try:
+                    # We assume classifier.enrich_single_item returns (result, debug_data)
+                    # You must ensure TaskClassifier.enrich_single_item is updated too!
+                    result, debug_data = classifier.enrich_single_item(item.name, project.name, goal_name)
+
+                    last_debug_info = debug_data
+
+                    # Apply updates
+                    item.tags = result.extracted_tags
+                    if hasattr(item, 'duration'):
+                        item.duration = result.estimated_duration or "unknown"
+
+                    # SAFE UPDATE: Notes
+                    if hasattr(item, 'notes'):
+                        if not item.notes and result.notes:
+                            item.notes = result.notes
+
+                    count += 1
+                except Exception as e:
+                    print(f"Failed to enrich {item.name}: {e}")
+
+        if count > 0:
+            self.repo.mark_dirty()
+
+        return count, last_debug_info
 
 class ExecutionService:
     def __init__(self, repo: YamlRepository):

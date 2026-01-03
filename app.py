@@ -108,7 +108,8 @@ except Exception as e:
 # --- 3. Navigation ---
 mode = st.sidebar.radio(
     "Mode",
-    ["📥 Triage", "🎯 Planning", "✅ Execution", "🛒 Shopping", "🤖 Coach"]
+    ["📥 Triage", "🎯 Planning", "✅ Execution", "🛒 Shopping", "🤖 Coach"],
+    index=1
 )
 
 # --- 4. Routing ---

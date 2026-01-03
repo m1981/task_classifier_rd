@@ -1,9 +1,52 @@
 import streamlit as st
 from models.entities import TaskItem, ResourceItem, ReferenceItem, ProjectItem
 from views.common import get_logger
+import json
 
 logger = get_logger("Components")
 
+def render_debug_panel():
+    """
+    Renders a standardized collapsible debug panel at the bottom of any view.
+    Reads from st.session_state.last_debug_event
+    """
+    if 'last_debug_event' not in st.session_state:
+        return
+
+    event = st.session_state.last_debug_event
+
+    st.markdown("---")
+    with st.expander(f"🛠️ Debug Info: {event.get('source', 'Unknown')}", expanded=False):
+
+        # 1. Metadata
+        st.caption(f"Timestamp: {event.get('timestamp', 'N/A')}")
+
+        # 2. The Prompt
+        if 'prompt' in event:
+            st.subheader("1. Prompt Sent")
+            st.code(event['prompt'], language='markdown')
+
+        # 3. The Schema (Optional)
+        if 'schema' in event and event['schema']:
+            st.subheader("2. Tool Schema")
+            st.json(event['schema'])
+
+        # 4. The Response
+        if 'response' in event:
+            st.subheader("3. Raw AI Response")
+            # Handle both string JSON and dict
+            resp = event['response']
+            if isinstance(resp, str):
+                try:
+                    st.json(json.loads(resp))
+                except:
+                    st.code(resp, language='text')
+            else:
+                st.json(resp)
+
+        # 5. Errors
+        if 'error' in event and event['error']:
+            st.error(f"Error: {event['error']}")
 
 def render_item(item: ProjectItem, on_complete=None, on_delete=None):
     """

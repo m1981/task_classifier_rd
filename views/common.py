@@ -3,6 +3,7 @@ import time
 import functools
 import logging
 import sys
+from datetime import datetime
 
 logger = logging.getLogger("task_classifier")
 
@@ -23,6 +24,21 @@ if not logger.handlers:
 def get_logger(component_name: str):
     """Returns a logger adapter with the component name pre-filled"""
     return logging.getLogger(f"task_classifier.{component_name}")
+
+
+
+def set_debug_state(source: str, prompt: str, response: any, schema: dict = None, error: str = None):
+    """
+    Updates the global session state with the latest AI interaction details.
+    """
+    st.session_state.last_debug_event = {
+        "source": source,
+        "timestamp": datetime.now().strftime("%H:%M:%S"),
+        "prompt": prompt,
+        "response": response,
+        "schema": schema,
+        "error": error
+    }
 
 # --- CSS Styling ---
 def inject_custom_css():

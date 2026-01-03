@@ -46,6 +46,7 @@ class ProjectItem(BaseModel):
     """The Abstract Base Class for all things inside a project"""
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
+    notes: str = ""
     created_at: datetime = Field(default_factory=datetime.now)
     tags: List[str] = Field(default_factory=list)
 
@@ -53,7 +54,6 @@ class TaskItem(ProjectItem):
     kind: Literal["task"] = "task"
     is_completed: bool = False
     duration: str = "unknown"
-    notes: str = ""
     completed_at: Optional[datetime] = None
     due_date: Optional[date] = None
 

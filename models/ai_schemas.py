@@ -90,3 +90,19 @@ class SmartFilterResult(BaseModel):
     estimated_total_time: str = Field(
         description="A rough sum of the duration of selected tasks (e.g., '45 mins')."
     )
+
+
+class EnrichmentResult(BaseModel):
+    extracted_tags: List[str] = Field(
+        description=f"Select tags STRICTLY from: {SystemConfig.DEFAULT_TAGS}"
+    )
+    estimated_duration: Optional[str] = Field(
+        description=f"Strictly one of: {SystemConfig.ALLOWED_DURATIONS}. Null if not a task."
+    )
+    notes: str = Field(
+        default="",
+        description="Add context, URL (if in title), or sub-steps. Keep empty if simple."
+    )
+    suggested_kind: ClassificationType = Field(
+        description="Is this actually a Resource (Buy) or Reference? If so, suggest change."
+    )
