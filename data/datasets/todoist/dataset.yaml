@@ -35,9 +35,9 @@ projects:
   - id: 2545bf3d-637c-4df4-99be-7ca9eddfb593
     name: Kensington Ulock sprzedać
     created_at: '2026-01-02T12:11:32.316460'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -45,16 +45,33 @@ projects:
   - id: 66b6c2af-f558-45d1-93dc-e969b76a6fd7
     name: Sell wheeled heater and IR panels from Daniel's attic
     created_at: '2026-01-02T16:18:34.389317'
-    kind: task
-    is_completed: false
     tags:
     - '@Garage'
     - Physical-Light
     - Administrative
+    kind: task
+    is_completed: false
     duration: 30min
     notes: 'Items are located in attic (Strych). Deadline: November 15, 2025. These are Daniel''s items (IR panels and wheeled heater).'
     completed_at: null
     due_date: null
+- id: 706
+  name: General
+  description: System generated container
+  status: active
+  goal_id: null
+  sort_order: 0.0
+  tags: []
+  items:
+  - id: f6ee7df6-6e44-4854-a606-b98f2c8c1126
+    name: eufyMake UV Printer - Product Overview
+    created_at: '2026-01-02T19:18:56.656909'
+    tags:
+    - Buy
+    - Hustle
+    - Business
+    kind: reference
+    content: https://www.eufymake.com/eu-en/eufymake-uv-printer-e - Product page for eufyMake UV printer. Could be relevant for future DIY projects with kids (3D printing, creative activities) or home business applications, but no immediate action identified.
 - id: 101
   name: Review Mate Campaign & Partner Search
   description: Focus on finding a Marketing Co-Founder/Partner for traction
@@ -66,9 +83,9 @@ projects:
   - id: 2bbf2e27-65fd-440a-8a8c-2fd724780c6c
     name: Draft "Co-Founder Pitch" (Equity/RevShare offer) instead of just looking for an assistant
     created_at: '2026-01-02T11:46:46.706880'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -76,9 +93,9 @@ projects:
   - id: b79e3fc1-56ef-4fb7-bda8-302432883279
     name: Kickoff meeting z gościem od Startapów na Fiverr
     created_at: '2026-01-02T11:46:46.706895'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -86,9 +103,9 @@ projects:
   - id: f908f521-1005-4661-8de1-b514b38304c5
     name: Zrobię z tego wymagania dla Osób z Fiverr
     created_at: '2026-01-02T11:46:46.706921'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -96,9 +113,9 @@ projects:
   - id: 28762c44-907b-4b74-b7e8-d0e1a41e6661
     name: Wybiorę Fiverr do setupu kampani
     created_at: '2026-01-02T11:46:46.706928'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -106,9 +123,9 @@ projects:
   - id: ad174996-cb75-444f-a012-23c170283d05
     name: Print color Roadmap
     created_at: '2026-01-02T11:46:46.706933'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -116,9 +133,9 @@ projects:
   - id: 994723f9-f120-49db-aa8c-2fc238a6a792
     name: 'Invite business partner: Verify LinkedIn NFC ID'
     created_at: '2026-01-02T11:46:46.706938'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -126,9 +143,9 @@ projects:
   - id: c57e1c52-d90c-4d93-b143-5640b517c445
     name: 'Invite business partner: Update LinkedIn profile to show "Founder looking for Co-Founder"'
     created_at: '2026-01-02T11:46:46.706943'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -136,9 +153,9 @@ projects:
   - id: 4addf441-a90d-4a7e-8820-1b7c294b53b1
     name: 'Invite business partner: Publish post to invite someone to biz cooperation (FB Ads/Ahrefs skills)'
     created_at: '2026-01-02T11:46:46.706946'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -146,9 +163,9 @@ projects:
   - id: bc933399-4154-4ad8-b067-215aaecda50c
     name: 'Invite business partner: Systematic Enrich my PixelCrate FB and IG accounts'
     created_at: '2026-01-02T11:46:46.706950'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -156,9 +173,9 @@ projects:
   - id: 42628e72-f133-495f-be22-ff1aab9c189a
     name: założyć pomocnicze domeny ReviewMate, AliceChat, etc.
     created_at: '2026-01-02T11:46:46.706954'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -166,9 +183,9 @@ projects:
   - id: 0c7d3864-2743-43b1-819b-e9bad9b85588
     name: Zrobię listę cytatów z filmików
     created_at: '2026-01-02T11:46:46.706958'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -176,9 +193,9 @@ projects:
   - id: 3bf33048-5c47-46a2-bc72-cfd470957eea
     name: Zgromadze wssystkie materiały kupione w produkcie "100task". Zaloguje się do plqtformy onlinr.
     created_at: '2026-01-02T11:46:46.706962'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -186,9 +203,9 @@ projects:
   - id: 12f4f930-cd4c-4573-b966-ec5489f7c3a8
     name: Spiszę kroki z dwóch filmików od Alex,a
     created_at: '2026-01-02T11:46:46.706966'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -196,9 +213,9 @@ projects:
   - id: bcc7c429-c08f-4e9c-aeab-8068650e0d38
     name: Wydrukuje wizytówki z cytatami
     created_at: '2026-01-02T11:46:46.706970'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -206,9 +223,9 @@ projects:
   - id: 22d93af9-ffd1-4615-af1c-ea9228f7b321
     name: Dodam do AI dane z tej stronki Alexa
     created_at: '2026-01-02T11:46:46.707005'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -216,9 +233,9 @@ projects:
   - id: fcfbbaeb-b058-44fd-ac11-25dda5496716
     name: Znajdę swoich patronów guru
     created_at: '2026-01-02T11:46:46.707060'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -234,9 +251,9 @@ projects:
   - id: 9c2b4875-a87f-4a13-8174-058caf2a2640
     name: Find stock to buy on YouTube (📅 2025-10-11)
     created_at: '2026-01-02T11:46:46.707077'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -244,9 +261,9 @@ projects:
   - id: 7f16a905-42a6-4614-9c93-411882fee07d
     name: Transfer money on Degiro (📅 2025-08-11)
     created_at: '2026-01-02T11:46:46.707082'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -254,9 +271,9 @@ projects:
   - id: 36e1bf30-4ec1-4ff5-a459-6de7e0f35cf0
     name: Buy stocks on Degiro (📅 2025-08-12)
     created_at: '2026-01-02T11:46:46.707086'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -272,9 +289,9 @@ projects:
   - id: 4dffa6f8-2051-40ab-9e7e-371f1a2c3562
     name: Wycenić wynajem e Samochodu
     created_at: '2026-01-02T11:46:46.707095'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -282,9 +299,9 @@ projects:
   - id: 633f32c5-96e6-409f-a997-ffbb190455a9
     name: Spisać ile na paliwo miesięcznie się wydaje
     created_at: '2026-01-02T11:46:46.707099'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -292,9 +309,9 @@ projects:
   - id: 6ed2dec5-aea0-4890-9a21-ca933715a433
     name: Spisać ile na naprawy rocznie się wydaje
     created_at: '2026-01-02T11:46:46.707105'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -302,9 +319,9 @@ projects:
   - id: 42755636-f2d0-4b1a-a3ce-6588992001e9
     name: Hyundai znajdę deleara i zapytam o wynajem
     created_at: '2026-01-02T11:46:46.707109'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -312,9 +329,9 @@ projects:
   - id: ac2201c7-a613-494a-a2ba-cae117d225a6
     name: Opel znajfe dealera i zapytam o wynajem
     created_at: '2026-01-02T11:46:46.707112'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -330,9 +347,9 @@ projects:
   - id: ec750e03-2039-4b1d-9c0e-b97fa4c8a5ca
     name: 🔴 Ogarnę budget (📅 2025-08-04)
     created_at: '2026-01-02T12:10:37.143156'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -348,9 +365,9 @@ projects:
   - id: d74cc06b-1c89-4dbb-bea7-fd1a68bcd940
     name: Kupię bransoletkę ze złota białego
     created_at: '2026-01-02T12:21:43.006555'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -366,9 +383,9 @@ projects:
   - id: fa6f7935-4368-4f9b-b3ed-668581cbfeb1
     name: Zaplanuję Pragę 13-16 Lipiec
     created_at: '2026-01-02T11:46:46.707120'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -376,9 +393,9 @@ projects:
   - id: 6a9b5360-67bf-48a7-b980-64bb8663c318
     name: Zaplanuję Drezno 13-16 Lipiec
     created_at: '2026-01-02T11:46:46.707124'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -386,9 +403,9 @@ projects:
   - id: 4b299329-bb98-450a-a13a-f7a5bb8e953a
     name: 'Wycieczki: Drezno'
     created_at: '2026-01-02T11:46:46.707128'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -396,9 +413,9 @@ projects:
   - id: 70a52a03-2248-4662-91e0-496c2b642c8d
     name: 'Wycieczki: Wiedeń'
     created_at: '2026-01-02T11:46:46.707131'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -406,9 +423,9 @@ projects:
   - id: 97b785ca-90a5-4ad4-97e2-19cab83af8a6
     name: 'Wycieczki: Praga'
     created_at: '2026-01-02T11:46:46.707135'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -416,9 +433,9 @@ projects:
   - id: 6132ddf9-a963-4506-be55-3f457705c9a0
     name: 'Wycieczki: Harry Potter Watford'
     created_at: '2026-01-02T11:46:46.707139'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -426,9 +443,9 @@ projects:
   - id: 4b7f98ad-b4b3-4169-a8a2-61f311eb2189
     name: Mail do Energylandii (Energy trip)
     created_at: '2026-01-02T11:46:46.707143'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -436,9 +453,9 @@ projects:
   - id: becb785e-03d5-49d1-98e3-e0e2d2eda0b0
     name: Spiszę listę celów finansowych i wycieczek eventow przeprowadzek studiów
     created_at: '2026-01-02T11:46:46.707147'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -446,9 +463,9 @@ projects:
   - id: c4b5662a-8a37-4482-8991-057afff8caaf
     name: Spisać jakie cele chcę osiągać
     created_at: '2026-01-02T11:46:46.707151'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -464,9 +481,9 @@ projects:
   - id: ef2d4ab9-886d-4f9f-996a-5b78dbbe9c42
     name: Polatać samolotem z dzieciakami
     created_at: '2026-01-02T11:46:46.707158'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -474,6 +491,7 @@ projects:
   - id: 0d08a8cd-28f1-449e-a30d-26923c4eace3
     name: Kupię ładowarkę RC
     created_at: '2026-01-02T11:46:46.707163'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -482,6 +500,7 @@ projects:
   - id: 60d202f5-d9dc-4772-9fbd-556dbf7627e3
     name: Kupię śmigło
     created_at: '2026-01-02T11:46:46.707169'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -490,9 +509,9 @@ projects:
   - id: d6a128d8-a752-40e7-bb4b-28f739e1f22d
     name: spisać grafik dzieciakow do kalendarza żeby rano poczytać coś z tymkiem a jak tymek na jamedze to porobić coś z Seba
     created_at: '2026-01-02T11:46:46.707173'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -500,9 +519,9 @@ projects:
   - id: f4d90da9-7378-47d7-8f80-fa146f7100be
     name: Salon gier w dominikańskiej
     created_at: '2026-01-02T11:46:46.707177'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -510,9 +529,9 @@ projects:
   - id: 584b80e9-425a-44f1-ab64-684f74aa8249
     name: Minecraft na PlayStation zainstalować
     created_at: '2026-01-02T11:46:46.707180'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -520,9 +539,9 @@ projects:
   - id: 43ffd6ec-08de-40b1-bcf5-c042b1c71fb3
     name: Jump hall kolo teczy
     created_at: '2026-01-02T11:46:46.707184'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -530,9 +549,9 @@ projects:
   - id: 1cc5aea7-c787-43a8-80b2-3dde63f21193
     name: Poulduchy z magnesi co Wojtki byli
     created_at: '2026-01-02T11:46:46.707188'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -540,9 +559,9 @@ projects:
   - id: bcb5470d-472d-4e54-aa9c-d873dc6281fa
     name: Gra rozmowa z dziećmi
     created_at: '2026-01-02T11:46:46.707192'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -550,9 +569,9 @@ projects:
   - id: 8c78e97d-8552-4ef1-9a01-d366eceb4ec0
     name: Wybiorę i kupię zabawkę s Cranchlabs super zabawki naukowe
     created_at: '2026-01-02T11:46:46.707196'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -560,9 +579,9 @@ projects:
   - id: eb1c6420-f6f5-4f7a-b97d-d91738980918
     name: Noc pod namiotem
     created_at: '2026-01-02T11:46:46.707200'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -570,9 +589,9 @@ projects:
   - id: 8889e4c1-15fc-40fa-affd-a107d43b342e
     name: Sprawdzę daty imprez moto we Wrocławiu
     created_at: '2026-01-02T11:46:46.707203'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -580,9 +599,9 @@ projects:
   - id: b89ae885-2e9e-4f36-a67d-6286dd1d376d
     name: Pixel XL gra kafle LED nq rynku
     created_at: '2026-01-02T11:46:46.707207'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -590,9 +609,9 @@ projects:
   - id: b069ed0a-b9d1-43dc-99f1-720ce4887b71
     name: Daniel jeździ na skuterze
     created_at: '2026-01-02T11:46:46.707211'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -600,9 +619,9 @@ projects:
   - id: dfaab6df-34c2-48cd-9805-13d30e8b5008
     name: Łukasz jeździ Traficarem
     created_at: '2026-01-02T11:46:46.707215'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -610,9 +629,9 @@ projects:
   - id: 6afef5fe-a8a4-43ae-ad2a-291e5496408a
     name: Zestaw z Sebą
     created_at: '2026-01-02T11:46:46.707218'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -620,9 +639,9 @@ projects:
   - id: 406f6ed2-2571-4644-bed9-f71770231d6e
     name: Zrobić kartkę co lubię w Sebastianie
     created_at: '2026-01-02T11:46:46.707222'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -630,6 +649,7 @@ projects:
   - id: 158b21d4-1678-4db6-89d1-bb3cc6dc9822
     name: Kalendarz magnetyczny zamowie
     created_at: '2026-01-02T11:46:46.707226'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -638,9 +658,9 @@ projects:
   - id: f05edea4-aadb-4576-bee3-8af1351cf149
     name: Namiot indiański w ogrodzie
     created_at: '2026-01-02T11:46:46.707231'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -648,9 +668,9 @@ projects:
   - id: 7404526e-6ae4-437b-9dc5-189b45cf935c
     name: Poniedziałek kino horyzonty Stich
     created_at: '2026-01-02T11:46:46.707234'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -658,21 +678,25 @@ projects:
   - id: c2ab13a9-0712-4f69-80d8-46544f270fd2
     name: Linden Park - centrum kreatywnej zabawy
     created_at: '2026-01-02T11:46:46.707239'
+    tags: []
     kind: reference
     content: '[Linden Park - centrum kreatywnej zabawy](https://g.co/kgs/6K4xZ1)'
   - id: b62a2f37-ff1b-4851-822a-9b642819d55f
     name: Miniaturowy domek DIY
     created_at: '2026-01-02T11:46:46.707244'
+    tags: []
     kind: reference
     content: '[Miniaturowy domek DIY](https://www.sklep.habarri.pl/Miniaturowy-domek-DIY-Kreatywne-popoludnie)'
   - id: aa247c3b-2385-451b-ab3b-dcdd24134c58
     name: DIY Lemonade Stand Idea
     created_at: '2026-01-02T11:46:46.707248'
+    tags: []
     kind: reference
     content: diy-lemonade-stand
   - id: d26e64e6-a088-404c-aa46-1431a5720993
     name: Bramka piłkarska samorozkładająca GOALKEEPER 2 szt
     created_at: '2026-01-02T11:46:46.707252'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -681,6 +705,7 @@ projects:
   - id: 0dcb22a6-eb31-45be-bcb2-f6b662263963
     name: 2X BRAMKA PIŁKARSKA BRAMKI DO PIŁKI NOŻNEJ ZESTAW
     created_at: '2026-01-02T11:46:46.707258'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -689,6 +714,7 @@ projects:
   - id: 60f27f50-2d42-4090-943e-ad60527d96af
     name: Magnetic Wall Board
     created_at: '2026-01-02T11:46:46.707262'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -697,13 +723,13 @@ projects:
   - id: 677f92b1-d0f2-4026-bf49-84909df5a852
     name: Kupię filtr do ekspresy Philips
     created_at: '2026-01-02T12:22:11.075926'
-    kind: task
-    is_completed: false
     tags:
     - '@Home'
     - Physical-Light
     - '@Errands'
     - Buy
+    kind: task
+    is_completed: false
     duration: unknown
     notes: ''
     completed_at: null
@@ -711,13 +737,13 @@ projects:
   - id: acc3844d-27a6-4d72-8799-5ac66b2cf37c
     name: Zabawy na drukarce 3D zaplanuję
     created_at: '2026-01-02T12:25:15.224293'
-    kind: task
-    is_completed: false
     tags:
     - '@Home'
     - Creative
     - Mental-Medium
     - HighEnergy
+    kind: task
+    is_completed: false
     duration: unknown
     notes: ''
     completed_at: null
@@ -725,11 +751,11 @@ projects:
   - id: 9eaf464f-49c9-432d-97b6-bbaa285385e6
     name: '[NEO ZESTAW SURVIVALOWY 8 W 1 MULTITOOL NÓŻ LATARKA KRZESIWO KOMPAS 63-154 - 5907558482041 - 14013698738 - Allegro](https://allegro.pl/oferta/neo-zestaw-survivalowy-8-w-1-multitool-noz-latarka-krzesiwo-kompas-63-154-14013698738)'
     created_at: '2026-01-02T12:25:48.559081'
-    kind: task
-    is_completed: false
     tags:
     - Buy
     - '@Errands'
+    kind: task
+    is_completed: false
     duration: unknown
     notes: ''
     completed_at: null
@@ -745,9 +771,9 @@ projects:
   - id: 0aaa7cab-0b96-48f1-bfea-a52a9be95060
     name: Dzieciaki dostają rozwijające książki, miesięczniki, todo, DIY
     created_at: '2026-01-02T11:46:46.707271'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -755,9 +781,9 @@ projects:
   - id: cbb49c28-46e5-434f-844d-a2e42bf4c601
     name: Przelew studia 3250zł every 27 September (📅 2025-09-27)
     created_at: '2026-01-02T11:46:46.707275'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -765,9 +791,9 @@ projects:
   - id: 7ce25019-791c-4f58-b36a-fab850fb4125
     name: 'Sebastian: Kiwico dla dzieci'
     created_at: '2026-01-02T11:46:46.707279'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -775,9 +801,9 @@ projects:
   - id: ec6e9d5c-4244-4c6a-a850-c88d86402022
     name: 'Sebastian: Wykłady z projektorem dla dzieci'
     created_at: '2026-01-02T11:46:46.707282'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -785,9 +811,9 @@ projects:
   - id: 183107aa-10aa-4ad3-8b43-4653e895f100
     name: 'Sebastian: Projekty z dziećmi'
     created_at: '2026-01-02T11:46:46.707286'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -795,9 +821,9 @@ projects:
   - id: 1ebd3043-98ad-4777-a984-214b70086468
     name: 'Tymek: Eksperymenty z dziećmi'
     created_at: '2026-01-02T11:46:46.707290'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -805,9 +831,9 @@ projects:
   - id: c01ef44c-c2b4-4f8c-91f5-4778d647f397
     name: 'Mati: Ostrow Tumski plener Mati'
     created_at: '2026-01-02T11:46:46.707294'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -815,9 +841,9 @@ projects:
   - id: 49d00988-ea33-4de6-b286-54371e2731f4
     name: 'Łukasz: Łukasz bawi się elektroniką'
     created_at: '2026-01-02T11:46:46.707297'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -825,9 +851,9 @@ projects:
   - id: 4582c7e8-cf69-4dca-9ff4-43512fdd7f8d
     name: 'Kamila: Kamila ma prenumeratę interior design'
     created_at: '2026-01-02T11:46:46.707301'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -835,6 +861,7 @@ projects:
   - id: 21dbc16a-f83b-49cf-a197-177a9a5aea07
     name: 'Kamila: Vogue Italian Magazine Subscription'
     created_at: '2026-01-02T11:46:46.707305'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -843,6 +870,7 @@ projects:
   - id: 5fdb6d7c-e1db-4918-90aa-08956ec12a8f
     name: 'Kamila: Vogue Collections Magazine Subscription'
     created_at: '2026-01-02T11:46:46.707309'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -851,6 +879,7 @@ projects:
   - id: 84bda57d-27ed-40e2-80f0-85035a4e986d
     name: 'Kamila: Sztuka szycia (Antonina Samecka)'
     created_at: '2026-01-02T11:46:46.707313'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -859,6 +888,7 @@ projects:
   - id: 216c56b8-0e80-499c-8a64-f5ea32b768a2
     name: 'Kamila: Vogue: The Covers'
     created_at: '2026-01-02T11:46:46.707316'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -867,6 +897,7 @@ projects:
   - id: 3d0c283b-adb2-4525-8b9a-4c753ee184af
     name: 'Kamila: Komputer do grafiki'
     created_at: '2026-01-02T11:46:46.707320'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -875,9 +906,9 @@ projects:
   - id: 2d8a32f2-55f9-4efc-91fe-414f648d759a
     name: 'Natalia: Natalia ma prawko kat. A'
     created_at: '2026-01-02T11:46:46.707324'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -885,9 +916,9 @@ projects:
   - id: 81f79893-fb57-4fb5-b880-8a8129a1327e
     name: 'Natalia: Natala jeździ skuterem'
     created_at: '2026-01-02T11:46:46.707328'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -895,9 +926,9 @@ projects:
   - id: 6dc50e11-3ec6-4158-b9e0-cedbc2bf004c
     name: 'Natalia: Natalia jeździ samochodem'
     created_at: '2026-01-02T11:46:46.707332'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -905,9 +936,9 @@ projects:
   - id: bc323581-5c1e-416b-b18e-6de3105c0901
     name: 'Natalia: Natalia rysuje'
     created_at: '2026-01-02T11:46:46.707335'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -915,6 +946,7 @@ projects:
   - id: 9a0bbf7a-c715-450b-960c-d8cfa11aab50
     name: 'Natalia: Buy the Illustrator''s Guidebook eBook by 21 Draw'
     created_at: '2026-01-02T11:46:46.707339'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -923,6 +955,7 @@ projects:
   - id: 4db25b75-398a-461a-b455-66510c959594
     name: 'Natalia: Super wkładki do butów super skoczne'
     created_at: '2026-01-02T11:46:46.707343'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -931,6 +964,7 @@ projects:
   - id: 914fccd5-a4a3-4ad2-996c-8b0fc282931d
     name: 'Natalia: Sztuka rysowania twarze'
     created_at: '2026-01-02T11:46:46.707347'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -939,6 +973,7 @@ projects:
   - id: 3a787582-1c6d-4602-bd04-3b3e29355e67
     name: 'Natalia: Funko pop star wars Ahsoka'
     created_at: '2026-01-02T11:46:46.707350'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -947,51 +982,61 @@ projects:
   - id: a50a12ee-365b-4f57-9259-2667e333b059
     name: Synthesis Tutor AI
     created_at: '2026-01-02T11:46:46.707354'
+    tags: []
     kind: reference
     content: '[Synthesis Tutor](https://www.synthesis.com/tutor)'
   - id: 71e7a814-b442-4b1b-881a-ec2601bce0f3
     name: CircuitMess DIY Kits
     created_at: '2026-01-02T11:46:46.707358'
+    tags: []
     kind: reference
     content: '[DIY STEM Kits for Kids | CircuitMess](https://circuitmess.com)'
   - id: 7d4c1e23-4bb8-4736-a8d1-491dc0d86ade
     name: Capo U4 RC Car Model
     created_at: '2026-01-02T11:46:46.707363'
+    tags: []
     kind: reference
     content: '[Capo U4 CD 1582X Queen 1/8 Scale](https://www.stirlingkit.com/products/capo-u4-cd-1582x-queen-1-8-scale-2-4g-all-metal-off-road-climibing-car-vehicles-kits)'
   - id: d55e508c-7c49-473f-b3ba-5a07a3f7b4ea
     name: Mini Drone Kit
     created_at: '2026-01-02T11:46:46.707366'
+    tags: []
     kind: reference
     content: '[Mini Drone Kit](https://harishprojects.com/product/mini-drone-kit-rc-diy-drone-2-4ghz-headless-mode-6-axis-gyro-led-light/)'
   - id: 47a401e4-334f-418b-9471-665c5c1615ee
     name: Mel Science Subscription
     created_at: '2026-01-02T11:46:46.707370'
+    tags: []
     kind: reference
     content: https://melscience.com/PL-en/subscription/...
   - id: 8cadbd49-e302-4980-9d6d-2eea66e15163
     name: LEGO Light Kits
     created_at: '2026-01-02T11:46:46.707373'
+    tags: []
     kind: reference
     content: '[Our LEGO Light Kits](https://www.lightmybricks.eu/collections/lego-light-kits)'
   - id: c149fd0d-40ba-4a0c-90c6-0c3884eaae47
     name: Strategic Parenting Course
     created_at: '2026-01-02T11:46:46.707377'
+    tags: []
     kind: reference
     content: '[Strategic Parenting](https://strategicparenting.com)'
   - id: c4d80378-7dab-455a-8f9e-3f8478cc3825
     name: Home Assistant on Pi Zero Guide
     created_at: '2026-01-02T11:46:46.707381'
+    tags: []
     kind: reference
     content: '[Home Assistant on a Pi Zero W](https://community.home-assistant.io/t/home-assistant-on-a-pi-zero-w-in-30-minutes/42494)'
   - id: 8eada924-b3c8-4986-99e4-7a7b14ef0d3a
     name: Spintronics Mechanical Circuits
     created_at: '2026-01-02T11:46:46.707384'
+    tags: []
     kind: reference
     content: '[Spintronics](https://store-eu.upperstory.com/collections/spintronics)'
   - id: 47c4ce1e-862f-4600-9c97-255340b53869
     name: 2-Stroke Go Kart Engine
     created_at: '2026-01-02T11:46:46.707388'
+    tags: []
     kind: reference
     content: '[(Basic Style) 2-Stroke 63cc](https://atvkart.com/products/2-stroke-90cc-off-road-go-kart)'
 - id: 204
@@ -1005,9 +1050,9 @@ projects:
   - id: 26ed5291-1ac5-4b18-b86a-4b87cc130e1d
     name: Spisać 20 słówek angielskich z AI
     created_at: '2026-01-02T11:46:46.707395'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1015,9 +1060,9 @@ projects:
   - id: 7d637b49-be42-4f96-a31a-8396d52f28de
     name: Phrasals starting on leter A
     created_at: '2026-01-02T11:46:46.707399'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1025,9 +1070,9 @@ projects:
   - id: b2e272a9-18d9-4cd8-98ac-24ec4894f820
     name: Idioms starting on A
     created_at: '2026-01-02T11:46:46.707403'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1035,9 +1080,9 @@ projects:
   - id: cab9b80d-b43d-45bb-98bf-bf77d44ba355
     name: Used in conversation
     created_at: '2026-01-02T11:46:46.707406'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1045,9 +1090,9 @@ projects:
   - id: bf8a6f4d-65bd-4011-86c1-56dfdde78bed
     name: Used in Business
     created_at: '2026-01-02T11:46:46.707410'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1055,9 +1100,9 @@ projects:
   - id: be518ec5-9631-479e-86f1-366b977acea1
     name: Dodam Słówka do super memo
     created_at: '2026-01-02T11:46:46.707414'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1073,9 +1118,9 @@ projects:
   - id: fa9b607f-e97b-4617-98d7-2342dd204a3e
     name: Filtr wymienię w moto
     created_at: '2026-01-02T11:46:46.708057'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1083,9 +1128,9 @@ projects:
   - id: 4983c602-0117-4636-a5a7-60cf2f654e06
     name: Zleje olej przez dren
     created_at: '2026-01-02T11:46:46.708061'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1093,9 +1138,9 @@ projects:
   - id: 04b721cb-ded9-4bb8-b290-8a6383c14f62
     name: Odkręce filtr
     created_at: '2026-01-02T11:46:46.708064'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1103,9 +1148,9 @@ projects:
   - id: ea93c0f7-0196-4ab3-8cc5-735c7680e5c7
     name: Założę nowy filtr
     created_at: '2026-01-02T11:46:46.708068'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1113,9 +1158,9 @@ projects:
   - id: a9586946-a897-42c3-a59b-b80ca0edf6f7
     name: Wleje olej i flush
     created_at: '2026-01-02T11:46:46.708072'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1123,9 +1168,9 @@ projects:
   - id: ab8ed8c8-c221-45f5-9c43-a2c88cb9fb6d
     name: Złoże drukarkę 3D
     created_at: '2026-01-02T11:46:46.708076'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1141,9 +1186,9 @@ projects:
   - id: 3628ccc9-cb43-4042-a34a-cf98b4628b83
     name: Dulsevia kupiona na 5 miesiecy
     created_at: '2026-01-02T11:46:46.708082'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1151,9 +1196,9 @@ projects:
   - id: e42851bb-f3e5-44ba-83c7-13c98c4c7a1e
     name: Dulsevia włożona jako lkarnityna
     created_at: '2026-01-02T11:46:46.708086'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1161,9 +1206,9 @@ projects:
   - id: 36438aaa-9c49-4b81-b564-dff1a53289f0
     name: Wzmacniacz DAC kupiony
     created_at: '2026-01-02T11:46:46.708090'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1171,9 +1216,9 @@ projects:
   - id: b9730ab4-4783-4868-be98-11aa2409fc4f
     name: Głośniki kupione
     created_at: '2026-01-02T11:46:46.708094'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1189,9 +1234,9 @@ projects:
   - id: 4c060802-c0a1-4188-a886-18751152961e
     name: Roleta w kuchni nowa założona
     created_at: '2026-01-02T11:46:46.707422'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1199,9 +1244,9 @@ projects:
   - id: dd028bc2-23bb-4e20-825a-9a4dd4d03ab2
     name: Znaleźć gdzie ja to kupiłem (roleta)
     created_at: '2026-01-02T11:46:46.707426'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1209,9 +1254,9 @@ projects:
   - id: 03929e7a-4d43-4feb-8f86-ef481c8500f4
     name: Założyć roletę
     created_at: '2026-01-02T11:46:46.707430'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1219,9 +1264,9 @@ projects:
   - id: a724a010-c4e2-468d-bee2-15a5f680b3a9
     name: Drzwi Daniela czyste
     created_at: '2026-01-02T11:46:46.707434'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1229,9 +1274,9 @@ projects:
   - id: f204e281-95e9-4074-91d7-6ee37579170c
     name: Drzwi w budynku zamykają się na klucz
     created_at: '2026-01-02T11:46:46.707437'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1239,9 +1284,9 @@ projects:
   - id: 0af29719-da35-4b9b-9179-fcf5140fd36b
     name: Furtka zamyka się na klucz
     created_at: '2026-01-02T11:46:46.707441'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1249,9 +1294,9 @@ projects:
   - id: 2bfb68b3-38b4-486a-9446-e932cca4e7d0
     name: Kuchnia pomalowana
     created_at: '2026-01-02T11:46:46.707445'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1259,9 +1304,9 @@ projects:
   - id: bbf27852-7a27-4442-b9b4-1351e9e00610
     name: Zaślepić dziurę went. w oknie
     created_at: '2026-01-02T11:46:46.707449'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1269,9 +1314,9 @@ projects:
   - id: 47e7eb22-9f7a-434e-93a9-292d694114a0
     name: Szafka pod TV Daniel
     created_at: '2026-01-02T11:46:46.707452'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1279,9 +1324,9 @@ projects:
   - id: 043d2d5e-c00f-4709-9f07-9e79f9117314
     name: Uchwyt tv zalozny
     created_at: '2026-01-02T11:46:46.707456'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1289,9 +1334,9 @@ projects:
   - id: 29a7c0f7-3094-4dd7-83f8-ad44ef17a38b
     name: Listwa progowa zalozona
     created_at: '2026-01-02T11:46:46.707474'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1299,9 +1344,9 @@ projects:
   - id: a1746ab1-436e-4cfd-be7d-bb07316b3085
     name: Zaslepki listew plastikowe zalozone
     created_at: '2026-01-02T11:46:46.707477'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1309,9 +1354,9 @@ projects:
   - id: 592904aa-b6b6-45fb-9b48-0b173b06f60a
     name: Listewki do framugi przyklejone
     created_at: '2026-01-02T11:46:46.707480'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1319,9 +1364,9 @@ projects:
   - id: 2d4c069a-1da3-45eb-87ba-28aeb85bf4b1
     name: Kółka pod szafką przykręcone
     created_at: '2026-01-02T11:46:46.707483'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1329,9 +1374,9 @@ projects:
   - id: 732079c0-eb33-4734-bcf3-9e7fbd6ec76b
     name: Termometr kupiony
     created_at: '2026-01-02T11:46:46.707492'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1339,9 +1384,9 @@ projects:
   - id: c2af28e8-d033-4206-b43f-61ad1ee68ede
     name: Uchwyt na odkurzacz kupiony i założony
     created_at: '2026-01-02T11:46:46.707498'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1349,9 +1394,9 @@ projects:
   - id: fbe56f0f-716d-4409-a0d4-a83c224a582e
     name: Lustro powieszone
     created_at: '2026-01-02T11:46:46.707502'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1359,9 +1404,9 @@ projects:
   - id: 262a0e75-ef87-40ca-ac13-22f9efefe600
     name: Nowe biurko składane zrobię
     created_at: '2026-01-02T11:46:46.707505'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1369,6 +1414,7 @@ projects:
   - id: 9bc43c61-8536-4416-8562-bfefcd755336
     name: Zawiasy na sciane x 3
     created_at: '2026-01-02T11:46:46.707508'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -1377,6 +1423,7 @@ projects:
   - id: 19ac014c-2684-4183-a3c7-1db9b0609278
     name: Nogi kantówki x 2
     created_at: '2026-01-02T11:46:46.707512'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -1385,6 +1432,7 @@ projects:
   - id: e4869f3e-43ec-4ceb-87b0-afef08ece77d
     name: Zawiazy na nogi x 2
     created_at: '2026-01-02T11:46:46.707515'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -1393,6 +1441,7 @@ projects:
   - id: 219c73e1-725a-489d-8dfd-f86fda78b083
     name: Blat 146zł kupie
     created_at: '2026-01-02T11:46:46.707519'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -1401,9 +1450,9 @@ projects:
   - id: 6470b45d-c134-48d6-88cd-a482c771622c
     name: Daniel ma sklepy na parterze co przyciągnie finanse i uwagę zarządcy - Zdjęcie sklepów pod Danielem
     created_at: '2026-01-02T11:46:46.707522'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1419,9 +1468,9 @@ projects:
   - id: 9f68bacd-f1be-4a79-b151-f6c77cd7b648
     name: Pralni remont skończony
     created_at: '2026-01-02T11:46:46.707534'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1429,9 +1478,9 @@ projects:
   - id: ac0cdf02-592b-40b1-a219-b09a2333e9c8
     name: Wyłączę prąd i obetnę kable w szafce
     created_at: '2026-01-02T11:46:46.707537'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1439,9 +1488,9 @@ projects:
   - id: 88172f5e-29da-49ef-8a03-bf5c55a38575
     name: Szafkę zdejmę
     created_at: '2026-01-02T11:46:46.707586'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1449,9 +1498,9 @@ projects:
   - id: 2b750d0f-e8b3-4907-a850-9cf334464e4a
     name: Przytnę płyte GK od Daniela na rozmiar dziury
     created_at: '2026-01-02T11:46:46.707593'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1459,9 +1508,9 @@ projects:
   - id: 6d743174-e19e-4415-8617-2792d5094619
     name: Przykleję płytę w dziurze
     created_at: '2026-01-02T11:46:46.707597'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1469,9 +1518,9 @@ projects:
   - id: 55f16650-15aa-4e05-8bcf-1be2d2994356
     name: 'Spiżarnia: Spawanie winylu zrobie'
     created_at: '2026-01-02T11:46:46.707600'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1479,9 +1528,9 @@ projects:
   - id: 2c110531-e70d-48b2-9f21-bd3487788b7c
     name: 'Spiżarnia: Listwy przy koszu przykrecę'
     created_at: '2026-01-02T11:46:46.707603'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1489,9 +1538,9 @@ projects:
   - id: 9ea045de-ebda-45a5-acfd-099626373a0a
     name: 'Spiżarnia: Gniazdo 380v zastąpione złączkami Wago'
     created_at: '2026-01-02T11:46:46.707606'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1499,9 +1548,9 @@ projects:
   - id: 848f1be8-c038-42b4-9e6e-85b312265258
     name: 'Spiżarnia: Próg bramy zalepiony, zamaskowany poprawnie'
     created_at: '2026-01-02T11:46:46.707624'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1509,9 +1558,9 @@ projects:
   - id: 4c4a651f-c5f7-490a-aa1c-0f58c5b015a8
     name: 'Spiżarnia: Dziury po myszach zaklejone pianką'
     created_at: '2026-01-02T11:46:46.707628'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1519,6 +1568,7 @@ projects:
   - id: 4a909505-9d77-4bc7-9e3b-d327e2a46f05
     name: 2 skrzynie 45x40 na owoce
     created_at: '2026-01-02T11:46:46.707631'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -1527,6 +1577,7 @@ projects:
   - id: 5d4b71d5-7a7a-42f7-8a14-c98a19baa00d
     name: 3 x drewniane skrzynie
     created_at: '2026-01-02T11:46:46.707635'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -1543,9 +1594,9 @@ projects:
   - id: 93f9e71e-6fec-4418-9d2e-20453b3d20d5
     name: Huśtawka dla gangusów 🛝🥅
     created_at: '2026-01-02T11:46:46.707643'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1553,9 +1604,9 @@ projects:
   - id: 57285d59-1b75-41bb-a414-042bec755ba9
     name: Listwy poprawione w korytarzu na dole
     created_at: '2026-01-02T11:46:46.707647'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1563,9 +1614,9 @@ projects:
   - id: e638e630-1e1f-441c-92fb-1b7af307b861
     name: Brodzik szczelny i drzwi nie wypadaja
     created_at: '2026-01-02T11:46:46.707651'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1573,9 +1624,9 @@ projects:
   - id: 406e8ecb-2a3c-4ee6-9b79-038d0e2b0b5c
     name: Brodzik blokady ma założone 10min
     created_at: '2026-01-02T11:46:46.707655'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1583,9 +1634,9 @@ projects:
   - id: 0a914d79-839c-478d-b4b9-0d74a78310f2
     name: Silicon nałożę przy szybie
     created_at: '2026-01-02T11:46:46.707659'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1593,9 +1644,9 @@ projects:
   - id: 5f64771a-698c-439e-9145-08252efdc5c9
     name: 'Klimatyzacja: Kwadrat zaszpachluję przy listwie pod Zuzy biurkiem'
     created_at: '2026-01-02T11:46:46.707662'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1603,9 +1654,9 @@ projects:
   - id: 82e37361-f365-4598-a448-caf0ad660d89
     name: 'Klimatyzacja: Kwadrat pomaluję przy listwie'
     created_at: '2026-01-02T11:46:46.707666'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1613,9 +1664,9 @@ projects:
   - id: 4e28bc03-6566-4804-ae62-533e600fe236
     name: Napiszę kroki do zamontowania klimatyzacji
     created_at: '2026-01-02T11:46:46.707670'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1623,9 +1674,9 @@ projects:
   - id: 3a73e2a6-1a52-4a4e-9f8f-abb46e3e70fe
     name: Półka 90x15cm wisi pod tablicą na czarnych uchwytach z Brico
     created_at: '2026-01-02T11:46:46.707674'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1633,9 +1684,9 @@ projects:
   - id: 4ecb5060-82f1-4868-9da4-3e4e40d4c1ec
     name: Przegródkę do szafy skręcić na metalowe kątowniki
     created_at: '2026-01-02T11:46:46.707677'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1643,9 +1694,9 @@ projects:
   - id: 755dd918-3fed-4a76-a942-231ce610694a
     name: Brico cięcie półek
     created_at: '2026-01-02T11:46:46.707681'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1653,6 +1704,7 @@ projects:
   - id: b16ee1bc-cb38-4ddf-bc03-ecc654f06878
     name: Brico - uchwyty dla Zuzy i Lukasz 4 sztuki
     created_at: '2026-01-02T11:46:46.707685'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -1661,6 +1713,7 @@ projects:
   - id: e6305a74-d7b0-4a7c-916f-49fd8f5b1033
     name: Półka 90x15
     created_at: '2026-01-02T11:46:46.707689'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -1669,6 +1722,7 @@ projects:
   - id: 34f9e452-765d-4051-9473-262ecfc0c1df
     name: Brico 2 x 80cmx20xm u Tymka i Seby
     created_at: '2026-01-02T11:46:46.707693'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -1677,9 +1731,9 @@ projects:
   - id: 7d7bcf70-7257-47f9-8e73-39ace050f3ec
     name: Łukasz gniazdko zaślepione
     created_at: '2026-01-02T11:46:46.707697'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1687,9 +1741,9 @@ projects:
   - id: be8e7573-c93a-4ae4-91db-d666e3aa944a
     name: Zwijacze ostatnie dwa do rolet założę (📅 2025-07-16)
     created_at: '2026-01-02T11:46:46.707700'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1697,9 +1751,9 @@ projects:
   - id: 8533e36e-bfa9-42d2-85ee-a8051994cb17
     name: Okap ma nowy wentylator kanałowy
     created_at: '2026-01-02T11:46:46.707704'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1707,9 +1761,9 @@ projects:
   - id: 2876125b-4260-4c4f-9beb-bf24035e47f6
     name: Projektor ze zdjęciami na ścianę na schodach
     created_at: '2026-01-02T11:46:46.707708'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1717,6 +1771,7 @@ projects:
   - id: e661605d-28c1-4a07-8f8a-70aee5d4c69e
     name: Wentylator kanałowy 150 mm ETAMASTER
     created_at: '2026-01-02T11:46:46.707711'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -1725,9 +1780,9 @@ projects:
   - id: 9b6ae347-c766-4130-85cb-779ac38030c1
     name: Szuflady w kuchni jak nowe
     created_at: '2026-01-02T11:46:46.707715'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1735,6 +1790,7 @@ projects:
   - id: 27dccdd9-3994-4257-9f1b-8241d8c829d3
     name: Szyny 8x 35 samo hamujące
     created_at: '2026-01-02T11:46:46.707719'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -1743,6 +1799,7 @@ projects:
   - id: 882cb419-01c8-4c49-8855-0f94aabb94f1
     name: Pilsniowe plyty 35x55cm x 4szt
     created_at: '2026-01-02T11:46:46.707723'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -1751,9 +1808,9 @@ projects:
   - id: 95319e47-b186-4079-beed-6cbe4549d759
     name: Szuflady Matiego jak nowe
     created_at: '2026-01-02T11:46:46.707727'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1761,6 +1818,7 @@ projects:
   - id: 6672b590-7cc4-4a83-a713-5dbb8eb03371
     name: Szyny samohamujace 40x8
     created_at: '2026-01-02T11:46:46.707730'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -1769,9 +1827,9 @@ projects:
   - id: bb1fb55b-cdf2-44f0-8f4d-e96feb5780c8
     name: Woda filtrowana z zasobnikiem w kuchni (Aquaphor)
     created_at: '2026-01-02T11:46:46.707734'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1779,9 +1837,9 @@ projects:
   - id: 156207ea-72fa-42f8-9bce-95cc14aa2707
     name: Patryk ma przyklejony kafel w łazience
     created_at: '2026-01-02T11:46:46.707738'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1789,6 +1847,7 @@ projects:
   - id: 0c798ce7-e44e-4c12-8c2d-c0a91ac6c932
     name: Fugę jasno szarą kupię
     created_at: '2026-01-02T11:46:46.707742'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -1797,6 +1856,7 @@ projects:
   - id: dc8bc1fa-7e25-4335-a77e-f65508ab20be
     name: Klej do płytki mały kupię
     created_at: '2026-01-02T11:46:46.707745'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -1805,9 +1865,9 @@ projects:
   - id: 3ecec934-16f5-41c5-96d6-46d40803b568
     name: Zabiore szlifierkę i papiery scierne
     created_at: '2026-01-02T11:46:46.707749'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1815,9 +1875,9 @@ projects:
   - id: f2071c7d-e2c4-475d-9911-7e2fa9dd8af6
     name: Zabiorę gumę do fugowania
     created_at: '2026-01-02T11:46:46.707753'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1825,9 +1885,9 @@ projects:
   - id: c6441309-5323-49f4-b39a-26d3ff1bd90c
     name: Kupię filtr do wody pod zlew Aquaphor Cristal A + KB7
     created_at: '2026-01-02T12:23:45.383038'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1835,12 +1895,12 @@ projects:
   - id: f34c2dcf-2508-411d-a6fb-96625932838f
     name: Install led lamp in attic
     created_at: '2026-01-02T15:39:03.437668'
-    kind: task
-    is_completed: false
     tags:
     - '@Home'
     - Physical-Light
     - LowEnergy
+    kind: task
+    is_completed: false
     duration: 1h
     notes: ''
     completed_at: null
@@ -1856,9 +1916,9 @@ projects:
   - id: 0e027dd8-3732-426f-b15e-1371ae2436ae
     name: Fix chat title generation stream error
     created_at: '2026-01-02T11:46:46.707761'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1866,9 +1926,9 @@ projects:
   - id: 36eab5d3-76eb-4d55-ab51-bd38dcf6a455
     name: Create with AI pastel colors for chat folders in light theme.
     created_at: '2026-01-02T11:46:46.707765'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1876,9 +1936,9 @@ projects:
   - id: 46304a63-a3c8-44ab-b5fa-623c45c07fca
     name: Fix chat content area alignment in screen width center
     created_at: '2026-01-02T11:46:46.707769'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1886,9 +1946,9 @@ projects:
   - id: 622684e0-7c34-40d8-b854-112310cc4a78
     name: Copy markdown "Copy"button to bottom
     created_at: '2026-01-02T11:46:46.707773'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1896,9 +1956,9 @@ projects:
   - id: ffdb889c-97fd-4aec-8ee4-8fcc1f078491
     name: Floating botton action bar
     created_at: '2026-01-02T11:46:46.707776'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1906,9 +1966,9 @@ projects:
   - id: 212e2c4f-362f-4274-bacd-434d50c5d7fb
     name: Floating arrow to place with open edition
     created_at: '2026-01-02T11:46:46.707780'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1916,9 +1976,9 @@ projects:
   - id: 02b9f65f-0eec-4ffe-8ed7-a5f535f7a190
     name: Implement Save and Save as buttons as floating
     created_at: '2026-01-02T11:46:46.707784'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1926,9 +1986,9 @@ projects:
   - id: e4f19062-9dd0-446d-844d-215f4af3ed8b
     name: Simple search
     created_at: '2026-01-02T11:46:46.707788'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1936,9 +1996,9 @@ projects:
   - id: d9e9dfea-127e-4406-9513-baf67b0fd864
     name: 🔴 Prevent open more than one instance of the app in the same browser
     created_at: '2026-01-02T11:46:46.707791'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1946,9 +2006,9 @@ projects:
   - id: 0feca689-cdf5-4de5-af05-872aaabb3399
     name: Chat sharing
     created_at: '2026-01-02T11:46:46.707795'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1956,9 +2016,9 @@ projects:
   - id: 3bc498f9-7391-41e0-aad9-a48dfd8ed2cf
     name: 'F11: Create chat sharing so anyone can get ad have chat in read only mode. unless have API keys.'
     created_at: '2026-01-02T11:46:46.707799'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1966,9 +2026,9 @@ projects:
   - id: 3ff98536-f3b5-409e-8fd1-8340a8cc121b
     name: Add content highlighting and preserve higlights when chat is shared using base64 data in URL (related to F11)
     created_at: '2026-01-02T11:46:46.707803'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1976,9 +2036,9 @@ projects:
   - id: 43ea5b6d-aa6e-474c-b872-a64f82995530
     name: Move to remote DB with login functionality (Critical for SaaS)
     created_at: '2026-01-02T11:46:46.707806'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1986,9 +2046,9 @@ projects:
   - id: e75e01a9-3d69-4fcc-bbeb-57867318416d
     name: Max words/letters limit - on Submit button
     created_at: '2026-01-02T11:46:46.707810'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -1996,9 +2056,9 @@ projects:
   - id: 273d357f-0dff-4f22-a948-a0a0b68085b2
     name: 🔵 Preserve scroll possition for all chats. So when I back to some chat I opens on last position I was before exiting chat.
     created_at: '2026-01-02T11:46:46.707814'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2006,9 +2066,9 @@ projects:
   - id: 7b7d089d-f9b2-41c3-9f32-b8327cfe26bc
     name: Create default prompts list from server during build
     created_at: '2026-01-02T11:46:46.707817'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2016,9 +2076,9 @@ projects:
   - id: 3a2b9787-1b00-490d-8abc-d350014f7535
     name: Add links at the end of last message that will help user create next prompts
     created_at: '2026-01-02T11:46:46.707821'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2026,9 +2086,9 @@ projects:
   - id: 390d3bef-7494-490b-8c5c-c24e54d0b82f
     name: Add total $ spend for every chat (Cost transparency for users)
     created_at: '2026-01-02T11:46:46.707825'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2036,9 +2096,9 @@ projects:
   - id: dd1b4241-869d-40bc-9a3d-20a450cff623
     name: Add canvas on the right sidebar like Slack has
     created_at: '2026-01-02T11:46:46.707828'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2046,9 +2106,9 @@ projects:
   - id: b260584a-3e53-42c6-8560-17611c4418c9
     name: Store update datetime for each conversation (not chat)
     created_at: '2026-01-02T11:46:46.707832'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2056,9 +2116,9 @@ projects:
   - id: 627e26bc-7619-4eb5-b732-17c2fb207baf
     name: Add Docker, Terraform color schemes
     created_at: '2026-01-02T11:46:46.707836'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2066,9 +2126,9 @@ projects:
   - id: aad2faac-dc44-4d1d-8e56-d4d3bcf46a20
     name: Place another Copy button on bottom of mardown field.
     created_at: '2026-01-02T11:46:46.707840'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2076,13 +2136,13 @@ projects:
   - id: 1ef5be7d-254d-47bd-b070-ffebb93329d0
     name: List AI app ideas from this clip
     created_at: '2026-01-02T14:52:27.794024'
-    kind: task
-    is_completed: false
     tags:
     - '@Computer'
     - Mental-Deep
     - Analytical
     - HighEnergy
+    kind: task
+    is_completed: false
     duration: unknown
     notes: ''
     completed_at: null
@@ -2090,9 +2150,9 @@ projects:
   - id: acbf50ac-4c38-4a41-a8f8-a7db66682fd8
     name: '[Edraw.AI](https://www.edraw.ai/app/recent)'
     created_at: '2026-01-02T14:54:20.331001'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2108,9 +2168,9 @@ projects:
   - id: c2d401e9-fd98-467c-be0a-5d0480821208
     name: Powiększyć guzik Send i zmienić go na ikonkę
     created_at: '2026-01-02T11:46:46.707847'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2118,9 +2178,9 @@ projects:
   - id: 72a9a842-e32f-4b6f-adcc-8fc8900f2933
     name: Slow down streaming text to be more appealing to read right away
     created_at: '2026-01-02T11:46:46.707850'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2128,9 +2188,9 @@ projects:
   - id: 2c5c13a7-26c3-46fa-940b-74af55b6e252
     name: Dodać stały guzik Stop na dole czata żeby łatwo go kliknąć
     created_at: '2026-01-02T11:46:46.707854'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2138,9 +2198,9 @@ projects:
   - id: 8ac476c8-99f2-46e9-8ad5-57060fdadbf4
     name: Screenshot można wysłać konkretnej wiadomości. Fajne do szerowania ciekawostek
     created_at: '2026-01-02T11:46:46.707858'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2148,9 +2208,9 @@ projects:
   - id: 3b9a525d-2b7a-47df-935b-6d83dfd4639c
     name: FT Share chat with user
     created_at: '2026-01-02T11:46:46.707861'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2158,9 +2218,9 @@ projects:
   - id: 7c9a1511-d7e7-4cc6-9870-684f9c0939dc
     name: Dodać guziki na ostatnim czacie z listą następnych pytań jakie mogą mnie interesować
     created_at: '2026-01-02T11:46:46.707865'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2168,9 +2228,9 @@ projects:
   - id: 842bb9bb-d517-4b20-9ffa-3c17fe6ae72a
     name: Dodać ogóry Mini pasek z opcjami powiększenia czcionki i zmiany czcionki jest oczywiście wybranego zestawu czcionek
     created_at: '2026-01-02T11:46:46.707869'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2178,9 +2238,9 @@ projects:
   - id: 363dcadf-7305-4e1b-bb84-82336938b4bf
     name: Zrobić osobno szablony dla apki mobilnej i dla desktopa
     created_at: '2026-01-02T11:46:46.707873'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2188,9 +2248,9 @@ projects:
   - id: 576e31be-9c41-4b99-ae42-a950c67c9951
     name: Przechowywać czaty wszystkie ustawienia użytkownika w bazie danych
     created_at: '2026-01-02T11:46:46.707876'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2198,9 +2258,9 @@ projects:
   - id: ae68cc22-4ba0-4984-8d25-0d867ee9837a
     name: 🟡 FT Dodać folder Czatów który będzie zawierał pojedyncze a ty tak jak to jest w tej drugiej aplikacji
     created_at: '2026-01-02T11:46:46.707880'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2208,9 +2268,9 @@ projects:
   - id: 832db75e-8f31-4f16-a25c-67de8977b9d3
     name: FT Publikacja czatów w postaci artykułu w formacie Markdow
     created_at: '2026-01-02T11:46:46.707884'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2218,9 +2278,9 @@ projects:
   - id: bf5de5f9-62d3-425b-b575-9efc501e6e20
     name: Dodać logowanie poprzez za pomocą Google (Critical for user retention)
     created_at: '2026-01-02T11:46:46.707888'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2228,9 +2288,9 @@ projects:
   - id: f6c01807-ecc6-4a84-9bcf-7c0d5c6ddf50
     name: Naprawię zmianę tytułu bo nie działa i dodam testy w jest
     created_at: '2026-01-02T11:46:46.707892'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2238,9 +2298,9 @@ projects:
   - id: d27a0cf6-5ca9-4b26-b785-c1ac1e950f2f
     name: Create more color schemes
     created_at: '2026-01-02T11:46:46.707896'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2248,12 +2308,12 @@ projects:
   - id: e79cff72-28b2-41fe-9ade-0863efda6f98
     name: List all CSS and JS features from this clip
     created_at: '2026-01-02T14:51:48.261512'
-    kind: task
-    is_completed: false
     tags:
     - '@Computer'
     - Mental-Deep
     - Analytical
+    kind: task
+    is_completed: false
     duration: unknown
     notes: ''
     completed_at: null
@@ -2269,9 +2329,9 @@ projects:
   - id: 467eba7e-9f3f-41da-9bb9-c31e04758878
     name: Errbot in python
     created_at: '2026-01-02T11:46:46.707902'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2279,9 +2339,9 @@ projects:
   - id: 74248ef5-528a-4e37-acfc-7a3c250664ec
     name: Program który pozwala mi pytać AI o tematy które już przerabiałem (jak Ecom, SaaS, etc.)
     created_at: '2026-01-02T11:46:46.707906'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2289,9 +2349,9 @@ projects:
   - id: 2709c7f6-fa1c-4123-8bc7-8c9f24794dba
     name: Zgromadzę listę użytkowników których chcę z digitalizować
     created_at: '2026-01-02T11:46:46.707909'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2299,9 +2359,9 @@ projects:
   - id: d8d42a3f-40fd-4c11-837a-879b22342c5d
     name: Dla każdego użytkownika zgromadzę linki z jakich chcę zrobić transcript
     created_at: '2026-01-02T11:46:46.707913'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2309,9 +2369,9 @@ projects:
   - id: 5f719f9b-6b26-4ee9-8592-463702885c38
     name: Dla każdego linka pobiorę transcript i go poprawię za pomocą AI
     created_at: '2026-01-02T11:46:46.707917'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2319,9 +2379,9 @@ projects:
   - id: 8276cf03-29e7-4f38-827d-093a7e575df8
     name: Wymyślę jak przechować transcripty w bazie vectorowej tak żebym mógł dokładać nowe transcripty.
     created_at: '2026-01-02T11:46:46.707921'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2329,9 +2389,9 @@ projects:
   - id: 6baca748-5bc6-4af6-a326-b9ecbd0452e6
     name: '[SlickGPT](https://slickgpt.vercel.app/)'
     created_at: '2026-01-02T14:54:04.165356'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2347,6 +2407,7 @@ projects:
   - id: 3a7f4124-f905-45b1-8afc-7af2661f024e
     name: '**EDP 4k 8K 120HZ DP**'
     created_at: '2026-01-02T11:46:46.707927'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -2355,6 +2416,7 @@ projects:
   - id: 50850fa6-9b37-4bde-9f9b-9409f2073c05
     name: Board
     created_at: '2026-01-02T11:46:46.707931'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -2363,6 +2425,7 @@ projects:
   - id: 2f52a595-d887-4290-bf51-0027877151b7
     name: Brass frame LCD
     created_at: '2026-01-02T11:46:46.707935'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -2371,6 +2434,7 @@ projects:
   - id: 0f3774c1-ff44-46e4-b70b-dcd136c928a4
     name: TFP401 Adafruit TTL 40 to HDMI
     created_at: '2026-01-02T11:46:46.707939'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -2387,9 +2451,9 @@ projects:
   - id: aa6bdadf-eb2c-493d-88aa-ddd0af5dd192
     name: Modify Bell chat app to export json chats compatible with MyChat
     created_at: '2026-01-02T11:46:46.707945'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2397,9 +2461,9 @@ projects:
   - id: faefc907-6af2-4099-9006-2c9bf7e431c1
     name: Add uploading files to MyChat
     created_at: '2026-01-02T11:46:46.707949'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2407,9 +2471,9 @@ projects:
   - id: 1aaae012-820a-4d2f-b55d-a43c496f36e6
     name: Add connector to my Todoist app
     created_at: '2026-01-02T11:46:46.707953'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2417,9 +2481,9 @@ projects:
   - id: 558fee2a-da10-4e01-9add-486496d0b38b
     name: Add connector to G Calendar
     created_at: '2026-01-02T11:46:46.707956'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2427,14 +2491,14 @@ projects:
   - id: 47dfdd00-3574-40f9-aea6-a428d89ea0d9
     name: Scalić wszystkie miejsca z pomysłami i notatkami oraz spisać jako input do GPT
     created_at: '2026-01-02T11:47:58.083099'
-    kind: task
-    is_completed: false
     tags:
     - '@Computer'
     - Mental-Deep
     - HighEnergy
     - Analytical
     - Administrative
+    kind: task
+    is_completed: false
     duration: 3h
     notes: ''
     completed_at: null
@@ -2450,9 +2514,9 @@ projects:
   - id: 3f55adee-0f07-4ffe-82f3-ebf8b7f3bcfa
     name: Do dentysty umówię się (📅 2025-12-26)
     created_at: '2026-01-02T11:46:46.707963'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2460,9 +2524,9 @@ projects:
   - id: 35c60e42-0936-457d-b7cb-1326c9c9a1dc
     name: Otworzę G Docs do rozpiski ćwiczenia i diety na 8 tygodni
     created_at: '2026-01-02T11:46:46.707966'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2470,9 +2534,9 @@ projects:
   - id: 263dd494-b348-41c4-874c-cd79285cb186
     name: Ask how people asking other to support their startup's describe my fear
     created_at: '2026-01-02T11:46:46.707970'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2480,9 +2544,9 @@ projects:
   - id: 59e28855-ad5a-401c-86f9-b89f7c666115
     name: Co znaczy being vulnerable i czy warto takim być
     created_at: '2026-01-02T11:46:46.707974'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2490,9 +2554,9 @@ projects:
   - id: 183c146d-7fee-4e9f-8b2e-617dbaee5265
     name: Gosia badanie na celiakię i inne uczulenia
     created_at: '2026-01-02T11:46:46.707977'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2500,9 +2564,9 @@ projects:
   - id: 6e691f32-2e24-48c0-bdec-3094bea9a733
     name: Badania dermatolog skóry (📅 2025-07-28)
     created_at: '2026-01-02T11:46:46.707981'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2510,6 +2574,7 @@ projects:
   - id: 345171be-c486-4c4c-bbe3-32d8db7c03f8
     name: Fisetin - Ultra Pure - 100mg
     created_at: '2026-01-02T11:46:46.707985'
+    tags: []
     kind: resource
     type: to_buy
     is_acquired: false
@@ -2518,41 +2583,49 @@ projects:
   - id: bf125353-9c6e-4449-9e11-8780111f0bc8
     name: Bryan Johnson Blueprint
     created_at: '2026-01-02T11:46:46.707989'
+    tags: []
     kind: reference
     content: '[blueprint](https://protocol.bryanjohnson.com/#step-2-supplements)'
   - id: 955abe19-cab4-4a9c-b907-ff1c67f2871e
     name: 'ALAB: Hormony apetytu'
     created_at: '2026-01-02T11:46:46.707993'
+    tags: []
     kind: reference
     content: '[Hormony regulujące apetyt i metabolizm](https://www.alab.pl/pakiet/hormony-regulujace-apetyt-i-metabolizm)'
   - id: 4792ca45-fbfb-492d-a107-779b9ea8f437
     name: 'ALAB: Mikroflora jelitowa'
     created_at: '2026-01-02T11:46:46.707997'
+    tags: []
     kind: reference
     content: '[Pakiet ocena mikroflory jelitowej](https://www.alab.pl/pakiet/ocena-mikroflory-jelitowej)'
   - id: c76d5765-90e6-4159-9d6d-3a7c2863e883
     name: 'ALAB: Nietolerancja mleka'
     created_at: '2026-01-02T11:46:46.708001'
+    tags: []
     kind: reference
     content: '[Nie toleruję mleka rozszerzony](https://www.alab.pl/pakiet/nie-toleruje-mleka-rozszerzony)'
   - id: c16b43ef-c1a7-428a-87a7-c14a80840526
     name: 'ALAB: Celiakia'
     created_at: '2026-01-02T11:46:46.708004'
+    tags: []
     kind: reference
     content: '[Celiakia - badania w pakiecie glutenowym](https://www.alab.pl/pakiet/celiakia-pakiet-diagnostyczny)'
   - id: f03d6ff5-98cf-4871-b7bd-fcec481c41f0
     name: 'ALAB: Serce'
     created_at: '2026-01-02T11:46:46.708008'
+    tags: []
     kind: reference
     content: '[Pakiet - serce pod kontrolą kompleksowy](https://www.alab.pl/pakiet/pakiet-serce-pod-kontrola-kompleksowy)'
   - id: 569cda04-91b7-48ef-b40c-cb9278c0e723
     name: Szpital Śrem Laryngologia
     created_at: '2026-01-02T11:46:46.708012'
+    tags: []
     kind: reference
     content: '[Oddział Laryngologiczny – Szpital w Śremie](https://szpital-srem.pl/?oddzialy=oddzial-laryngologiczny)'
   - id: 457ff5a6-3642-460d-8769-c9d9d15359ea
     name: Szpital Gniezno Otolaryngologia
     created_at: '2026-01-02T11:46:46.708015'
+    tags: []
     kind: reference
     content: '[Szpital Pomnik Chrztu Polski - Oddział Otolaryngologiczny](https://szpitalpomnik.pl/szpital/oddzialy/oddzial-otolaryngologiczny)'
 - id: 601
@@ -2566,9 +2639,9 @@ projects:
   - id: bbd9da6f-e7da-486d-aba7-02e5d6a121b2
     name: Masaże Ula
     created_at: '2026-01-02T11:46:46.708021'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2576,9 +2649,9 @@ projects:
   - id: 6b5708a9-5b93-4242-8c8f-6751da82c374
     name: Znaleźć pracę lub płatny staż dla Gosi
     created_at: '2026-01-02T11:46:46.708025'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2586,9 +2659,9 @@ projects:
   - id: 0d40903a-d8c7-41c1-8f06-44a5b5228256
     name: Znaleźć pracę dla Marty
     created_at: '2026-01-02T11:46:46.708029'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2596,9 +2669,9 @@ projects:
   - id: fa835a07-1350-4f97-a549-785336eda97e
     name: Znaleźć pracę dla Lucy
     created_at: '2026-01-02T11:46:46.708033'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2606,9 +2679,9 @@ projects:
   - id: 71384068-9568-4cfb-b9dd-7d42bc07456f
     name: Daniel ma CV zrobione
     created_at: '2026-01-02T11:46:46.708037'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2616,9 +2689,9 @@ projects:
   - id: c6c1ee27-c238-4bdd-a04d-4d69753c9c63
     name: Znaleźć oferty pracy dla Lucy
     created_at: '2026-01-02T11:46:46.708041'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2626,9 +2699,9 @@ projects:
   - id: 58eb89e0-2e50-43e0-8556-2fe796519833
     name: Zagadam do Kasia z Irlandii o pracę testera Cypress Playwright
     created_at: '2026-01-02T11:46:46.708045'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
@@ -2644,15 +2717,14 @@ projects:
   - id: e5f363c3-4505-4669-9b2b-1d187deb7f4d
     name: How to segment ptospects
     created_at: '2026-01-02T11:46:46.708051'
+    tags: []
     kind: task
     is_completed: false
-    tags: []
     duration: unknown
     notes: ''
     completed_at: null
     due_date: null
 inbox_tasks:
-- '[eufyMake | UV Printing Made Easy - eufymake Europe](https://www.eufymake.com/eu-en/eufymake-uv-printer-e)'
 - 'Manage my day: What to do today? System gets overdue tasks from todoist and ask which of them have been accomplished [system knows about my long term goals, short term goals and other circumstances as facts list]'
 - '[Local JavaScript Vector Database that works offline | RxDB - JavaScript Database](https://rxdb.info/articles/javascript-vector-database.html) #'
 - Filtr Auquaphor pod zlewem działa
