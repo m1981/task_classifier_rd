@@ -116,7 +116,7 @@ if mode == "📥 Triage":
     render_triage_view(triage_service, classifier, repo)
 
 elif mode == "🎯 Planning":
-    render_planning_view(planning_service)
+    render_planning_view(planning_service, classifier)
 
 elif mode == "✅ Execution":
     render_execution_view(execution_service, analytics_service, repo)

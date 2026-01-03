@@ -1,5 +1,6 @@
 import streamlit as st
 from services.repository import PlanningService
+from services import TaskClassifier
 from models.entities import ResourceType, TaskItem, ResourceItem, ReferenceItem
 from views.components import render_item
 from views.common import get_logger
@@ -7,7 +8,7 @@ from views.common import get_logger
 logger = get_logger("PlanningView")
 
 
-def render_planning_view(planning_service: PlanningService):
+def render_planning_view(planning_service: PlanningService, classifier: TaskClassifier):
     logger.info("--- Rendering Planning View ---")
     st.title("🎯 Planning & Review")
 
@@ -50,7 +51,7 @@ def render_planning_view(planning_service: PlanningService):
                 st.info("No projects linked to this goal.")
 
             for proj in projects:
-                _render_project_strip(proj, planning_service)
+                _render_project_strip(proj, planning_service, classifier)
 
     # --- 4. RENDER ORPHANED PROJECTS ---
     orphaned = get_sorted_projects(None)
@@ -58,10 +59,10 @@ def render_planning_view(planning_service: PlanningService):
         logger.debug(f"Found {len(orphaned)} orphaned projects.")
         st.markdown("#### 📂 Uncategorized Projects")
         for proj in orphaned:
-            _render_project_strip(proj, planning_service)
+            _render_project_strip(proj, planning_service, classifier)
 
 
-def _render_project_strip(project, service: PlanningService):
+def _render_project_strip(project, service: PlanningService, classifier: TaskClassifier):
     """
     Renders a project as a clean 'Strip' with a header and collapsible body.
     """
@@ -126,6 +127,20 @@ def _render_project_strip(project, service: PlanningService):
                 logger.info(f"Linking project {project.id} to goal {new_goal_id}")
                 service.link_project_to_goal(project.id, new_goal_id)
                 st.rerun()
+
+            st.divider()
+
+            # ✨ THE MAGIC BUTTON
+            if st.button("✨ Auto-Enrich Items", key=f"enrich_{project.id}",
+                         help="Use AI to add tags and duration to empty tasks"):
+                with st.spinner(f"Enriching '{project.name}'..."):
+                    count = service.enrich_project(project.id, classifier)
+
+                    if count > 0:
+                        st.success(f"Enriched {count} items!")
+                        st.rerun()
+                    else:
+                        st.info("No items needed enrichment.")
 
     # --- B. THE COLLAPSIBLE BODY (Unified Stream) ---
     # Level 3: The Content
