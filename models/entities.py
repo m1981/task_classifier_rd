@@ -8,11 +8,11 @@ from datetime import datetime, date
 # --- TAG DIMENSIONS (NEW SOURCE OF TRUTH) ---
 class TagDimensions:
     TOOLS_MODE = [
-        "@Email",  "@Calls",  "@Paperwork", "@Errands", "@Out", "@Computer"
+        "@Email",  "@Calls", "@Errands", "@Out", "@Computer"
     ]
     ENERGY = [
         "DeepWork", "LowEnergy", "QuickWin",
-        "HighEnergy", "Mental-Deep", "Physical-Light"
+        "Physical-Light",
     ]
     PEOPLE = [
         "@WaitingFor"

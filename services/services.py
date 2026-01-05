@@ -2,8 +2,7 @@ from pathlib import Path
 from typing import List, Optional
 import anthropic
 import json
-from models.ai_schemas import ClassificationType, EnrichmentResult
-
+from models.ai_schemas import ClassificationType, EnrichmentResult, BatchEnrichmentResponse
 # Import Domain Models and DTOs
 from models import (
     DatasetContent,
@@ -13,7 +12,7 @@ from models import (
     ClassificationResponse,
     SystemConfig,
     SingleTaskClassificationRequest,
-    TagDimensions # NEW
+    TagDimensions
 )
 
 from dataset_io import YamlDatasetLoader, YamlDatasetSaver
@@ -197,7 +196,32 @@ flowchart TD
         5. Determine if this is really a Task, or if it should be a Resource (Shopping) or Reference.
         """
 
+    def build_batch_enrichment_prompt(self, target_items_str: str, project_name: str, goal_name: str,
+                                      project_context_str: str, extra_tags: List[str]) -> str:
+        defaults = TagDimensions.get_all_defaults()
+        combined_tags = list(set(defaults + extra_tags))
 
+        return f"""
+        You are a GTD Data Cleaner.
+
+        CURRENT PROJECT: "{project_name}"
+        GOAL CONTEXT: "{goal_name}"
+
+        PROJECT CONTEXT (Already enriched items for pattern matching):
+        {project_context_str}
+
+        ITEMS TO ENRICH (Format: ID | Name):
+        {target_items_str}
+
+        AVAILABLE TAGS: {combined_tags}
+        ALLOWED DURATIONS: {self.config.ALLOWED_DURATIONS}
+
+        INSTRUCTIONS:
+        1. Return a list of enriched objects corresponding to the "ITEMS TO ENRICH".
+        2. Use the ID provided to map the result back.
+        3. Assign appropriate tags (Context, Energy, Effort).
+        4. Estimate duration.
+        """
 class TaskClassifier:
     def __init__(self, client, prompt_builder: PromptBuilder):
         self.client = client
@@ -273,3 +297,19 @@ class TaskClassifier:
         }
 
         return response.parsed_output, debug_data
+
+    def enrich_batch_items(self, target_items_str: str, project_name: str, goal_name: str,
+                           project_context_str: str, extra_tags: List[str]) -> BatchEnrichmentResponse:
+
+        prompt = self.prompt_builder.build_batch_enrichment_prompt(
+            target_items_str, project_name, goal_name, project_context_str, extra_tags
+        )
+
+        response = self.client.beta.messages.parse(
+            model="claude-haiku-4-5",
+            max_tokens=4096,  # Increased token limit for batch
+            messages=[{"role": "user", "content": prompt}],
+            output_format=BatchEnrichmentResponse,
+        )
+
+        return response.parsed_output, {"prompt": prompt, "response": response.parsed_output.model_dump_json()}

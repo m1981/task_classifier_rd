@@ -504,71 +504,82 @@ class PlanningService:
         project = self.repo.find_project(project_id)
         if not project: return 0, {}
 
-        # Find Goal Name for context
+        # 1. Find Goal Name for context
         goal_name = "No Goal"
         if project.goal_id:
             goal = next((g for g in self.repo.data.goals if g.id == project.goal_id), None)
             if goal: goal_name = goal.name
 
-        # 2. PRE-CALCULATE CONTEXT & TAGS
-        # Gather all tags currently used in this project (User Added Extra Tags)
+        # 2. PRE-CALCULATE CONTEXT & IDENTIFY CANDIDATES
         existing_project_tags = set()
         project_items_summary = []
+        candidates = []
 
         for item in project.items:
-            if hasattr(item, 'tags'):
+            # A. Build Context (from ALL items)
+            if hasattr(item, 'tags') and item.tags:
                 existing_project_tags.update(item.tags)
+                tags_display = f"[{', '.join(item.tags)}]"
+            else:
+                tags_display = ""
 
-            # Build a summary string of existing items to give AI context
-            # e.g. "- Buy Milk [Errands]"
-            tags_display = f"[{', '.join(item.tags)}]" if item.tags else ""
+            # Add to summary string (limit context size implicitly by loop)
             project_items_summary.append(f"- {item.name} {tags_display}")
 
-        project_context_str = "\n".join(project_items_summary[:50]) # Limit to 50 items to save tokens
-        extra_tags_list = list(existing_project_tags)
-
-        count = 0
-        last_debug_info = {}
-
-        for item in project.items:
-            # Skip if already completed or already has tags/duration
+            # B. Identify Candidates (Items needing enrichment)
+            # Skip if completed/acquired
             if getattr(item, 'is_completed', False) or getattr(item, 'is_acquired', False):
                 continue
 
-            # Heuristic: Only enrich if "poor" data (no tags AND unknown duration)
+            # Heuristic: Missing tags AND duration
             has_tags = bool(item.tags)
             has_duration = getattr(item, 'duration', 'unknown') != 'unknown'
 
             if not has_tags and not has_duration:
-                try:
-                    # PASS THE NEW CONTEXT
-                    result, debug_data = classifier.enrich_single_item(
-                        item_name=item.name,
-                        project_name=project.name,
-                        goal_name=goal_name,
-                        project_context_str=project_context_str,
-                        extra_tags=extra_tags_list
-                    )
-                    last_debug_info = debug_data
+                candidates.append(item)
 
-                    # Apply updates
-                    item.tags = result.extracted_tags
-                    if hasattr(item, 'duration'):
-                        item.duration = result.estimated_duration or "unknown"
+        # Prepare Context Variables
+        project_context_str = "\n".join(project_items_summary[:50])  # Limit context to 50 items
+        extra_tags_list = list(existing_project_tags)
 
-                    # SAFE UPDATE: Notes
-                    if hasattr(item, 'notes'):
-                        if not item.notes and result.notes:
-                            item.notes = result.notes
+        if not candidates:
+            return 0, {}
 
-                    count += 1
-                except Exception as e:
-                    print(f"Failed to enrich {item.name}: {e}")
+        # 3. Prepare Batch Request
+        # Format: "ID: <uuid> | Name: <text>"
+        target_items_str = "\n".join([f"ID: {item.id} | Name: {item.name}" for item in candidates])
 
-        if count > 0:
-            self.repo.mark_dirty()
+        try:
+            # 4. Single API Call
+            batch_result, debug_data = classifier.enrich_batch_items(
+                target_items_str,
+                project.name,
+                goal_name,
+                project_context_str,
+                extra_tags_list
+            )
 
-        return count, last_debug_info
+            # 5. Map Results Back
+            update_count = 0
+            for enriched in batch_result.items:
+                # Find the original item object by ID
+                original_item = next((i for i in candidates if i.id == enriched.id), None)
+                if original_item:
+                    original_item.tags = enriched.extracted_tags
+                    if hasattr(original_item, 'duration'):
+                        original_item.duration = enriched.estimated_duration or "unknown"
+                    if not original_item.notes and enriched.notes:
+                        original_item.notes = enriched.notes
+                    update_count += 1
+
+            if update_count > 0:
+                self.repo.mark_dirty()
+
+            return update_count, debug_data
+
+        except Exception as e:
+            logger.error(f"Batch enrichment failed: {e}")
+            return 0, {"error": str(e)}
 
 class ExecutionService:
     def __init__(self, repo: YamlRepository):
