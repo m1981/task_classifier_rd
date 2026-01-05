@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 import anthropic
 import json
 from models.ai_schemas import ClassificationType, EnrichmentResult
@@ -12,19 +12,14 @@ from models import (
     ClassificationRequest,
     ClassificationResponse,
     SystemConfig,
-    SingleTaskClassificationRequest
+    SingleTaskClassificationRequest,
+    DomainType,
+    DOMAIN_CONFIGS
 )
 
-from models.ai_schemas import ClassificationType
-
-# Import Infrastructure
 from dataset_io import YamlDatasetLoader, YamlDatasetSaver
 
 class DatasetManager:
-    """
-    Infrastructure Service: Handles File I/O for Datasets.
-    """
-
     def __init__(self, base_path: Path = Path("data/datasets")):
         self.base_path = base_path
         self.base_path.mkdir(parents=True, exist_ok=True)
@@ -86,12 +81,18 @@ class PromptBuilder:
         }
 
     def build_triage_prompt(self, task_text: str, context_hierarchy: str, existing_tags: List[str] = None) -> str:
-        # 1. Merge Tags
-        all_tags = list(set(self.config.DEFAULT_TAGS + (existing_tags or [])))
-        tags_str = ", ".join(all_tags)
+        # For Triage, we use a UNION of all domain tags because we don't know the destination yet
+        # Or we can stick to a default set. Let's use a broad set for Triage.
 
-        # 2. Durations
-        durations_str = ", ".join(self.config.ALLOWED_DURATIONS)
+        # 1. Merge Tags (Broad Context)
+        # Combine all domain configs for triage to allow routing anywhere
+        all_domain_tags = []
+        for tags in DOMAIN_CONFIGS.values():
+            all_domain_tags.extend(tags)
+
+        # Deduplicate
+        available_tags = list(set(all_domain_tags + (existing_tags or [])))
+        tags_str = ", ".join(available_tags)
 
         return f"""
         Act as my personal advisor and Getting Things Done methodology expert.
@@ -114,6 +115,8 @@ class PromptBuilder:
         CONTEXT (Goals > Projects > Existing Items):
         {context_hierarchy}
         
+        AVAILABLE TAGS: [{tags_str}]
+        ALLOWED DURATIONS: {self.config.ALLOWED_DURATIONS}
 
 ```mermaid
 flowchart TD
@@ -177,20 +180,25 @@ flowchart TD
     
 """
 
-    def build_enrichment_prompt(self, item_name: str, project_name: str, goal_name: str) -> str:
+    def build_enrichment_prompt(self, item_name: str, project_name: str, goal_name: str, domain_type: DomainType = DomainType.LIFESTYLE) -> str:
+        # DYNAMIC TAG SELECTION
+        # We select the specific vocabulary based on the domain passed in
+        allowed_tags = DOMAIN_CONFIGS.get(domain_type, DOMAIN_CONFIGS[DomainType.LIFESTYLE])
+
         return f"""
         You are a GTD Data Cleaner.
 
         ITEM: "{item_name}"
         CURRENT PROJECT: "{project_name}"
         GOAL CONTEXT: "{goal_name}"
+        DOMAIN CONTEXT: "{domain_type.value}"
 
-        AVAILABLE TAGS: {self.config.DEFAULT_TAGS}
+        AVAILABLE TAGS: {allowed_tags}
         ALLOWED DURATIONS: {self.config.ALLOWED_DURATIONS}
 
         INSTRUCTIONS:
-        1. Analyze the item in the context of its project.
-        2. Assign appropriate tags (Context, Energy, Effort).
+        1. Analyze the item in the context of its project and domain.
+        2. Assign appropriate tags (Context, Energy, Effort) ONLY from the AVAILABLE TAGS list.
         3. Estimate duration if it's a task.
         4. If the item name contains a URL, extract it to notes.
         5. Determine if this is really a Task, or if it should be a Resource (Shopping) or Reference.
@@ -207,11 +215,9 @@ flowchart TD
         {tasks_str}
 
         INSTRUCTIONS:
-        1. Analyze the User Query for constraints (Time, Context, Energy, Tools).
+        1. Analyze the User Query for constraints.
         2. Select tasks from the Candidate List that strictly fit these constraints.
         3. Return the IDs of the matching tasks.
-        4. If the query implies a time limit (e.g. "I have 1 hour"), try to fill that time with the highest priority/best fitting tasks without exceeding it significantly.
-        5. Provide a brief reasoning.
         """
 
     def _get_dynamic_guidance(self, variant: str) -> str:
@@ -278,10 +284,9 @@ class TaskClassifier:
                 raw_response=str(e)
             )
 
-    def enrich_single_item(self, item_name: str, project_name: str, goal_name: str) -> EnrichmentResult:
-        prompt = self.prompt_builder.build_enrichment_prompt(item_name, project_name, goal_name)
-
-        # Capture Schema
+    def enrich_single_item(self, item_name: str, project_name: str, goal_name: str, domain: DomainType = DomainType.LIFESTYLE) -> EnrichmentResult:
+        # Pass domain to prompt builder
+        prompt = self.prompt_builder.build_enrichment_prompt(item_name, project_name, goal_name, domain)
         tool_schema = EnrichmentResult.model_json_schema()
 
         response = self.client.beta.messages.parse(

@@ -109,27 +109,30 @@ def _render_project_strip(project, service: PlanningService, classifier: TaskCla
             goals_list = service.get_all_goals()
             goal_options = ["None"] + [g.name for g in goals_list]
 
-            # Find current goal name
-            current_goal_name = "None"
-            if project.goal_id:
-                current_goal = next((g for g in goals_list if g.id == project.goal_id), None)
-                if current_goal: current_goal_name = current_goal.name
+            # --- NEW: DOMAIN SELECTOR ---
+            from models.entities import DomainType # Ensure import
 
-            selected_goal = st.selectbox(
-                "Link to Goal",
-                goal_options,
-                index=goal_options.index(current_goal_name) if current_goal_name in goal_options else 0,
-                key=f"goal_link_{project.id}"
+            # Create list of options
+            domain_options = [d.value for d in DomainType]
+
+            # Current selection
+            current_domain = project.domain.value if project.domain else DomainType.LIFESTYLE.value
+
+            selected_domain_str = st.selectbox(
+                "Project Domain (Vocabulary)",
+                options=domain_options,
+                index=domain_options.index(current_domain),
+                key=f"dom_sel_{project.id}",
+                help="Determines which tags the AI will use (e.g. Software vs Maker)"
             )
 
-            if selected_goal != current_goal_name:
-                new_goal_id = None
-                if selected_goal != "None":
-                    g_obj = next((g for g in goals_list if g.name == selected_goal), None)
-                    if g_obj: new_goal_id = g_obj.id
-
-                logger.info(f"Linking project {project.id} to goal {new_goal_id}")
-                service.link_project_to_goal(project.id, new_goal_id)
+            # Save if changed
+            if selected_domain_str != current_domain:
+                new_domain_enum = DomainType(selected_domain_str)
+                logger.info(f"Changing project {project.id} domain to {new_domain_enum}")
+                # We need a service method for this, or direct repo update
+                project.domain = new_domain_enum
+                service.repo.mark_dirty() # Direct update for simplicity
                 st.rerun()
 
             st.divider()
@@ -160,6 +163,27 @@ def _render_project_strip(project, service: PlanningService, classifier: TaskCla
     # Level 3: The Content
     item_count = len(project.items)
     label = f"Show {item_count} Items" if item_count > 0 else "Empty Project (Add Items)"
+
+    # --- CALCULATE UNTAGGED COUNT ---
+    # Logic: Active items (not completed) that have empty tags
+    untagged_count = sum(
+        1 for i in project.items
+        if not getattr(i, 'is_completed', False)
+        and not getattr(i, 'is_acquired', False)
+        and not i.tags
+    )
+
+    # --- B. THE COLLAPSIBLE BODY ---
+    item_count = len(project.items)
+
+    # Dynamic Label Construction
+    if item_count == 0:
+        label = "Empty Project (Add Items)"
+    else:
+        label = f"Show {item_count} Items"
+
+        if untagged_count > 0:
+            label += f" | ⚠️ {untagged_count} need tags"
 
     with st.expander(label, expanded=False):
 

@@ -503,10 +503,13 @@ class PlanningService:
 
             if not has_tags and not has_duration:
                 try:
-                    # We assume classifier.enrich_single_item returns (result, debug_data)
-                    # You must ensure TaskClassifier.enrich_single_item is updated too!
-                    result, debug_data = classifier.enrich_single_item(item.name, project.name, goal_name)
-
+                    # We use project.domain (which defaults to LIFESTYLE if not set)
+                    result, debug_data = classifier.enrich_single_item(
+                        item.name,
+                        project.name,
+                        goal_name,
+                        domain=project.domain
+                    )
                     last_debug_info = debug_data
 
                     # Apply updates

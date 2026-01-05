@@ -4,26 +4,56 @@ from enum import Enum
 import uuid
 from datetime import datetime, date
 
-# --- CONFIGURATION ---
+# --- DOMAIN CONFIGURATION (NEW) ---
+class DomainType(str, Enum):
+    SOFTWARE = "software"
+    MAKER = "maker"      # Renovation, 3D Printing, Carpentry
+    LIFESTYLE = "lifestyle" # Family, Health, Travel
+    BUSINESS = "business"
+
+# Configuration for each domain
+DOMAIN_CONFIGS = {
+    DomainType.SOFTWARE: [
+        "Frontend", "Backend", "DevOps", "Bug", "Feature", "Refactor",
+        "Python", "React", "Database", "Architecture", "API", "Testing",
+        "@Computer", "Mental-Deep", "HighEnergy"
+    ],
+    DomainType.MAKER: [
+        "Design", "Assembly", "Finishing", "Shopping",
+        "Wood", "Electronics", "3D-Print", "Painting",
+        "Measurements", "Safety", "@Garage", "Physical-Heavy"
+    ],
+    DomainType.LIFESTYLE: [
+        "Errands", "Phone", "Email", "Finance", "Health",
+        "Kids", "Social", "Travel", "Reading", "Household",
+        "@Home", "@Anywhere", "LowEnergy"
+    ],
+    DomainType.BUSINESS: [
+        "Strategy",  # For MVP Validation / Roadmap
+        "Marketing",  # General promotion
+        "Content",  # Writing posts, recording videos
+        "Sales",  # Commercialization
+        "Outreach",  # Finding partners/Co-founders
+        "Hiring",  # Specifically for the Co-Founder search
+        "Finance",  # Budgeting, Pricing
+        "Legal",  # Contracts, Incorporation
+        "Research",  # Competitor analysis
+        "Admin",  # Taxes, paperwork
+        "@Meeting",  # Calls with candidates/partners
+        "@Computer",
+        "HighEnergy",  # Sales/Pitching usually requires this
+        "Mental-Deep"  # Strategy work
+    ]
+}
+# --- SYSTEM CONFIGURATION ---
 class SystemConfig:
     """Central configuration for domain logic"""
-    DEFAULT_TAGS: List[str] = [
-        # Energy Level (Physical)
-        "Physical-Light", "Physical-Medium", "Physical-Heavy",
 
-        # Cognitive Load (Mental)
-        "Mental-Low", "Mental-Medium", "Mental-Deep",
+    # Static Lists (Durations)
+    ALLOWED_DURATIONS: List[str] = ["5min", "15min", "30min", "1h", "2h", "4h", "1d"]
 
-        # Focus Type
-        "Creative", "Analytical", "Administrative",
-
-        # Context
-        "@Computer", "@Home", "@Garage", "@Garden", "@Errands", "@Phone", "@Anywhere",
-
-        # Energy State
-        "HighEnergy", "LowEnergy", "Morning", "Evening"
-    ]
-    ALLOWED_DURATIONS: List[str] = ["15min", "30min", "1h", "2h", "4h"]
+    # Default fallback tags (Legacy support)
+    DEFAULT_TAGS: List[str] = DOMAIN_CONFIGS[DomainType.LIFESTYLE]
 
 # --- ENUMS ---
 class ProjectStatus(str, Enum):
@@ -35,7 +65,6 @@ class GoalStatus(str, Enum):
     ACTIVE = "active"
     SOMEDAY = "someday"
 
-# --- RESTORED ENUM (Fixes ImportError) ---
 class ResourceType(str, Enum):
     TO_BUY = "to_buy"
     TO_GATHER = "to_gather"
@@ -60,7 +89,7 @@ class TaskItem(ProjectItem):
 
 class ResourceItem(ProjectItem):
     kind: Literal["resource"] = "resource"
-    type: ResourceType = ResourceType.TO_BUY # Restored field
+    type: ResourceType = ResourceType.TO_BUY
     is_acquired: bool = False
     store: str = "General"
     link: Optional[str] = None
@@ -82,6 +111,8 @@ class Project(BaseModel):
     description: str = ""
     status: ProjectStatus = ProjectStatus.ACTIVE
     goal_id: Optional[str] = None
+    # NEW: Optional domain override (defaults to Lifestyle if not set)
+    domain: DomainType = DomainType.LIFESTYLE
     sort_order: float = Field(default=0.0)
     tags: List[str] = Field(default_factory=list)
     items: List[ProjectItemUnion] = Field(default_factory=list)
@@ -91,13 +122,14 @@ class Goal(BaseModel):
     name: str
     description: str = ""
     status: GoalStatus = GoalStatus.ACTIVE
+    # NEW: Goal level domain
+    domain: DomainType = DomainType.LIFESTYLE
 
 class DatasetContent(BaseModel):
     goals: List[Goal] = Field(default_factory=list)
     projects: List[Project] = Field(default_factory=list)
     inbox_tasks: List[str] = Field(default_factory=list)
 
-# --- CRITICAL FIX: REBUILD MODELS ---
-# This resolves forward references and circular dependencies
+# --- REBUILD MODELS ---
 Project.model_rebuild()
 DatasetContent.model_rebuild()

@@ -12,7 +12,7 @@ class ClassificationType(str, Enum):
     INCUBATE = "incubate"
 
 class ClassificationResult(BaseModel):
-    # --- CHAIN OF THOUGHT (Moved to Top) ---
+    # --- CHAIN OF THOUGHT ---
     reasoning: str = Field(
         description="Step-by-step analysis of the item against GTD rules and the Project Hierarchy."
     )
@@ -35,7 +35,7 @@ class ClassificationResult(BaseModel):
     # --- METADATA ---
     extracted_tags: List[str] = Field(
         default_factory=list,
-        description=f"Select tags STRICTLY from this list: {SystemConfig.DEFAULT_TAGS}"
+        description="Select tags STRICTLY from the 'AVAILABLE TAGS' list provided in the prompt context."
     )
     refined_text: str = Field(
         description="Cleaned up title. Try extract the page title. MUST be translated into clear, concise English"
@@ -53,7 +53,7 @@ class ClassificationResult(BaseModel):
     )
     alternative_projects: List[str] = Field(
         default_factory=list,
-        description="Identify exactly 3 other existing projects from the context that could be valid destinations, sorted by relevance. If fewer than 3 make sense, list as many as possible."
+        description="Identify exactly 3 other existing projects from the context that could be valid destinations."
     )
 
     notes: str = Field(
@@ -65,36 +65,29 @@ class ClassificationResult(BaseModel):
 
 @dataclass
 class ClassificationRequest:
-    """Batch request object (Legacy/Future use)"""
     dataset: Any
 
 @dataclass
 class ClassificationResponse:
-    """Standardized response wrapper used by TaskClassifier"""
     results: List[ClassificationResult]
     prompt_used: str
     tool_schema: dict
     raw_response: str
 
 class SmartFilterResult(BaseModel):
-    """
-    The AI's response to a 'Smart Context' query.
-    It returns the IDs of tasks that fit the user's constraints.
-    """
     matching_task_ids: List[str] = Field(
         description="The exact IDs of the tasks that fit the user's query constraints."
     )
     reasoning: str = Field(
-        description="A brief explanation of why these tasks were selected (e.g., 'These tasks are short and computer-based')."
+        description="A brief explanation of why these tasks were selected."
     )
     estimated_total_time: str = Field(
-        description="A rough sum of the duration of selected tasks (e.g., '45 mins')."
+        description="A rough sum of the duration of selected tasks."
     )
-
 
 class EnrichmentResult(BaseModel):
     extracted_tags: List[str] = Field(
-        description=f"Select tags STRICTLY from: {SystemConfig.DEFAULT_TAGS}"
+        description="Select tags STRICTLY from the 'AVAILABLE TAGS' list provided in the prompt context."
     )
     estimated_duration: Optional[str] = Field(
         description=f"Strictly one of: {SystemConfig.ALLOWED_DURATIONS}. Null if not a task."
