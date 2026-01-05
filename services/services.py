@@ -13,8 +13,7 @@ from models import (
     ClassificationResponse,
     SystemConfig,
     SingleTaskClassificationRequest,
-    DomainType,
-    DOMAIN_CONFIGS
+    TagDimensions # NEW
 )
 
 from dataset_io import YamlDatasetLoader, YamlDatasetSaver
@@ -76,22 +75,11 @@ class PromptBuilder:
     def __init__(self, prompts_dir: Path = Path("data/prompts")):
         self.prompts_dir = prompts_dir
         self.config = SystemConfig()
-        self._dynamic_variants = {
-            "basic": """Act as my personal advisor and assistant.""",
-        }
 
     def build_triage_prompt(self, task_text: str, context_hierarchy: str, existing_tags: List[str] = None) -> str:
-        # For Triage, we use a UNION of all domain tags because we don't know the destination yet
-        # Or we can stick to a default set. Let's use a broad set for Triage.
-
-        # 1. Merge Tags (Broad Context)
-        # Combine all domain configs for triage to allow routing anywhere
-        all_domain_tags = []
-        for tags in DOMAIN_CONFIGS.values():
-            all_domain_tags.extend(tags)
-
-        # Deduplicate
-        available_tags = list(set(all_domain_tags + (existing_tags or [])))
+        # TRIAGE: Use the Default Dimensions + any existing tags passed in
+        defaults = TagDimensions.get_all_defaults()
+        available_tags = list(set(defaults + (existing_tags or [])))
         tags_str = ", ".join(available_tags)
 
         return f"""
@@ -180,56 +168,34 @@ flowchart TD
     
 """
 
-    def build_enrichment_prompt(self, item_name: str, project_name: str, goal_name: str, domain_type: DomainType = DomainType.LIFESTYLE) -> str:
-        # DYNAMIC TAG SELECTION
-        # We select the specific vocabulary based on the domain passed in
-        allowed_tags = DOMAIN_CONFIGS.get(domain_type, DOMAIN_CONFIGS[DomainType.LIFESTYLE])
+    def build_enrichment_prompt(self, item_name: str, project_name: str, goal_name: str,
+                                project_context_str: str, extra_tags: List[str]) -> str:
+
+        # ENRICHMENT: Defaults + User Added Tags (Extra)
+        defaults = TagDimensions.get_all_defaults()
+        # Merge and Deduplicate
+        combined_tags = list(set(defaults + extra_tags))
 
         return f"""
-        You are a GTD Data Cleaner.
-
-        ITEM: "{item_name}"
+        Please act GTD techniq expert. Please help me to enrich my item based on below instruction.
+        
+        ITEM TO ENRICH: "{item_name}"
         CURRENT PROJECT: "{project_name}"
         GOAL CONTEXT: "{goal_name}"
-        DOMAIN CONTEXT: "{domain_type.value}"
-
-        AVAILABLE TAGS: {allowed_tags}
+        
+        PROJECT CONTEXT (Other items in this project for pattern matching):
+        {project_context_str}
+        
+        AVAILABLE TAGS: {combined_tags}
         ALLOWED DURATIONS: {self.config.ALLOWED_DURATIONS}
 
         INSTRUCTIONS:
-        1. Analyze the item in the context of its project and domain.
+        1. Analyze the item in the context of its project.
         2. Assign appropriate tags (Context, Energy, Effort) ONLY from the AVAILABLE TAGS list.
         3. Estimate duration if it's a task.
         4. If the item name contains a URL, extract it to notes.
         5. Determine if this is really a Task, or if it should be a Resource (Shopping) or Reference.
         """
-
-
-    def build_smart_filter_prompt(self, query: str, tasks_str: str) -> str:
-        return f"""
-        You are a productivity assistant helping a user select tasks.
-
-        USER QUERY: "{query}"
-
-        CANDIDATE TASKS:
-        {tasks_str}
-
-        INSTRUCTIONS:
-        1. Analyze the User Query for constraints.
-        2. Select tasks from the Candidate List that strictly fit these constraints.
-        3. Return the IDs of the matching tasks.
-        """
-
-    def _get_dynamic_guidance(self, variant: str) -> str:
-        return self._dynamic_variants.get(variant, "Act as a helpful task organizer.")
-
-    def _format_projects(self, projects: List[Project]) -> str:
-        return '\n'.join([f"  - {p.name}" for p in projects])
-
-    def _format_inbox_tasks(self, tasks: List[str]) -> str:
-        if not tasks:
-            return "  [NO TASKS TO CLASSIFY]"
-        return '\n'.join([f"  - {task}" for task in tasks])
 
 
 class TaskClassifier:
@@ -284,9 +250,13 @@ class TaskClassifier:
                 raw_response=str(e)
             )
 
-    def enrich_single_item(self, item_name: str, project_name: str, goal_name: str, domain: DomainType = DomainType.LIFESTYLE) -> EnrichmentResult:
-        # Pass domain to prompt builder
-        prompt = self.prompt_builder.build_enrichment_prompt(item_name, project_name, goal_name, domain)
+    def enrich_single_item(self, item_name: str, project_name: str, goal_name: str,
+                           project_context_str: str, extra_tags: List[str]) -> EnrichmentResult:
+
+        # Pass new context arguments to prompt builder
+        prompt = self.prompt_builder.build_enrichment_prompt(
+            item_name, project_name, goal_name, project_context_str, extra_tags
+        )
         tool_schema = EnrichmentResult.model_json_schema()
 
         response = self.client.beta.messages.parse(
@@ -302,5 +272,4 @@ class TaskClassifier:
             "schema": tool_schema
         }
 
-        # Return Tuple
         return response.parsed_output, debug_data

@@ -72,16 +72,12 @@ def _render_project_strip(project, service: PlanningService, classifier: TaskCla
     """
     logger.debug(f"Rendering Project Strip: {project.name} (ID: {project.id})")
 
-    # Level 2: The Project Strip Container
-    # with st.container(border=True):
-
     # --- A. THE HEADER ROW (Always Visible) ---
     # Layout: [ Title (70%) ] [ Up | Down | Settings (30%) ]
     col_title, col_toolbar = st.columns([0.7, 0.3], vertical_alignment="center")
 
     with col_title:
         st.markdown(f"#### {project.name}")
-        # Optional: Show progress bar or stats here in the future
 
     with col_toolbar:
         # Nested columns for tight button spacing
@@ -109,42 +105,39 @@ def _render_project_strip(project, service: PlanningService, classifier: TaskCla
             goals_list = service.get_all_goals()
             goal_options = ["None"] + [g.name for g in goals_list]
 
-            # --- NEW: DOMAIN SELECTOR ---
-            from models.entities import DomainType # Ensure import
+            # Find current goal name
+            current_goal_name = "None"
+            if project.goal_id:
+                current_goal = next((g for g in goals_list if g.id == project.goal_id), None)
+                if current_goal: current_goal_name = current_goal.name
 
-            # Create list of options
-            domain_options = [d.value for d in DomainType]
-
-            # Current selection
-            current_domain = project.domain.value if project.domain else DomainType.LIFESTYLE.value
-
-            selected_domain_str = st.selectbox(
-                "Project Domain (Vocabulary)",
-                options=domain_options,
-                index=domain_options.index(current_domain),
-                key=f"dom_sel_{project.id}",
-                help="Determines which tags the AI will use (e.g. Software vs Maker)"
+            selected_goal = st.selectbox(
+                "Link to Goal",
+                goal_options,
+                index=goal_options.index(current_goal_name) if current_goal_name in goal_options else 0,
+                key=f"goal_link_{project.id}"
             )
 
-            # Save if changed
-            if selected_domain_str != current_domain:
-                new_domain_enum = DomainType(selected_domain_str)
-                logger.info(f"Changing project {project.id} domain to {new_domain_enum}")
-                # We need a service method for this, or direct repo update
-                project.domain = new_domain_enum
-                service.repo.mark_dirty() # Direct update for simplicity
+            if selected_goal != current_goal_name:
+                new_goal_id = None
+                if selected_goal != "None":
+                    g_obj = next((g for g in goals_list if g.name == selected_goal), None)
+                    if g_obj: new_goal_id = g_obj.id
+
+                logger.info(f"Linking project {project.id} to goal {new_goal_id}")
+                service.link_project_to_goal(project.id, new_goal_id)
                 st.rerun()
 
             st.divider()
 
-            # ✨ THE MAGIC BUTTON
+            # ✨ THE MAGIC BUTTON (Auto-Enrich)
             if st.button("✨ Auto-Enrich Items", key=f"enrich_{project.id}",
                          help="Use AI to add tags and duration to empty tasks"):
                 with st.spinner(f"Enriching '{project.name}'..."):
 
                     result_stats, debug_info = service.enrich_project(project.id, classifier)
 
-                    # 4. SET DEBUG STATE
+                    # Set Debug State for the Debug Panel
                     if debug_info:
                         set_debug_state(
                             source=f"Enricher ({project.name})",
@@ -160,12 +153,8 @@ def _render_project_strip(project, service: PlanningService, classifier: TaskCla
                         st.info("No items needed enrichment.")
 
     # --- B. THE COLLAPSIBLE BODY (Unified Stream) ---
-    # Level 3: The Content
-    item_count = len(project.items)
-    label = f"Show {item_count} Items" if item_count > 0 else "Empty Project (Add Items)"
 
-    # --- CALCULATE UNTAGGED COUNT ---
-    # Logic: Active items (not completed) that have empty tags
+    # Calculate Untagged Count for Label
     untagged_count = sum(
         1 for i in project.items
         if not getattr(i, 'is_completed', False)
@@ -173,7 +162,6 @@ def _render_project_strip(project, service: PlanningService, classifier: TaskCla
         and not i.tags
     )
 
-    # --- B. THE COLLAPSIBLE BODY ---
     item_count = len(project.items)
 
     # Dynamic Label Construction
@@ -181,7 +169,6 @@ def _render_project_strip(project, service: PlanningService, classifier: TaskCla
         label = "Empty Project (Add Items)"
     else:
         label = f"Show {item_count} Items"
-
         if untagged_count > 0:
             label += f" | ⚠️ {untagged_count} need tags"
 
@@ -196,19 +183,15 @@ def _render_project_strip(project, service: PlanningService, classifier: TaskCla
             sorted_items = sorted(project.items, key=lambda x: x.created_at)
 
             for item in sorted_items:
-                # Pass the completion callback!
-                # We assume PlanningService has complete_item (added in previous step)
-                # If not, we can use a lambda to call repo directly or ExecutionService logic
+                # Pass the completion callback
                 if hasattr(service, 'complete_item'):
                     render_item(item, on_complete=service.complete_item)
                 else:
-                    # Fallback if method missing (should be added to service)
                     render_item(item)
 
         st.markdown("---")
 
         # --- C. QUICK ADD FOOTER ---
-        # Level 4: The Quick Add
         # Using a Popover for the form keeps the list clean
         with st.popover("➕ Add Item", use_container_width=True):
             st.markdown("#### New Item")
@@ -237,7 +220,6 @@ def _render_project_strip(project, service: PlanningService, classifier: TaskCla
                                             key=f"rt_{project.id}")
                 res_store = col_r2.text_input("Store", value="General", key=f"rs_{project.id}")
                 extra_data['store'] = res_store
-                # Note: We need to pass the Enum to the service, handled below
 
             elif type_choice == "Reference":
                 content = st.text_area("Content / URL", key=f"ref_{project.id}")
@@ -254,4 +236,3 @@ def _render_project_strip(project, service: PlanningService, classifier: TaskCla
                         name=name_input,
                         **extra_data
                     )
-                    st.rerun()

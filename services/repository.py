@@ -158,6 +158,17 @@ class TriageService:
     def create_draft(self, text: str, classification: ClassificationResult) -> DraftItem:
         """Pure function: Creates a proposal object"""
         logger.debug(f"Creating draft for: '{text[:20]}...' as {classification.classification_type}")
+
+        # --- SAFETY NET: Ensure URL is preserved ---
+        # If the input looks like a URL but the AI didn't put it in the notes, force it in.
+        if "http" in text and "http" not in classification.notes:
+            # Prepend the original text (URL) to the notes
+            if classification.notes:
+                classification.notes = f"{text}\n\n{classification.notes}"
+            else:
+                classification.notes = text
+        # -------------------------------------------
+
         return DraftItem(source_text=text, classification=classification)
 
     def apply_draft(self, draft: DraftItem, override_project_id: Optional[int] = None) -> None:
@@ -269,13 +280,23 @@ class TriageService:
             self.repo.data.inbox_tasks.remove(item_text)
             self.repo.mark_dirty()
 
-    def get_all_tags(self) -> List[str]:
-        tags = set()
+    def get_triage_tags(self) -> List[str]:
+        """
+        Strategy: Global Context.
+        Returns: Union of (All Tag Dimensions) + (All Tags used in DB)
+        """
+        # 1. Start with all defaults from TagDimensions
+        # (You need to import TagDimensions or access via SystemConfig)
+        from models.entities import SystemConfig
+        tags = set(SystemConfig.DEFAULT_TAGS)
+
+        # 2. Add tags actually used in the database (User's custom tags)
         for p in self.repo.data.projects:
             for item in p.items:
                 if hasattr(item, 'tags'):
                     tags.update(item.tags)
-        return list(tags)
+
+        return sorted(list(tags))
 
     def build_full_context_tree(self) -> str:
         """
@@ -489,11 +510,28 @@ class PlanningService:
             goal = next((g for g in self.repo.data.goals if g.id == project.goal_id), None)
             if goal: goal_name = goal.name
 
-        count = 0
-        last_debug_info = {} # Store debug info from the last AI call
+        # 2. PRE-CALCULATE CONTEXT & TAGS
+        # Gather all tags currently used in this project (User Added Extra Tags)
+        existing_project_tags = set()
+        project_items_summary = []
 
         for item in project.items:
-            # Skip if already completed or already has tags/duration (don't overwrite good data)
+            if hasattr(item, 'tags'):
+                existing_project_tags.update(item.tags)
+
+            # Build a summary string of existing items to give AI context
+            # e.g. "- Buy Milk [Errands]"
+            tags_display = f"[{', '.join(item.tags)}]" if item.tags else ""
+            project_items_summary.append(f"- {item.name} {tags_display}")
+
+        project_context_str = "\n".join(project_items_summary[:50]) # Limit to 50 items to save tokens
+        extra_tags_list = list(existing_project_tags)
+
+        count = 0
+        last_debug_info = {}
+
+        for item in project.items:
+            # Skip if already completed or already has tags/duration
             if getattr(item, 'is_completed', False) or getattr(item, 'is_acquired', False):
                 continue
 
@@ -503,12 +541,13 @@ class PlanningService:
 
             if not has_tags and not has_duration:
                 try:
-                    # We use project.domain (which defaults to LIFESTYLE if not set)
+                    # PASS THE NEW CONTEXT
                     result, debug_data = classifier.enrich_single_item(
-                        item.name,
-                        project.name,
-                        goal_name,
-                        domain=project.domain
+                        item_name=item.name,
+                        project_name=project.name,
+                        goal_name=goal_name,
+                        project_context_str=project_context_str,
+                        extra_tags=extra_tags_list
                     )
                     last_debug_info = debug_data
 

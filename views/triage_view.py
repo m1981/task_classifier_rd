@@ -46,8 +46,7 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
             # 1. Prepare Context
             context_str = triage_service.build_full_context_tree()
 
-            # B. Prepare Tags (DB + System Defaults)
-            db_tags = triage_service.get_all_tags()
+            db_tags = triage_service.get_triage_tags()
 
             req = SingleTaskClassificationRequest(
                 task_text=current_text,
