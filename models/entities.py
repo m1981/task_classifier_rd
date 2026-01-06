@@ -57,6 +57,12 @@ class TagKnowledgeBase:
         TagDefinition(tag="@WaitingFor", state="⏳ Blocked", example="Waiting for reply"),
     ]
 
+    ADMIN = [
+        TagDefinition(tag="@Admin-Digital", state="💻 File & System Org", example="Register domains, Organize Drive folders, Update Jira"),
+        TagDefinition(tag="@Admin-Physical", state="🖨️ Office Tasks", example="Print documents, File paperwork, Scan receipts"),
+        TagDefinition(tag="@Project-Mgmt", state="🧠 Planning & Specs", example="Write requirements, Define roadmap, Review tasks"),
+    ]
+
     @classmethod
     def get_all_definitions(cls) -> List[TagDefinition]:
         return cls.COMPUTER + cls.WORKSHOP + cls.FAMILY + cls.HOBBY + cls.ESSENTIALS

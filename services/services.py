@@ -217,24 +217,89 @@ flowchart TD
         return f"""
         Please help me as my GTD advisor. Please analzye my project and its goal and assign duration and tags to my project items.
 
-        CURRENT PROJECT\n"{project_name}"
-        GOAL CONTEXT\t"{goal_name}"
-
-        PROJECT:
-        {project_context_str}
+GOAL CONTEXT\n"{goal_name}"
+CURRENT PROJECT\n"{project_name}"
 
         ITEMS TO ENRICH (Format: ID | Name):
         {target_items_str}
         
-        TAGGING STRATEGY (COGNITIVE STATES):
-        You must select tags based on the intersection of **Mode** and **Energy**.
+        TAGGING STRATEGY (FLOWCHART):
+        Follow this decision tree strictly. Do not cross domains.
         
-        {tag_knowledge_table}
+        ```mermaid
+flowchart TD
+    %% --- STYLES ---
+    classDef input fill:#333,stroke:#fff,color:#fff,stroke-width:2px
+    classDef domain fill:#E3F2FD,stroke:#1565C0,color:#0D47A1,stroke-width:2px
+    classDef digital fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20
+    classDef physical fill:#FFF3E0,stroke:#EF6C00,color:#E65100
+    classDef social fill:#F3E5F5,stroke:#7B1FA2,color:#4A148C
+    classDef tag fill:#fff,stroke:#333,color:#000,stroke-dasharray: 5 5
+
+    %% --- START ---
+    Start([Input Item]) --> Domain{{1. DOMAIN CHECK:<br/>Where does this happen?}}
+    class Start input
+    class Domain domain
+
+    %% ==========================================
+    %% BRANCH 1: DIGITAL (The "Computer" World)
+    %% ==========================================
+    Domain -- "💻 COMPUTER / SCREEN" --> DigState{{2. COGNITIVE MODE?}}
+    class DigState digital
+
+    DigState -- "Deep Logic / Code" --> T_Code["@Maker-Code"]
+    DigState -- "Visual / Story / Design" --> T_Create["@Maker-Creative"]
+    DigState -- "Spreadsheets / Money" --> T_Data["@Analytical"]
+    DigState -- "Passive / Reading" --> T_Res["@Research"]
+    
+    %% THE NEW BUCKET FOR YOUR ADMIN TASKS
+    DigState -- "Config / Files / Specs" --> T_Admin["@Sys-Admin<br/>@Docs-Specs"]
+    
+    class T_Code,T_Create,T_Data,T_Res,T_Admin tag
+
+    %% ==========================================
+    %% BRANCH 2: PHYSICAL (The "Workshop" World)
+    %% ==========================================
+    Domain -- "🛠️ WORKSHOP / HOUSE" --> PhysState{{2. PHYSICAL MODE?}}
+    class PhysState physical
+
+    PhysState -- "Dirty / Sweaty / Heavy" --> T_Heavy["@Heavy-Duty"]
+    PhysState -- "Seated / Delicate / Solder" --> T_Prec["@Precision-Bench"]
+    PhysState -- "Quick / Glue / Oil" --> T_Quick["@Quick-Fix"]
+    
+    %% RENAMED TO AVOID CONFUSION
+    PhysState -- "Measuring / Counting" --> T_Prep["@Workshop-Prep<br/>(NOT Digital Logistics)"]
+
+    class T_Heavy,T_Prec,T_Quick,T_Prep tag
+
+    %% ==========================================
+    %% BRANCH 3: SOCIAL & WORLD
+    %% ==========================================
+    Domain -- "🌍 PEOPLE / OUTSIDE" --> SocState{{2. SOCIAL CONTEXT?}}
+    class SocState social
+
+    SocState -- "Business / LinkedIn" --> T_Out["@Outreach"]
+    SocState -- "Family / Kids" --> T_Fam["@Family-*"]
+    SocState -- "Driving / Shopping" --> T_Err["@Errands / @Buy"]
+
+    class T_Out,T_Fam,T_Err tag
+
+    %% --- GUARD RAILS ---
+    subgraph Rules ["⛔ GUARD RAILS"]
+        direction TB
+        R1["NEVER use @Logistics for<br/>digital file organization"]
+        R2["NEVER use @Precision-Bench<br/>for printing documents"]
+    end
+    
+    style Rules fill:#ffcdd2,stroke:#b71c1c,color:#b71c1c
+        ```
         
         INSTRUCTIONS:
-        1. For each item, first determine the **Mode** (Where am I?) and **Energy** (How hard is it?).
-        2. Use those determinations to select the single best **Tag** from the table.
-        3. Example: If Mode="Computer" and Energy="Deep Logic", you MUST select "@Maker-Code".
+        1. **DOMAIN CHECK**: First, decide if the item is DIGITAL (Computer), PHYSICAL (Workshop), or SOCIAL.
+        2. **DIGITAL TASKS**: Must ONLY use tags from the Digital branch (e.g., @Sys-Admin, @Maker-Code).
+           - WARNING: Do NOT use @Logistics or @Precision-Bench for computer tasks.
+        3. **PHYSICAL TASKS**: Must ONLY use tags from the Physical branch.
+        4. **ADMIN TASKS**: If the task is registering domains, organizing files, or printing docs, use **@Sys-Admin** or **@Docs-Specs**.
         ...
         """
 
