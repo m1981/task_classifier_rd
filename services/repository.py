@@ -46,7 +46,8 @@ class DraftItem:
         elif kind == ClassificationType.SHOPPING:
             return ResourceItem(
                 name=name,
-                store="General",
+                store=self.classification.suggested_store or "General",
+                cost_estimate=self.classification.cost_estimate,
                 tags=tags
             )
 
@@ -111,7 +112,8 @@ class YamlRepository:
                 count += 1
         logger.debug(f"Index rebuild complete. Indexed {count} items.")
 
-    def find_project(self, project_id: int) -> Optional[Project]:
+    # CHANGED: Project ID is now str (UUID)
+    def find_project(self, project_id: str) -> Optional[Project]:
         return next((p for p in self.data.projects if p.id == project_id), None)
 
     def find_project_by_name(self, name: str) -> Optional[Project]:
@@ -171,7 +173,7 @@ class TriageService:
 
         return DraftItem(source_text=text, classification=classification)
 
-    def apply_draft(self, draft: DraftItem, override_project_id: Optional[int] = None) -> None:
+    def apply_draft(self, draft: DraftItem, override_project_id: Optional[str] = None) -> None:
         """
         Commits a Draft to the database.
         """
@@ -192,9 +194,8 @@ class TriageService:
             if not project and target_name in ["General", "Someday/Maybe", "Inbox"]:
                 logger.info(f"Auto-creating missing system project: '{target_name}'")
 
-                # Generate new ID
-                existing_ids = [p.id for p in self.repo.data.projects]
-                new_id = max(existing_ids, default=0) + 1
+                # CHANGED: Generate new UUID
+                new_id = str(uuid.uuid4())
 
                 # Create and Register
                 project = Project(id=new_id, name=target_name, description="System generated container")
@@ -222,8 +223,8 @@ class TriageService:
     def create_project_from_draft(self, draft: DraftItem, new_project_name: str) -> None:
         logger.info(f"Creating new project from draft: '{new_project_name}'")
         # 1. Create Project
-        existing_ids = [p.id for p in self.repo.data.projects]
-        new_id = max(existing_ids, default=0) + 1
+        # CHANGED: UUID generation
+        new_id = str(uuid.uuid4())
         new_proj = Project(id=new_id, name=new_project_name)
         self.repo.data.projects.append(new_proj)
 
@@ -238,7 +239,7 @@ class TriageService:
             self.repo.data.inbox_tasks.append(item_text)
             self.repo.mark_dirty()
 
-    def move_inbox_item_to_project(self, item_text: str, project_id: int, tags: List[str]) -> None:
+    def move_inbox_item_to_project(self, item_text: str, project_id: str, tags: List[str]) -> None:
         """
         Convenience method: Move inbox item directly to a project as a TaskItem.
         """
@@ -264,8 +265,8 @@ class TriageService:
         """
         logger.info(f"Creating project '{new_project_name}' from inbox item.")
         # Create Project
-        existing_ids = [p.id for p in self.repo.data.projects]
-        new_id = max(existing_ids, default=0) + 1
+        # CHANGED: UUID generation
+        new_id = str(uuid.uuid4())
         new_proj = Project(id=new_id, name=new_project_name)
         self.repo.data.projects.append(new_proj)
         self.repo.mark_dirty()
@@ -285,10 +286,9 @@ class TriageService:
         Strategy: Global Context.
         Returns: Union of (All Tag Dimensions) + (All Tags used in DB)
         """
-        # 1. Start with all defaults from TagDimensions
-        # (You need to import TagDimensions or access via SystemConfig)
-        from models.entities import SystemConfig
-        tags = set(SystemConfig.DEFAULT_TAGS)
+        # 1. Start with all defaults from TagKnowledgeBase
+        from models.entities import TagKnowledgeBase
+        tags = set(TagKnowledgeBase.get_all_tags())
 
         # 2. Add tags actually used in the database (User's custom tags)
         for p in self.repo.data.projects:
@@ -297,6 +297,10 @@ class TriageService:
                     tags.update(item.tags)
 
         return sorted(list(tags))
+
+    # --- FIX: Alias for View Compatibility ---
+    def get_all_tags(self) -> List[str]:
+        return self.get_triage_tags()
 
     def build_full_context_tree(self) -> str:
         """
@@ -374,7 +378,8 @@ class PlanningService:
         self.repo.mark_dirty()
         return new_goal
 
-    def add_manual_item(self, project_id: int, kind: str, name: str, **kwargs) -> None:
+    # CHANGED: project_id is str
+    def add_manual_item(self, project_id: str, kind: str, name: str, **kwargs) -> None:
         """Manual entry bypassing AI"""
         logger.info(f"Manually adding item '{name}' (kind={kind}) to Project {project_id}")
         project = self.repo.find_project(project_id)
@@ -426,7 +431,7 @@ class PlanningService:
         project.items.append(reference_item)
         self.repo.register_item(project, reference_item)
 
-    def link_project_to_goal(self, project_id: int, goal_id: Optional[str]) -> None:
+    def link_project_to_goal(self, project_id: str, goal_id: Optional[str]) -> None:
         """Link a project to a goal (or unlink if goal_id is None)"""
         logger.info(f"Linking Project {project_id} to Goal {goal_id}")
         project = self.repo.find_project(project_id)
@@ -458,7 +463,7 @@ class PlanningService:
             item.is_acquired = not item.is_acquired
             self.repo.mark_dirty()
 
-    def move_project(self, project_id: int, direction: str):
+    def move_project(self, project_id: str, direction: str):
         """
         Moves a project 'up' or 'down' within its Goal group.
         """
@@ -496,7 +501,7 @@ class PlanningService:
             target_proj.sort_order, neighbor.sort_order = neighbor.sort_order, target_proj.sort_order
             self.repo.mark_dirty()
 
-    def enrich_project(self, project_id: int, classifier) -> Tuple[int, Dict]:
+    def enrich_project(self, project_id: str, classifier) -> Tuple[int, Dict]:
         """
         Iterates through active items in a project and enriches them using AI.
         Returns: (count_of_enriched_items, debug_data_dict)

@@ -24,7 +24,7 @@ def e2e_env(tmp_path):
     yaml_content = """
     goals: []
     projects:
-      - id: 1
+      - id: "1"
         name: Groceries
         status: active
         items: []
@@ -141,10 +141,10 @@ def test_transition_incubate(e2e_env):
     # Note: Since project is "Unmatched", user usually picks one.
     # For test, we force it into "Groceries" (ID 1)
     draft = triage.create_draft(text, result)
-    triage.apply_draft(draft, override_project_id=1)
+    triage.apply_draft(draft, override_project_id="1")
 
     # 4. Verify
-    project = repo.find_project(1)
+    project = repo.find_project("1")
     item = project.items[0]
     assert isinstance(item, TaskItem)
     assert "someday" in item.tags
@@ -175,7 +175,7 @@ def test_transition_reference(e2e_env):
     triage.apply_draft(draft)  # AI suggested "Groceries", so no override needed
 
     # Verify
-    project = repo.find_project(1)
+    project = repo.find_project("1")
     item = project.items[0]
     assert isinstance(item, ReferenceItem)
     assert item.content == text
@@ -259,14 +259,14 @@ def test_transition_override(e2e_env):
 
     # User Decision: Override! Move to a new project "Errands" (simulated)
     # 1. User creates "Errands" manually or it exists
-    repo.data.projects.append(Project(id=2, name="Errands"))
+    repo.data.projects.append(Project(id="2", name="Errands"))
 
     # 2. User clicks "Move to Errands" (Manual Assignment)
-    triage.move_inbox_item_to_project(text, 2, ["manual_tag"])
+    triage.move_inbox_item_to_project(text, "2", ["manual_tag"])
 
     # Verify
-    groceries = repo.find_project(1)
-    errands = repo.find_project(2)
+    groceries = repo.find_project("1")
+    errands = repo.find_project("2")
 
     assert len(groceries.items) == 0  # AI suggestion ignored
     assert len(errands.items) == 1  # Manual choice respected

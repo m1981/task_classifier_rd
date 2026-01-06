@@ -1,293 +1,32 @@
-Here is the fully updated `doc/usage.md` file, incorporating the new architecture, the refined diagrams, and the correct user flows.
+# Architecture & Strategy
 
+## The "Context Injection" Strategy (DRY & OCP)
 
-# Usage & Architecture
+To ensure the AI behaves correctly in different modes without duplicating logic, we implement a **Service-Led Context Strategy**.
 
-## High-Level Data Flow
+### 1. The Problem
+*   **Triage Mode:** Needs to route items anywhere. Needs a **Global Vocabulary** (All tags from all domains).
+*   **Enrichment Mode:** Needs to clean up a specific project. Needs a **Local Vocabulary** (Only tags relevant to that domain).
 
-The application follows a **Model-View-Service (MVS)** architecture designed for Streamlit's rerun cycle. Data flows from the "Liquid" state (User/AI input) into a "Brick" state (Polymorphic Entities) via a stable Service Layer.
+### 2. The Solution (SOLID Principles)
+*   **Single Responsibility (SRP):** `PromptBuilder` is "dumb". It does not decide which tags to show. It simply formats the list of tags passed to it.
+*   **Open/Closed (OCP):** We can add new Domains or Tagging Strategies in the *Service Layer* without modifying the Prompt Builder or the AI Client.
 
-```mermaid
-graph RL
-    %% Nodes
-    User((User))
-    YAML[("📂 dataset.yaml\n(Hard Drive)")]
-    App["🖥️ Streamlit App\n(Session State)"]
-    AI["🤖 Anthropic API\n(Claude Haiku)"]
-    
-    %% Flow
-    YAML -- "1. Load Data" --> App
-    App -- "2. Show Current View" --> User
-    
-    subgraph "The Triage Loop"
-        App -- "3. Send Text + Context" --> AI
-        AI -- "4. Return Classification" --> App
-        App -- "5. Create Draft Proposal" --> User
-        User -- "6. Confirm / Edit" --> App
-    end
-    
-    App -- "7. Mutate Domain Model\n(Mark Dirty)" --> App
-    User -- "8. Click Save" --> App
-    App -- "9. Write to Disk" --> YAML
+### 3. Implementation Details
 
-    %% Styling
-    style YAML fill:#f9f,stroke:#333,stroke-width:2px
-    style App fill:#bbf,stroke:#333,stroke-width:2px
-    style AI fill:#bfb,stroke:#333,stroke-width:2px
-```
+#### A. Triage Context (Global)
+*   **Service:** `TriageService.get_triage_tags()`
+*   **Logic:** Returns `Union(All Domain Defaults, All Tags in DB)`.
+*   **Result:** AI can route a "Buy Milk" task (Lifestyle) and a "Fix Bug" task (Software) in the same session.
 
-```mermaid
-graph TD
-    %% --- STYLES ---
-    classDef view fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1
-    classDef service fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20
-    classDef model fill:#FFF3E0,stroke:#EF6C00,stroke-width:2px,color:#E65100
-    classDef state fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#4A148C
-    classDef storage fill:#ECEFF1,stroke:#455A64,stroke-width:2px,color:#263238
+#### B. Enrichment Context (Local)
+*   **Service:** `PlanningService.enrich_project(id)`
+*   **Logic:**
+    1.  Look up `Project.domain` (e.g., SOFTWARE).
+    2.  Fetch `DOMAIN_CONFIGS[SOFTWARE]`.
+    3.  Add tags currently used *only* in this project.
+*   **Result:** When enriching a Software project, the AI will never suggest "Grocery" tags.
 
-    %% --- ACTORS ---
-    User((User))
-
-    %% --- LAYER 1: THE VIEW (Ephemeral) ---
-    subgraph View_Layer ["🖥️ VIEW LAYER (Re-runs on Interaction)"]
-        direction TB
-        InboxView["📥 Inbox View"]
-        PlanView["🎯 Planning View"]
-        
-        subgraph Forms ["Input Mechanisms"]
-            ManualForm["📝 Manual Form\n(Goal / Item)"]
-            AIButton["🤖 AI Triage\n(Button)"]
-        end
-    end
-
-    %% --- LAYER 2: THE STATE (The Bridge) ---
-    subgraph State_Layer ["🧠 SESSION STATE (The Container)"]
-        SessionState[("st.session_state")]
-        DirtyFlag["🚩 is_dirty (bool)"]
-        Proposal["💡 current_proposal\n(DraftItem)"]
-    end
-
-    %% --- LAYER 3: THE SERVICE (The Brain) ---
-    subgraph Service_Layer ["⚙️ SERVICE LAYER (Stable / Cached)"]
-        TriageService["TriageService"]
-        PlanService["PlanningService"]
-        
-        subgraph Logic ["The Logic Core"]
-            AI_Engine["🤖 AI Engine\n(Claude)"]
-            ProposalEngine["Draft Builder\n(Liquid -> Brick)"]
-        end
-    end
-
-    %% --- LAYER 4: THE MODEL (The Foundation) ---
-    subgraph Model_Layer ["📦 DOMAIN MODEL (Polymorphic)"]
-        Repo["Repository"]
-        
-        subgraph Entities ["Unified Stream"]
-            Project["Project Container"]
-            Items["List[ Union ]"]
-            
-            Task["⚡ TaskItem"]
-            Res["🛒 ResourceItem"]
-            Ref["📚 ReferenceItem"]
-        end
-    end
-
-    %% --- LAYER 5: PERSISTENCE ---
-    subgraph Disk ["💾 DISK"]
-        YAML["dataset.yaml"]
-    end
-
-    %% --- FLOWS ---
-    
-    %% 1. Manual Path
-    User -- "1a. Types Manually" --> ManualForm
-    ManualForm -- "Direct Call" --> PlanService
-    
-    %% 2. AI Path
-    User -- "1b. Clicks Triage" --> AIButton
-    AIButton -- "Request" --> TriageService
-    TriageService --> AI_Engine
-    AI_Engine -- "JSON" --> ProposalEngine
-    ProposalEngine -- "Draft Object" --> Proposal
-    Proposal -.-> InboxView
-    InboxView -- "User Confirms" --> TriageService
-    
-    %% 3. Unification
-    TriageService --> Repo
-    PlanService --> Repo
-    
-    %% 4. Data Structure
-    Repo --> Project
-    Project --> Items
-    Items --- Task
-    Items --- Res
-    Items --- Ref
-    
-    %% 5. State Updates
-    Repo -- "Mark Dirty" --> DirtyFlag
-    Repo -- "Update Data" --> SessionState
-    SessionState -- "Triggers Rerun" --> View_Layer
-    
-    %% 6. Persistence
-    User -- "Click Save" --> View_Layer
-    View_Layer -- "Command" --> Repo
-    Repo -- "Write" --> YAML
-
-    %% --- CLASS ASSIGNMENTS ---
-    class InboxView,PlanView,ManualForm,AIButton view
-    class TriageService,PlanService,AI_Engine,ProposalEngine service
-    class Repo,Project,Items,Task,Res,Ref model
-    class SessionState,DirtyFlag,Proposal state
-    class YAML storage
-```
----
-
-## UI Layout & Navigation
-
-### 1. The Sidebar (System Control)
-The sidebar persists across all modes and handles the "Meta" application state.
-
-*   **Dataset Selector:** A Dropdown menu listing files found in `./data/*.yaml`.
-    *   *Options:* `home_renovation.yaml`, `coding_projects.yaml`, `test_edge_cases.yaml`.
-*   **Status Indicator:**
-    *   🟢 Saved
-    *   🔴 Unsaved Changes (Dirty)
-*   **Global Actions:**
-    *   [Save Changes] (Enabled only when Dirty)
-    *   [Reload/Revert] (Reloads from disk, discarding changes)
-
-### 2. Main Content Area
-Changes based on the selected Mode (Inbox / Planning / Engage).
-
----
-
-## Architecture Diagrams
-
-### 1. Class Diagram: The Polymorphic Stream
-The core data structure uses a **Unified Stream** (`Project.items`) containing different types of items (`Task`, `Resource`, `Reference`).
-
-```mermaid
-classDiagram
-    %% --- DOMAIN MODEL (Polymorphic) ---
-    class Project {
-        +str name
-        +List~ProjectItem~ items
-    }
-
-    class ProjectItem {
-        <<Abstract>>
-        +str id
-        +str kind
-        +str name
-    }
-
-    class TaskItem {
-        +bool is_completed
-        +List~str~ tags
-        +str duration
-    }
-
-    class ResourceItem {
-        +bool is_acquired
-        +str store
-    }
-
-    class ReferenceItem {
-        +str url
-        +str content
-    }
-
-    %% Inheritance
-    ProjectItem <|-- TaskItem
-    ProjectItem <|-- ResourceItem
-    ProjectItem <|-- ReferenceItem
-    Project *-- ProjectItem : Contains
-
-    %% --- SERVICE LAYER ---
-    class TriageService {
-        +create_draft(text, result) DraftItem
-        +apply_draft(draft)
-    }
-
-    class DraftItem {
-        <<Proposal>>
-        +ClassificationResult classification
-        +to_entity() ProjectItem
-    }
-
-    class ClassificationResult {
-        +Enum classification_type
-        +str suggested_project
-        +str reasoning
-    }
-
-    %% Relationships
-    TriageService ..> DraftItem : Creates
-    DraftItem ..> ProjectItem : Factory for
-    TriageService --> Project : Mutates
-```
-
-### 2. Sequence Diagram: The Proposal Loop (Triage)
-This flow shows how the AI suggests a "Draft," and the user confirms it to create a concrete entity.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User
-    participant UI as View (Triage)
-    participant Service as TriageService
-    participant AI as Claude (API)
-    participant Repo as Repository
-
-    %% 1. Analysis
-    User->>UI: Opens Inbox Item: "Buy white paint"
-    UI->>Service: classify("Buy white paint")
-    Service->>AI: Prompt (JSON Schema)
-    AI-->>Service: {type: "RESOURCE", project: "Home Reno"}
-    
-    %% 2. The Proposal (New Step)
-    Service->>Service: create_draft(result)
-    Service-->>UI: Returns DraftItem
-    UI->>User: Display Proposal Card:\n"Type: Shopping | Project: Home Reno"
-
-    %% 3. Confirmation (Polymorphic Creation)
-    User->>UI: Click "Confirm"
-    UI->>Service: apply_draft(draft)
-    Service->>Service: item = draft.to_entity() -> ResourceItem
-    Service->>Repo: Projects["Home Reno"].items.append(item)
-    Service->>Repo: mark_dirty()
-    
-    %% 4. UI Update
-    Service-->>UI: Success
-    UI->>UI: st.rerun()
-```
-
-### 3. Sequence Diagram: Explicit Persistence
-This flow demonstrates the "Dirty Flag" pattern. Data is only written to disk when explicitly requested.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User
-    participant UI as Sidebar
-    participant Repo as Repository
-    participant Disk as dataset.yaml
-
-    %% 1. State Check
-    Note over UI, Repo: User has made changes
-    Repo-->>UI: is_dirty = True
-    UI->>User: Show "🔴 Unsaved Changes"
-
-    %% 2. Explicit Save
-    User->>UI: Click "Save Changes"
-    UI->>Repo: save()
-    
-    %% 3. Serialization
-    Repo->>Repo: model_dump(mode='json')
-    Repo->>Disk: Write YAML
-    Repo->>Repo: is_dirty = False
-    
-    %% 4. Feedback
-    Repo-->>UI: Success
-    UI->>User: Show "🟢 Saved"
-```
+## Auto-Creation Strategy
+To support the AI's tendency to categorize items into standard GTD buckets ("General", "Someday/Maybe"), the `TriageService` implements a **Lazy Initialization** pattern.
+*   If the AI suggests a project named "General" and it does not exist, the Service creates it on the fly before assigning the item.

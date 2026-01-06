@@ -14,7 +14,7 @@ from .entities import (
     ProjectStatus,
     ResourceType,
     GoalStatus,
-    TagDimensions
+    TagKnowledgeBase
 )
 from .ai_schemas import (
     ClassificationResult,

@@ -51,7 +51,7 @@ def test_repo_indexing_and_retrieval(repo):
     """Verify O(1) lookup index works"""
     # Setup Data
     task = TaskItem(name="Find Me")
-    proj = Project(id=1, name="P1", items=[task])
+    proj = Project(id="1", name="P1", items=[task])
     repo.data.projects = [proj]
 
     # Act: Rebuild index (usually happens on init or register)
@@ -65,12 +65,12 @@ def test_repo_indexing_and_retrieval(repo):
 
 def test_repo_find_project_helpers(repo):
     """Verify project lookup helpers"""
-    p1 = Project(id=10, name="Alpha")
-    p2 = Project(id=20, name="Beta")
+    p1 = Project(id="10", name="Alpha")
+    p2 = Project(id="20", name="Beta")
     repo.data.projects = [p1, p2]
 
-    assert repo.find_project(10) == p1
-    assert repo.find_project(99) is None
+    assert repo.find_project("10") == p1
+    assert repo.find_project("99") is None
 
     assert repo.find_project_by_name("Beta") == p2
     assert repo.find_project_by_name("Gamma") is None
@@ -110,7 +110,7 @@ def test_create_project_from_draft_success(triage_service, repo):
     """
     # Setup
     repo.data.inbox_tasks = ["Build App"]
-    repo.data.projects = [Project(id=1, name="Existing")]
+    repo.data.projects = [Project(id="1", name="Existing")]
 
     result = ClassificationResult(
         classification_type=ClassificationType.NEW_PROJECT,
@@ -127,9 +127,10 @@ def test_create_project_from_draft_success(triage_service, repo):
 
     # Assert
     # 1. Project Created
-    new_proj = repo.find_project(2)  # ID should auto-increment
+    # Since ID is random UUID, we check by name
+    new_proj = repo.find_project_by_name("App Project")
     assert new_proj is not None
-    assert new_proj.name == "App Project"
+    assert new_proj.id != "1"
 
     # 2. Item Added
     assert len(new_proj.items) == 1
@@ -149,8 +150,8 @@ def test_create_project_from_inbox_manual_success(triage_service, repo):
 
     triage_service.create_project_from_inbox("Raw Idea", "Manual Project")
 
-    new_proj = repo.find_project(1)
-    assert new_proj.name == "Manual Project"
+    new_proj = repo.find_project_by_name("Manual Project")
+    assert new_proj is not None
     assert new_proj.items[0].name == "Raw Idea"
     assert "Raw Idea" not in repo.data.inbox_tasks
 
@@ -161,10 +162,10 @@ def test_move_inbox_item_to_project_success(triage_service, repo):
     Expected: Item becomes Task in target project.
     """
     repo.data.inbox_tasks = ["Buy Milk"]
-    target_proj = Project(id=1, name="Groceries")
+    target_proj = Project(id="1", name="Groceries")
     repo.data.projects = [target_proj]
 
-    triage_service.move_inbox_item_to_project("Buy Milk", 1, ["tag1"])
+    triage_service.move_inbox_item_to_project("Buy Milk", "1", ["tag1"])
 
     assert len(target_proj.items) == 1
     item = target_proj.items[0]
@@ -182,7 +183,7 @@ def test_move_inbox_item_to_project_invalid_id(triage_service, repo):
     repo.data.projects = []
 
     with pytest.raises(ValueError, match="Project 999 not found"):
-        triage_service.move_inbox_item_to_project("Task", 999, [])
+        triage_service.move_inbox_item_to_project("Task", "999", [])
 
 
 def test_apply_draft_invalid_project(triage_service, repo):

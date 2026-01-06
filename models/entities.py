@@ -5,22 +5,84 @@ import uuid
 from datetime import datetime, date
 
 
-# --- TAG DIMENSIONS (NEW SOURCE OF TRUTH) ---
-class TagDimensions:
-    TOOLS_MODE = [
-        "@Email",  "@Calls", "@Errands", "@Out", "@Computer"
+# --- TAG KNOWLEDGE BASE (NEW SOURCE OF TRUTH) ---
+class TagDefinition(BaseModel):
+    tag: str
+    state: str
+    example: str
+
+
+class TagKnowledgeBase:
+    """
+    Defines the Cognitive Tagging System.
+    Used to generate prompts for AI and validation lists for Pydantic.
+    """
+
+    # 1. COMPUTER (Deep Logic & Creative)
+    COMPUTER = [
+        TagDefinition(tag="@Maker-Code", state="🧠 Logic & Syntax", example="Fix stream error, Refactor API"),
+        TagDefinition(tag="@Maker-Creative", state="🎨 Visual & Story", example="Draft Pitch Deck, Design UI"),
+        TagDefinition(tag="@Outreach", state="🗣️ Social & Sales",
+                      example="Message LinkedIn prospects, Reply to emails"),
+        TagDefinition(tag="@Analytical", state="📊 Data & Money", example="Update Budget Excel, Analyze Metrics"),
+        TagDefinition(tag="@Research", state="👀 Passive Input", example="Watch Tutorial, Read Documentation"),
     ]
-    ENERGY = [
-        "DeepWork", "LowEnergy", "QuickWin",
-        "Physical-Light",
+
+    # 2. WORKSHOP (Physical & Focused)
+    WORKSHOP = [
+        TagDefinition(tag="@Heavy-Duty", state="👷‍♂️ Dirty & Sweaty", example="Paint kitchen, Grout tiles, Plumbing"),
+        TagDefinition(tag="@Precision-Bench", state="🔬 Focused & Seated",
+                      example="Solder electronics, Assemble 3D Printer"),
+        TagDefinition(tag="@Quick-Fix", state="🔧 Casual & Fast", example="Tighten screw, Glue strip, Oil hinge"),
+        TagDefinition(tag="@Logistics", state="📏 Measuring & Planning", example="Measure wall, Count screws needed"),
     ]
-    PEOPLE = [
-        "@WaitingFor"
+
+    # 3. FAMILY (Roles)
+    FAMILY = [
+        TagDefinition(tag="@Family-Admin", state="📋 Logistics Manager", example="Pay school fees, Book dentist"),
+        TagDefinition(tag="@Kids-Growth", state="🌱 Patient Coach", example="Teach math, Explain emotions"),
+        TagDefinition(tag="@Quality-Time", state="❤️ Phone Off", example="Board games, Walk in park"),
+    ]
+
+    # 4. HOBBY (Growth)
+    HOBBY = [
+        TagDefinition(tag="@Skill-Up", state="🎓 Learning", example="Practice guitar scales, Duolingo"),
+        TagDefinition(tag="@Play-Mode", state="🎮 Enjoying", example="Gaming, Free riding"),
+    ]
+
+    # 5. LEGACY / ESSENTIALS (To ensure we don't break basic GTD flows)
+    ESSENTIALS = [
+        TagDefinition(tag="@Errands", state="🚗 Out & About", example="Post office, Shopping"),
+        TagDefinition(tag="@Buy", state="🛒 Resource/Shopping", example="Buy Milk, Order parts"),
+        TagDefinition(tag="@WaitingFor", state="⏳ Blocked", example="Waiting for reply"),
     ]
 
     @classmethod
-    def get_all_defaults(cls) -> List[str]:
-        return cls.TOOLS_MODE + cls.ENERGY + cls.PEOPLE
+    def get_all_definitions(cls) -> List[TagDefinition]:
+        return cls.COMPUTER + cls.WORKSHOP + cls.FAMILY + cls.HOBBY + cls.ESSENTIALS
+
+    @classmethod
+    def get_all_tags(cls) -> List[str]:
+        return [t.tag for t in cls.get_all_definitions()]
+
+    @classmethod
+    def get_markdown_table(cls) -> str:
+        """Generates the Markdown table for the AI Prompt"""
+        rows = []
+        rows.append("| Tag | Cognitive/Physical State | Example Task |")
+        rows.append("|---|---|---|")
+
+        for group_name, items in [
+            ("COMPUTER", cls.COMPUTER),
+            ("WORKSHOP", cls.WORKSHOP),
+            ("FAMILY", cls.FAMILY),
+            ("HOBBY", cls.HOBBY),
+            ("ESSENTIALS", cls.ESSENTIALS)
+        ]:
+            for item in items:
+                rows.append(f"| `{item.tag}` | {item.state} | {item.example} |")
+
+        return "\n".join(rows)
 
 
 # --- SYSTEM CONFIGURATION ---
@@ -30,9 +92,8 @@ class SystemConfig:
     # Static Lists (Durations)
     ALLOWED_DURATIONS: List[str] = ["5min", "15min", "30min", "1h", "2h", "4h", "1d"]
 
-    # Default fallback tags (The Core List)
-    DEFAULT_TAGS: List[str] = TagDimensions.get_all_defaults()
-
+    # Default fallback tags
+    DEFAULT_TAGS: List[str] = TagKnowledgeBase.get_all_tags()
 
 # --- ENUMS ---
 class ProjectStatus(str, Enum):
@@ -75,6 +136,7 @@ class ResourceItem(ProjectItem):
     type: ResourceType = ResourceType.TO_BUY
     is_acquired: bool = False
     store: str = "General"
+    cost_estimate: Optional[float] = None
     link: Optional[str] = None
 
 
@@ -92,7 +154,7 @@ ProjectItemUnion = Annotated[
 
 # --- CONTAINERS ---
 class Project(BaseModel):
-    id: int
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     description: str = ""
     status: ProjectStatus = ProjectStatus.ACTIVE

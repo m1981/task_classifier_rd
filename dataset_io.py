@@ -49,7 +49,7 @@ class YamlDatasetLoader:
 
         for i, p_data in enumerate(raw_projects):
             try:
-                projects.append(self._parse_project(p_data))
+                projects.append(self._parse_project(p_data, i))
             except Exception as e:
                 logger.error(f"Failed to parse project index {i}: {p_data.get('name', 'Unknown')}")
                 logger.exception(e)
@@ -63,28 +63,48 @@ class YamlDatasetLoader:
             inbox_tasks=raw_data.get('inbox_tasks', [])
         )
 
-    def _parse_project(self, data: Dict[str, Any]) -> Project:
+    def _parse_project(self, data: Dict[str, Any], index: int = -1) -> Project:
         """
         Parses a project using the Unified Stream architecture.
+        Handles legacy integer IDs by converting them to strings.
         """
+        # --- DEBUG LOGGING START ---
+        p_name = data.get('name', 'Unknown')
+        raw_id = data.get('id', 'MISSING')
+        logger.debug(f"[{index}] Parsing Project: '{p_name}' | Raw ID: {raw_id} (Type: {type(raw_id)})")
+        # --- DEBUG LOGGING END ---
+
         # 1. Extract Unified Items
-        # Pydantic will handle the polymorphism via the 'kind' discriminator
         unified_items = data.get('items', [])
 
         # 2. Handle sort_order collision
-        # We extract sort_order manually so we don't pass it twice
-        sort_order = data.get('sort_order', float(data.get('id', 0)))
+        # Default to 0.0 instead of trying to cast ID to float
+        sort_order = data.get('sort_order', 0.0)
 
         # 3. Prepare data for Pydantic
         # Exclude keys we handle manually or legacy keys we want to ignore
         exclude_keys = {'items', 'sort_order', 'tasks', 'resources', 'reference_items'}
         clean_data = {k: v for k, v in data.items() if k not in exclude_keys}
 
-        return Project(
-            **clean_data,
-            sort_order=sort_order,
-            items=unified_items
-        )
+        # --- FIX: Explicitly cast ID to string ---
+        if 'id' in clean_data:
+            original_id = clean_data['id']
+            clean_data['id'] = str(original_id)
+            logger.debug(f"[{index}] Converted ID {original_id} -> '{clean_data['id']}'")
+        else:
+            logger.warning(f"[{index}] Project '{p_name}' has no ID in clean_data keys: {list(clean_data.keys())}")
+        # -----------------------------------------
+
+        try:
+            return Project(
+                **clean_data,
+                sort_order=sort_order,
+                items=unified_items
+            )
+        except Exception as e:
+            logger.error(f"[{index}] Pydantic Validation Error for Project '{p_name}'")
+            logger.error(f"Clean Data Payload: {clean_data}")
+            raise e
 
 
 class YamlDatasetSaver:

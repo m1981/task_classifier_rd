@@ -3,6 +3,8 @@ from typing import List, Optional
 import anthropic
 import json
 from models.ai_schemas import ClassificationType, EnrichmentResult, BatchEnrichmentResponse
+from models.entities import TagKnowledgeBase
+
 # Import Domain Models and DTOs
 from models import (
     DatasetContent,
@@ -12,7 +14,7 @@ from models import (
     ClassificationResponse,
     SystemConfig,
     SingleTaskClassificationRequest,
-    TagDimensions
+    TagKnowledgeBase
 )
 
 from dataset_io import YamlDatasetLoader, YamlDatasetSaver
@@ -76,10 +78,16 @@ class PromptBuilder:
         self.config = SystemConfig()
 
     def build_triage_prompt(self, task_text: str, context_hierarchy: str, existing_tags: List[str] = None) -> str:
-        # TRIAGE: Use the Default Dimensions + any existing tags passed in
-        defaults = TagDimensions.get_all_defaults()
-        available_tags = list(set(defaults + (existing_tags or [])))
-        tags_str = ", ".join(available_tags)
+        # 1. Get the Rich Markdown Table
+        tag_knowledge_table = TagKnowledgeBase.get_markdown_table()
+
+        # 2. Get simple list for validation
+        defaults = TagKnowledgeBase.get_all_tags()
+        available_tags_list = list(set(defaults + (existing_tags or [])))
+
+        # --- FIX: Define tags_str ---
+        tags_str = ", ".join(f'"{t}"' for t in available_tags_list)
+        # ----------------------------
 
         return f"""
         Act as my personal advisor and Getting Things Done methodology expert.
@@ -171,7 +179,7 @@ flowchart TD
                                 project_context_str: str, extra_tags: List[str]) -> str:
 
         # ENRICHMENT: Defaults + User Added Tags (Extra)
-        defaults = TagDimensions.get_all_defaults()
+        defaults = TagKnowledgeBase.get_all_tags()
         # Merge and Deduplicate
         combined_tags = list(set(defaults + extra_tags))
 
@@ -198,30 +206,38 @@ flowchart TD
 
     def build_batch_enrichment_prompt(self, target_items_str: str, project_name: str, goal_name: str,
                                       project_context_str: str, extra_tags: List[str]) -> str:
-        defaults = TagDimensions.get_all_defaults()
+
+        # 1. Get the Rich Markdown Table
+        tag_knowledge_table = TagKnowledgeBase.get_markdown_table()
+
+        # 2. Get simple list for validation
+        defaults = TagKnowledgeBase.get_all_tags()
         combined_tags = list(set(defaults + extra_tags))
 
         return f"""
-        You are a GTD Data Cleaner.
+        Please help me as my GTD advisor. Please analzye my project and its goal and assign duration and tags to my project items.
 
-        CURRENT PROJECT: "{project_name}"
-        GOAL CONTEXT: "{goal_name}"
+        CURRENT PROJECT\n"{project_name}"
+        GOAL CONTEXT\t"{goal_name}"
 
-        PROJECT CONTEXT (Already enriched items for pattern matching):
+        PROJECT:
         {project_context_str}
 
         ITEMS TO ENRICH (Format: ID | Name):
         {target_items_str}
-
-        AVAILABLE TAGS: {combined_tags}
-        ALLOWED DURATIONS: {self.config.ALLOWED_DURATIONS}
-
+        
+        TAGGING STRATEGY (COGNITIVE STATES):
+        You must select tags based on the intersection of **Mode** and **Energy**.
+        
+        {tag_knowledge_table}
+        
         INSTRUCTIONS:
-        1. Return a list of enriched objects corresponding to the "ITEMS TO ENRICH".
-        2. Use the ID provided to map the result back.
-        3. Assign appropriate tags (Context, Energy, Effort).
-        4. Estimate duration.
+        1. For each item, first determine the **Mode** (Where am I?) and **Energy** (How hard is it?).
+        2. Use those determinations to select the single best **Tag** from the table.
+        3. Example: If Mode="Computer" and Energy="Deep Logic", you MUST select "@Maker-Code".
+        ...
         """
+
 class TaskClassifier:
     def __init__(self, client, prompt_builder: PromptBuilder):
         self.client = client
@@ -305,6 +321,8 @@ class TaskClassifier:
             target_items_str, project_name, goal_name, project_context_str, extra_tags
         )
 
+        tool_schema = BatchEnrichmentResponse.model_json_schema()
+
         response = self.client.beta.messages.parse(
             model="claude-haiku-4-5",
             max_tokens=4096,  # Increased token limit for batch
@@ -312,4 +330,8 @@ class TaskClassifier:
             output_format=BatchEnrichmentResponse,
         )
 
-        return response.parsed_output, {"prompt": prompt, "response": response.parsed_output.model_dump_json()}
+        return response.parsed_output, {
+            "prompt": prompt,
+            "response": response.parsed_output.model_dump_json(),
+            "schema": tool_schema
+        }

@@ -15,9 +15,9 @@ def mock_repo():
     repo.data = MagicMock()
 
     # Setup in-memory data
-    p1 = Project(id=1, name="P1", sort_order=1.0, goal_id="g1")
-    p2 = Project(id=2, name="P2", sort_order=2.0, goal_id="g1")
-    p3 = Project(id=3, name="P3", sort_order=3.0, goal_id="g2")
+    p1 = Project(id="1", name="P1", sort_order=1.0, goal_id="g1")
+    p2 = Project(id="2", name="P2", sort_order=2.0, goal_id="g1")
+    p3 = Project(id="3", name="P3", sort_order=3.0, goal_id="g2")
 
     repo.data.projects = [p1, p2, p3]
     repo.data.inbox_tasks = ["Buy milk"]
@@ -35,7 +35,7 @@ def test_move_project_up(mock_repo):
     service = PlanningService(mock_repo)
 
     # Act: Move P2 (index 1) UP
-    service.move_project(2, "up")
+    service.move_project("2", "up")
 
     # Assert: P2 should swap sort_order with P1
     p1 = mock_repo.data.projects[0]
@@ -53,7 +53,7 @@ def test_move_project_down_boundary(mock_repo):
 
     # Act: Try to move P2 (index 1) DOWN (it is the last in goal "g1")
     # P3 is in "g2", so P2 shouldn't swap with P3.
-    service.move_project(2, "down")
+    service.move_project("2", "down")
 
     # Assert: No change expected
     p2 = mock_repo.data.projects[1]

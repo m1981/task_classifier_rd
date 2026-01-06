@@ -64,15 +64,17 @@ def test_draft_to_entity_incubate():
     assert entity.notes == "Incubated from Triage."
 
 
-def test_draft_to_entity_shopping():
-    """Validates that SHOPPING classification creates a ResourceItem."""
+def test_draft_to_entity_shopping_polymorphic():
+    """Validates that SHOPPING classification creates a ResourceItem with store and cost."""
     result = ClassificationResult(
         classification_type=ClassificationType.SHOPPING,
         suggested_project="Groceries",
         confidence=1.0,
         reasoning="Buy",
         refined_text="Milk",
-        extracted_tags=[]
+        extracted_tags=[],
+        suggested_store="Whole Foods",
+        cost_estimate=5.99
     )
     draft = DraftItem(source_text="Buy Milk", classification=result)
 
@@ -80,7 +82,8 @@ def test_draft_to_entity_shopping():
 
     assert isinstance(entity, ResourceItem)
     assert entity.name == "Milk"
-    assert entity.store == "General"
+    assert entity.store == "Whole Foods"
+    assert entity.cost_estimate == 5.99
 
 
 # --- TEST: TRIAGE SERVICE ---
@@ -102,7 +105,7 @@ def test_triage_apply_draft_to_project(mock_repo):
     service = TriageService(mock_repo)
 
     # Setup Project
-    proj = Project(id=1, name="Test Project")
+    proj = Project(id="p1", name="Test Project")
     mock_repo.data.projects = [proj]
     mock_repo.find_project_by_name.return_value = proj
 
@@ -132,13 +135,13 @@ def test_planning_move_project_ordering(mock_repo):
     service = PlanningService(mock_repo)
 
     # Setup 3 projects in order
-    p1 = Project(id=1, name="P1", sort_order=1.0, goal_id="g1")
-    p2 = Project(id=2, name="P2", sort_order=2.0, goal_id="g1")
-    p3 = Project(id=3, name="P3", sort_order=3.0, goal_id="g1")
+    p1 = Project(id="1", name="P1", sort_order=1.0, goal_id="g1")
+    p2 = Project(id="2", name="P2", sort_order=2.0, goal_id="g1")
+    p3 = Project(id="3", name="P3", sort_order=3.0, goal_id="g1")
     mock_repo.data.projects = [p1, p2, p3]
 
     # Act: Move P2 UP
-    service.move_project(2, "up")
+    service.move_project("2", "up")
 
     # Assert: P2 should swap sort_order with P1
     assert p2.sort_order == 1.0
@@ -151,12 +154,12 @@ def test_planning_link_project_to_goal(mock_repo):
     service = PlanningService(mock_repo)
 
     # Setup
-    proj = Project(id=1, name="Orphan", goal_id=None)
+    proj = Project(id="1", name="Orphan", goal_id=None)
     mock_repo.data.projects = [proj]
     mock_repo.data.goals = [MagicMock(id="g1")]  # Mock goal existence check
 
     # Act
-    service.link_project_to_goal(1, "g1")
+    service.link_project_to_goal("1", "g1")
 
     # Assert
     assert proj.goal_id == "g1"
@@ -171,7 +174,7 @@ def test_execution_complete_task_toggle(mock_repo):
 
     # Setup
     task = TaskItem(name="Task", is_completed=False)
-    proj = Project(id=1, name="P1", items=[task])
+    proj = Project(id="1", name="P1", items=[task])
     mock_repo.data.projects = [proj]
 
     # Act 1: Complete
@@ -190,7 +193,7 @@ def test_execution_complete_resource_toggle(mock_repo):
 
     # Setup
     res = ResourceItem(name="Milk", is_acquired=False)
-    proj = Project(id=1, name="P1", items=[res])
+    proj = Project(id="1", name="P1", items=[res])
     mock_repo.data.projects = [proj]
 
     # Act
@@ -204,35 +207,20 @@ def test_execution_complete_resource_toggle(mock_repo):
 def test_regression_manual_override_preserves_ai_data(mock_repo):
     """
     Regression Test for Bug: Data Loss during Manual Override.
-
-    Scenario:
-      1. Input is a URL.
-      2. AI classifies as Reference, extracts URL to notes, refines title.
-      3. User manually selects a specific project (Override).
-
-    Failure Mode (Previous Bug):
-      - Created a generic TaskItem.
-      - Name was the raw URL.
-      - Notes were empty (URL lost).
-
-    Success Criteria (Fix):
-      - Creates a ReferenceItem.
-      - Name is the AI-refined title.
-      - Content is the URL from AI notes.
     """
     service = TriageService(mock_repo)
 
     # 1. Setup: Target Project exists
-    target_proj = Project(id=99, name="Manual Target")
+    target_proj = Project(id="99", name="Manual Target")
     mock_repo.data.projects = [target_proj]
     # Ensure the mock finds the project by ID (simulating the override lookup)
-    mock_repo.find_project.side_effect = lambda pid: target_proj if pid == 99 else None
+    mock_repo.find_project.side_effect = lambda pid: target_proj if pid == "99" else None
 
     # 2. Setup: The Draft (AI Analysis)
     # The AI found a URL and put it in notes
     ai_result = ClassificationResult(
         classification_type=ClassificationType.REFERENCE,
-        suggested_project="Wrong Project",  # AI guessed wrong (or General)
+        suggested_project="Wrong Project",
         confidence=0.8,
         reasoning="It is a link",
         refined_text="Refined Title",
@@ -241,39 +229,26 @@ def test_regression_manual_override_preserves_ai_data(mock_repo):
     )
     draft = DraftItem(source_text="http://raw-input.com", classification=ai_result)
 
-    # 3. Act: Apply Draft with Override (Simulating the fixed View logic)
-    service.apply_draft(draft, override_project_id=99)
+    # 3. Act: Apply Draft with Override
+    service.apply_draft(draft, override_project_id="99")
 
     # 4. Assert
     assert len(target_proj.items) == 1
     item = target_proj.items[0]
 
     # Check for Data Preservation
-    assert isinstance(item, ReferenceItem), "Should be ReferenceItem, not TaskItem"
-    assert item.name == "Refined Title", "Should use refined title, not raw text"
-    assert item.content == "http://real-url.com", "Should preserve URL from notes"
+    assert isinstance(item, ReferenceItem)
+    assert item.name == "Refined Title"
+    assert item.content == "http://real-url.com"
 
 def test_regression_reference_tags_preservation(mock_repo):
     """
     Regression Test for Bug: Tags lost for Reference Items.
-
-    Scenario:
-      1. AI classifies item as REFERENCE.
-      2. AI extracts tags (e.g. ["@Computer", "Research"]).
-      3. User confirms.
-
-    Failure Mode (Previous Bug):
-      - ReferenceItem was created, but tags were empty [].
-      - ReferenceItem class didn't support tags, or mapper didn't pass them.
-
-    Success Criteria (Fix):
-      - ReferenceItem has tags field (inherited from ProjectItem).
-      - Tags are persisted from Draft to Entity.
     """
     service = TriageService(mock_repo)
 
     # 1. Setup: Target Project
-    proj = Project(id=1, name="Research Project")
+    proj = Project(id="1", name="Research Project")
     mock_repo.data.projects = [proj]
     mock_repo.find_project_by_name.return_value = proj
 
@@ -284,7 +259,7 @@ def test_regression_reference_tags_preservation(mock_repo):
         confidence=1.0,
         reasoning="Docs",
         refined_text="Documentation",
-        extracted_tags=["@Computer", "Research"],  # <--- The Critical Data
+        extracted_tags=["@Computer", "Research"],
         notes="http://docs.com"
     )
     draft = DraftItem(source_text="http://docs.com", classification=ai_result)

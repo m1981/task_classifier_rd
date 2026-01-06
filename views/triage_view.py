@@ -160,7 +160,47 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
 
         st.markdown(f"**Goes to ➝** **{result.suggested_project}**")
 
-        # --- TAG EDITOR ---
+        # --- POLYMORPHIC FIELDS (Based on Type) ---
+
+        # 1. SHOPPING FIELDS
+        if draft.classification.classification_type == ClassificationType.SHOPPING:
+            col_store, col_cost = st.columns([2, 1])
+
+            store_val = st.text_input(
+                "Store",
+                value=draft.classification.suggested_store or "General",
+                key=f"store_{hash(current_text)}"
+            )
+            if store_val != draft.classification.suggested_store:
+                draft.classification.suggested_store = store_val
+
+            cost_val = st.number_input(
+                "Est. Cost",
+                value=draft.classification.cost_estimate or 0.0,
+                key=f"cost_{hash(current_text)}"
+            )
+            if cost_val != draft.classification.cost_estimate:
+                draft.classification.cost_estimate = cost_val
+
+        # 2. TASK FIELDS (Duration)
+        elif draft.classification.classification_type == ClassificationType.TASK:
+            duration_options = SystemConfig.ALLOWED_DURATIONS
+            default_selection = result.estimated_duration if result.estimated_duration in duration_options else None
+
+            selected_duration = st.pills(
+                "Estimated Duration",
+                options=duration_options,
+                default=default_selection,
+                selection_mode="single",
+                key=f"duration_{hash(current_text)}"
+            )
+
+            if selected_duration:
+                draft.classification.estimated_duration = selected_duration
+            elif result.estimated_duration and result.estimated_duration not in duration_options:
+                st.caption(f"Custom AI Estimate: {result.estimated_duration}")
+
+        # --- TAG EDITOR (Common) ---
         def add_new_tag():
             key = f"new_tag_{hash(current_text)}"
             new_val = st.session_state.get(key, "").strip()
@@ -206,23 +246,6 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
         if notes_input != draft.classification.notes:
             draft.classification.notes = notes_input
 
-        # --- DURATION EDITOR (Pills) ---
-        duration_options = SystemConfig.ALLOWED_DURATIONS
-        default_selection = result.estimated_duration if result.estimated_duration in duration_options else None
-
-        selected_duration = st.pills(
-            "Estimated Duration",
-            options=duration_options,
-            default=default_selection,
-            selection_mode="single",
-            key=f"duration_{hash(current_text)}"
-        )
-
-        if selected_duration:
-            draft.classification.estimated_duration = selected_duration
-        elif result.estimated_duration and result.estimated_duration not in duration_options:
-            st.caption(f"Custom AI Estimate: {result.estimated_duration}")
-
         # --- ACTIONS ---
         col_confirm, col_skip, col_trash = st.columns([2, 1, 1])
 
@@ -234,8 +257,8 @@ def render_triage_view(triage_service: TriageService, classifier: TaskClassifier
                     # FINAL SYNC: Ensure draft has latest values from widgets before applying
                     if edited_text: draft.classification.refined_text = edited_text
                     if selected_tags: draft.classification.extracted_tags = selected_tags
-                    if selected_duration: draft.classification.estimated_duration = selected_duration
                     if notes_input: draft.classification.notes = notes_input
+                    # Store/Cost/Duration are synced via callbacks/direct assignment above
 
                     triage_service.apply_draft(draft)
                     _clear_draft_state()

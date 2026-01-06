@@ -27,13 +27,12 @@ def yaml_file(tmp_path):
 
 def test_load_project_with_explicit_sort_order(loader, yaml_file):
     """
-    Validates that 'sort_order' is correctly loaded and doesn't cause
-    argument collision errors.
+    Validates that 'sort_order' is correctly loaded.
     """
     data = {
         "projects": [
             {
-                "id": 1,
+                "id": "uuid-1",
                 "name": "Test Project",
                 "sort_order": 5.5,
                 "status": "active",
@@ -50,18 +49,18 @@ def test_load_project_with_explicit_sort_order(loader, yaml_file):
     project = content.projects[0]
 
     # Assert
-    assert project.id == 1
+    assert project.id == "uuid-1"
     assert project.sort_order == 5.5
 
-def test_load_project_defaults_sort_order_to_id(loader, yaml_file):
+def test_load_project_defaults_sort_order(loader, yaml_file):
     """
     Validates that if 'sort_order' is missing in YAML,
-    it defaults to the Project ID (float).
+    it defaults to 0.0.
     """
     data = {
         "projects": [
             {
-                "id": 10,
+                "id": "uuid-10",
                 "name": "Legacy Project",
                 # No sort_order provided
                 "status": "active",
@@ -78,8 +77,33 @@ def test_load_project_defaults_sort_order_to_id(loader, yaml_file):
     project = content.projects[0]
 
     # Assert
-    assert project.id == 10
-    assert project.sort_order == 10.0  # Defaulted to ID
+    assert project.id == "uuid-10"
+    assert project.sort_order == 0.0  # Default
+
+def test_load_legacy_integer_ids(loader, yaml_file):
+    """
+    Validates that legacy integer IDs in YAML are converted to strings.
+    """
+    data = {
+        "projects": [
+            {
+                "id": 123,  # Integer ID
+                "name": "Legacy Project",
+                "items": []
+            }
+        ]
+    }
+
+    with open(yaml_file, 'w') as f:
+        yaml.dump(data, f)
+
+    # Act
+    content = loader.load(yaml_file)
+    project = content.projects[0]
+
+    # Assert
+    assert isinstance(project.id, str)
+    assert project.id == "123"
 
 def test_load_unified_stream_items(loader, yaml_file):
     """
@@ -89,7 +113,7 @@ def test_load_unified_stream_items(loader, yaml_file):
     data = {
         "projects": [
             {
-                "id": 1,
+                "id": "uuid-1",
                 "name": "Unified Project",
                 "items": [
                     {
@@ -129,9 +153,9 @@ def test_save_sorts_projects_correctly(saver, tmp_path):
     Goal ID and Sort Order.
     """
     # Arrange: Create projects out of order
-    p1 = Project(id=1, name="Second", sort_order=2.0, goal_id="g1")
-    p2 = Project(id=2, name="First", sort_order=1.0, goal_id="g1")
-    p3 = Project(id=3, name="Orphaned", sort_order=5.0, goal_id=None)
+    p1 = Project(id="1", name="Second", sort_order=2.0, goal_id="g1")
+    p2 = Project(id="2", name="First", sort_order=1.0, goal_id="g1")
+    p3 = Project(id="3", name="Orphaned", sort_order=5.0, goal_id=None)
 
     content = DatasetContent(
         projects=[p1, p3, p2],  # Random order in memory
@@ -183,12 +207,12 @@ def test_load_raises_and_logs_on_invalid_project_data(loader, yaml_file, caplog)
     data = {
         "projects": [
             {
-                "id": 1,
+                "id": "1",
                 "name": "Valid Project",
                 "items": []
             },
             {
-                "id": 2,
+                "id": "2",
                 # Missing 'name' field, which is required by Pydantic model
                 "items": []
             }
@@ -199,12 +223,9 @@ def test_load_raises_and_logs_on_invalid_project_data(loader, yaml_file, caplog)
         yaml.dump(data, f)
 
     # Act & Assert
-    # We expect a validation error (or generic Exception depending on Pydantic version)
     with pytest.raises(Exception):
         loader.load(yaml_file)
 
     # Verify Logging
-    # We expect an error log for index 1 (the second project)
-    # caplog captures all logs during the test
     assert "Failed to parse project index 1" in caplog.text
-    assert "Unknown" in caplog.text # Since name is missing, it defaults to 'Unknown' in the log message
+    assert "Unknown" in caplog.text

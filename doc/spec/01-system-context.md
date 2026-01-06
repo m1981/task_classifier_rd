@@ -6,13 +6,13 @@ We follow a **Unidirectional Data Flow** tailored for Streamlit's rerun cycle.
 ### 1. The View Layer (Ephemeral)
 *   **Responsibility:** Renders the UI based *strictly* on the current Session State.
 *   **Constraint:** Views are idempotent. They do not hold logic.
-*   **Polymorphism:** Views use a `render_item(item)` strategy to draw the correct card (Checkbox vs. Shopping Row) based on the item's `kind`.
+*   **Polymorphism:** Views use a `render_item(item)` strategy to draw the correct card based on the item's `kind`.
 
-### 2. The Service Layer (Stable)
-*   **Responsibility:** Handles business logic, AI communication, and State mutation.
-*   **Components:**
-    *   `TriageService`: Manages the Inbox, AI Classification, and Proposal Engine.
-    *   `PlanningService`: Manages Goals, Project structures, and Ordering.
+### 2. The Service Layer (Stable & Smart)
+*   **Responsibility:** Handles business logic, AI communication, State mutation, and **Context Calculation**.
+*   **Key Principle (SSOT):** Services are the Single Source of Truth for "What tags are available?"
+    *   `TriageService`: Calculates **Global Context** (All Domains + All DB Tags).
+    *   `PlanningService`: Calculates **Local Context** (Project Domain + Project Tags).
     *   `ExecutionService`: Manages Task completion and Context filtering.
     *   `AnalyticsService`: Manages "Chat with Data" (Smart Context) and Strategic Reviews.
 
@@ -22,8 +22,7 @@ We follow a **Unidirectional Data Flow** tailored for Streamlit's rerun cycle.
     *   `st.session_state.data`: The loaded `DatasetContent`.
     *   `st.session_state.is_dirty`: Boolean flag indicating unsaved changes.
     *   `st.session_state.current_draft`: The active AI suggestion waiting for user confirmation.
-    *   `st.session_state.smart_results`: Cached results from the AI Coach.
-    *   `st.session_state.smart_debug`: Raw prompt/response logs for the AI Coach.
+
 ## Data Persistence
 *   **Format:** YAML.
 *   **Strategy:** Explicit Save. The user must click "Save" to flush the `is_dirty` state to disk.
@@ -109,30 +108,33 @@ graph LR
 ```mermaid
 graph TD
     subgraph "Core Entities"
-        DC[📦 DatasetContent<br/>Root Container]
-        G[🎯 Goal<br/>High-level objectives]
-        P[📁 Project<br/>Collection of items]
-        PI[📋 ProjectItem<br/>Abstract Base]
+        DC[📦 DatasetContent]
+        G[🎯 Goal]
+        P[📁 Project]
+        PI[📋 ProjectItem - Abstract Base]
+    end
+    
+    subgraph "Context & Config"
+        SC[⚙️ SystemConfig<br/>Durations SSOT]
+        DT[🌍 DomainType<br/>Enum: Software, Maker...]
+        DCFG[📖 DomainConfigs<br/>Tag Vocabularies]
     end
     
     subgraph "Item Types (Polymorphic)"
-        T[✅ TaskItem<br/>done, context, next_action]
-        R[🛒 ResourceItem<br/>acquired, store, type]
-        REF[📚 ReferenceItem<br/>tags, description]
-    end
-    
-    subgraph "Supporting Models"
-        SC[⚙️ SystemConfig<br/>Inbox, settings]
-        PS[📊 ProjectStatus<br/>ENUM: active/incubate]
-        GS[🎯 GoalStatus<br/>ENUM: active/completed]
-        RT[🏷️ ResourceType<br/>ENUM: food/tool/book]
+        T[✅ TaskItem]
+        R[🛒 ResourceItem]
+        REF[📚 ReferenceItem]
     end
     
     DC -->|contains| G
     DC -->|contains| P
-    DC -->|contains| SC
-    G -->|links to| P
+    
+    G -->|has domain| DT
+    P -->|has domain| DT
+    DT -.->|configures| DCFG
+    
     P -->|contains| PI
+    PI -->|has tags| T
     PI -.->|implements| T
     PI -.->|implements| R
     PI -.->|implements| REF

@@ -9,6 +9,8 @@ We utilize a **Polymorphic Data Structure**. A Project does not contain separate
 *   `kind`: Enum ["task", "resource", "reference"] (The Discriminator)
 *   `name`: String
 *   `created_at`: DateTime
+*   `tags`: List[String] (**Moved up from TaskItem** to support polymorphic tagging)
+*   `notes`: String (Holds Context or URLs)
 
 ## 2. Concrete Entities (The "Bricks")
 

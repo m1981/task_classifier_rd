@@ -11,8 +11,8 @@ def sample_dataset():
     """Creates a populated dataset for testing"""
     return DatasetContent(
         projects=[
-            Project(id=1, name="Kitchen Reno"),
-            Project(id=2, name="Learn Python")
+            Project(id="1", name="Kitchen Reno"),
+            Project(id="2", name="Learn Python")
         ],
         inbox_tasks=["Buy Milk", "Call Mom"],
         goals=[]
